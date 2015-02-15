@@ -51,7 +51,6 @@ module Annah.Core (
     , buildExpr
     ) where
 
-import Control.Applicative (empty)
 import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
 import Data.Text.Lazy (Text)
@@ -359,7 +358,7 @@ buildExpr = go 0
             <>  ") → "
             <>  go 1 b )
         Pi  x _A b    -> quoteAbove 1 (
-                (if M.used (M.V x 0) (desugar b)
+                (if M.used x (desugar b)
                  then "∀(" <> fromLazyText x <> " : " <> go 1 _A <> ")"
                  else go 2 _A )
             <>  " → "
