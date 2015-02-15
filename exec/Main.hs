@@ -5,7 +5,7 @@ import Annah.Core
 import Data.Monoid (mempty)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy.IO as Text
-import qualified Morte.Core as Morte
+import Morte.Core (typeOf, normalize, prettyTypeError)
 import Options.Applicative
 import System.IO (stderr)
 import System.Exit (exitFailure)
@@ -34,11 +34,10 @@ main = do
     inText <- Text.getContents
 
     (at, ae') <- handle (do
-        ae  <- using  prettyParseError             (exprFromText inText)
-        using prettyLintError (lint ae)
-        mt  <- using (prettyTypeError . interpret) (Morte.typeOf (desugar ae))
-        let at  = resugar (Morte.normalize  mt         )
-        let ae' = resugar (Morte.normalize (desugar ae))
+        ae  <- using prettyParseError             (exprFromText inText)
+        mt  <- using prettyTypeError (typeOf (desugar ae))
+        let at  = resugar (normalize  mt         )
+        let ae' = resugar (normalize (desugar ae))
         return (at, ae') )
 
     Text.hPutStrLn stderr (prettyExpr at)

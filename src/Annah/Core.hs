@@ -41,37 +41,21 @@ module Annah.Core (
     , Stmt(..)
     , StmtType(..)
     , Expr(..)
-    , Context
 
     -- * Core functions
     , desugar
     , resugar
-    , interpret
-    , lint
 
     -- * Utilities
     , prettyExpr
-    , prettyTypeError
-    , prettyLintError
     , buildExpr
-    , buildTypeError
-    , buildLintError
-
-    -- * Errors
-    , TypeError(..)
-    , TypeMessage(..)
-    , LintError(..)
     ) where
 
 import Control.Applicative (empty)
-import Control.Monad (guard, forM, when, zipWithM_)
-import Control.Exception (Exception)
 import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
 import Data.Text.Lazy (Text)
-import qualified Data.Text.Lazy as Text
 import Data.Text.Lazy.Builder (Builder, toLazyText, fromLazyText)
-import Data.Typeable (Typeable)
 import qualified Morte.Core as M
 import Prelude hiding (const, pi)
 
@@ -112,7 +96,10 @@ data StmtType = Type | Data | Let Expr deriving (Eq, Show)
 -}
 data Stmt = Stmt { stmtDecl :: Decl, stmtType :: StmtType } deriving (Eq, Show)
 
--- | Syntax tree for expressions
+{-| Syntax tree for expressions
+
+    Note that equality of @annah@ expressions is purely syntactic
+-}
 data Expr
     -- | > Const c           ~  c
     = Const M.Const
@@ -137,18 +124,18 @@ instance IsString Expr where
 
 -- | Convert an Annah expression to a Morte expression
 desugar :: Expr -> M.Expr
-desugar (Const c    ) = M.Const c
-desugar (Var v      ) = M.Var   v
-desugar (Lam x _A  b) = M.Lam x (desugar _A) (desugar  b)
-desugar (Pi  x _A _B) = M.Pi  x (desugar _A) (desugar _B)
-desugar (App f a    ) = M.App (desugar f) (desugar a)
-desugar (Annot a _A ) = desugar (Stmts [Stmt (Decl "x" [] _A) (Let a)] "x")
-desugar (Stmts stmts e ) = desugarLets (desugarStmts stmts) e
+desugar (Const c      ) = M.Const c
+desugar (Var v        ) = M.Var   v
+desugar (Lam x _A  b  ) = M.Lam x (desugar _A) (desugar  b)
+desugar (Pi  x _A _B  ) = M.Pi  x (desugar _A) (desugar _B)
+desugar (App f a      ) = M.App (desugar f) (desugar a)
+desugar (Annot a _A   ) = desugar (Stmts [Stmt (Decl "x" [] _A) (Let a)] "x")
+desugar (Stmts stmts e) = desugarLets (desugarStmts stmts) e
 
 desugarStmts :: [Stmt] -> [Let]
 desugarStmts stmts = reverse (do
-    (stmtsAfter, Stmt decl st, _) <- zippers (reverse stmts)
-    let Decl x params _ = decl
+    (stmtsAfter, Stmt decl st, stmtsBefore) <- zippers (reverse stmts)
+    let Decl x params _A = decl
 
     {- The purpose of `conArgs` is to correctly assign De Bruijn indices to
        constructor arguments.  For typical code all names will be unique and the
@@ -164,8 +151,8 @@ desugarStmts stmts = reverse (do
 
     {- We also need to correctly compute the DeBruin index for the constructor.
        For typical code all names will be unique and this DeBruijn index will be
-       zero.  However, Annah permits duplicate names for constructors, which
-       results in a non-zero DeBruin index.
+       zero.  However, Annah permits duplicate names for constructors, which can
+       lead to a non-zero DeBruin index.
     -}
     let ns  = consNames stmtsAfter
     let con = Var (M.V x (count x ns))
@@ -190,14 +177,13 @@ desugarStmts stmts = reverse (do
 
            let Either (a : *) (b : *) : *
                    =   ∀(Either : * -> * -> *)
-                   ->  ∀(Left   : ∀(a : *) -> ∀(b : *) -> a -> Either a b)
-                   ->  ∀(Right  : ∀(a : *) -> ∀(b : *) -> b -> Either a b)
+                   ->  ∀(Left   : a -> Either a b)
+                   ->  ∀(Right  : b -> Either a b)
                    ->  Either a b
 
        The reason I do things this way is because:
 
-       * This encoding is more powerful, since it permits all the features of
-         GADTs while preserving totality
+       * This encoding can implement GADTs
        * It's simpler to implement!
 
        However, this approach complicates pattern matching since you need to
@@ -213,7 +199,27 @@ desugarStmts stmts = reverse (do
             Type     -> makeRhs Pi
             Data     -> makeRhs Lam
             Let rhs' -> rhs'
-    return (LetOnly decl rhs) )
+
+    let lhs = 
+            let go1 (App e _      ) = go1 e
+                go1 (Var (M.V t n)) = go2 t n stmtsBefore
+                go1  _              = empty
+
+                go2 t n (Stmt (Decl t' args _) Type:ss)
+                    | t == t' =
+                        if n == 0
+                        then go3 args
+                        else go2 t (n -1) ss
+                go2 t n (_:ss) = go2 t n ss
+                go2 _ _  []    = empty
+
+                go3 args = return (Decl x (args ++ params) _A)
+
+            in  case go1 _A of
+                    Just e  -> e
+                    Nothing -> decl
+
+    return (LetOnly lhs rhs) )
 
 -- | All type or data constructor declarations
 consDecls :: [Stmt] -> [Decl]
@@ -243,7 +249,7 @@ foldArgs f = foldr (\(Arg x _A) -> f x _A)
 
 data Let = LetOnly Decl Expr deriving (Eq, Show)
 
-data Lets = Lets [Let] Expr
+data Lets = Lets [Let] Expr deriving (Eq, Show)
 
 {-| This desugars:
 
@@ -278,7 +284,7 @@ desugarLets lets e = apps
             -- > forall (xn0 : _An0) -> ... -> forall (xnj : _Anj) -> _Bn
             let rhsType = foldArgs Pi _Bn args
 
-            -- > \(fn : forall (xn0 : _An0) -> ... -> forall (xnj : _Anj) -> _Bn) -> rest
+            -- > \(fn : rhsType) -> rest
             in  M.Lam fn (desugar rhsType) rest )
         (desugar e)
         lets
@@ -289,11 +295,8 @@ desugarLets lets e = apps
     -- > (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
     apps = foldr
         (\(LetOnly (Decl _ args _) bn) rest ->
-            -- > \(xn0 : _An0) -> ... -> \(xnj : _Anj) -> bn
-            let rhsVal = foldArgs Lam bn args
-
             -- > rest (\(xn0 : _An0) -> ... -> \(xnj : _Anj) -> bn)
-            in  M.App rest (desugar rhsVal) )
+            M.App rest (desugar (foldArgs Lam bn args)) )
         lams
         (reverse lets)
 
@@ -309,168 +312,18 @@ zippers (stmt:stmts') = z:go z
       where
         z' = (m:ls, r, rs)
 
--- | Convert a Morte expression to an Annah expression
+{-| Convert a Morte expression to an Annah expression
+
+    Right now this desugaring is trivial, but it will start to become useful
+    when I add syntactic sugar for natural numbers and anonymous records
+-}
 resugar :: M.Expr -> Expr
 resugar (M.Const c    ) = Const c
 resugar (M.Var v      ) = Var v
 resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
 resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
-resugar (M.App (M.Lam x _A (M.Var (M.V x' 0))) a) | x == x' =
-    Annot (resugar a) (resugar _A)
-resugar (M.App f0 a0  ) = resugarLets f0 a0
+resugar (M.App f0 a0  ) = App (resugar f0) (resugar a0)
 
-resugarLets :: M.Expr -> M.Expr -> Expr
-resugarLets f0 a0 = case collectApps [] (M.App f0 a0) of
-    Just (Lets ls e) -> Stmts (resugarConstructors ls) e
-    Nothing          -> App (resugar f0) (resugar a0)
-  where
-    collectApps as (M.App f a) = collectApps (a:as) f
-    collectApps as  e1         = collectLams as e1
-
-    collectLams [a]    (M.Lam f _A b) = do
-        let l = makeFun f _A a
-        return (Lets [l] (resugar b))
-    collectLams (a:as) (M.Lam f _A b) = do
-        ~(Lets ls e) <- collectLams as b
-        let l = makeFun f _A a
-        return (Lets (l:ls) e)
-    collectLams  _      _             = empty
-
-    makeFun f (M.Pi _ _A' _B) (M.Lam x _A b)
-        | _A == _A' = LetOnly (Decl f' (arg:args) _B') b'
-      where
-        arg = Arg x (resugar _A)
-        ~(LetOnly ~(Decl f' args _B') b') = makeFun f _B b
-    makeFun f             _B              b
-                    = LetOnly (Decl f [] (resugar _B)) (resugar b)
-
-{-| This converts ordinary let statements into their equivalent data and type
-    constructors.  What makes this tricky is that:
-
-    * By design, `annah` does not store any structured information in variable
-      labels.  This means, for example that `annah` cannot require that
-      constructor names are capitalized, even if that would make it easier to
-      detect type or data constructors.
-    * `annah` permits interleaving `let` statements with `type` or `data`
-      statements, so you cannot assume that all statements within a block are
-      constructors.
-    * `annah` does not require that `data` constructor definitions are
-      contiguous, nor does `annah` require that they immediately follow a `type`
-      constructor
-
-    However, you can still detect `type` or `data` constructors robustly and
-    reasonably efficiently, even with these limitations:
-
-    * For each statement, make conservative guesses for what statement types
-      it might desugar to
-    * Lazily desugar all permutations of guesses, taking the first one that
-      matches the original expression
-
-    You're always guaranteed to have at least one solution for the case where
-    none of the statements are constructors.  Also, this is efficient for the
-    common case where there are no duplicate names, where the first attempted
-    solution will be the correct one.
--}
-resugarConstructors :: [Let] -> [Stmt]
-resugarConstructors ls = head (do
-    stmts <- forM ls (\(LetOnly decl@(Decl x _ _A) rhs) -> do
-        let typeConstructor (Pi  x' _A' e') = x == x' || typeConstructor e'
-            typeConstructor  _              = False
-
-        let dataConstructor (Lam x' _A' e') = x == x' || dataConstructor e'
-            dataConstructor  _              = False
-
-        stmtType' <- [Type | typeConstructor rhs]
-                  ++ [Data | dataConstructor rhs]
-                  ++ [Let rhs]
-                 
-        return (Stmt decl stmtType') )
-    guard (desugarStmts stmts == ls)
-    return stmts )
-
--- | Convert a Morte type error to an Annah type error
-interpret :: M.TypeError -> TypeError
-interpret (M.TypeError ctx expr msg) =
-    let ctx'  = [ (v, resugar e) | (v, e) <- ctx ]
-        expr' = resugar expr
-        err msg' = TypeError ctx' expr' msg'
-    in  case msg of
-        M.UnboundVariable     -> err  UnboundVariable
-        M.InvalidInputType  e -> case expr of
-            M.Pi _ _A1 _A2| _A1 == _A2 ->
-                TypeError ctx' (Annot "_" e') (InvalidAnnotationType e')
-              where
-                e' = resugar e
-            _                                      ->
-                err (InvalidInputType  (resugar e))
-        M.InvalidOutputType e -> err (InvalidOutputType (resugar e))
-        M.NotAFunction        -> err  NotAFunction
-        M.TypeMismatch e1 e2  -> err (countApp expr (0 :: Int))
-          where
-            countApp (M.App e _) n = countApp e $! n + 1
-            countApp  e          n = minLam e n
-
-            minLam  _            n | n <= 0 =
-                AnnotationMismatch (resugar e1) (resugar e2)
-            minLam (M.Lam _ _ e) n          = minLam e $! n - 1
-            minLam  _            _          =
-                TypeMismatch (resugar e1) (resugar e2)
-        M.Untyped c           -> err (Untyped c)
-
-{-| Use `lint` if you want to enforce that Annah programs use syntactic sugar
-    consistent with expressions generated by `interpret`.  Otherwise, you will
-    have great difficulty interpreting error messages because the expression
-    highlighted by `interpret` won't match your code.
-
-    `lint` fails with a `LintError` if the given expression changes in a desugar /
-    resugar round-trip
--}
-lint :: Expr -> Either LintError ()
-lint e = diffExpr e (resugar (desugar e))
-
-diffExpr :: Expr -> Expr -> Either LintError ()
-diffExpr    (Const c1        )    (Const c2        ) | c1 == c2 = return ()
-diffExpr    (Var x1          )    (Var x2          ) | x1 == x2 = return ()
-diffExpr    (Lam x1 _A1  b1  )    (Lam x2 _A2  b2  ) | x1 == x2 = do
-    diffExpr _A1 _A2
-    diffExpr  b1  b2
-diffExpr    (Pi  x1 _A1 _B1  )    (Pi  x2 _A2 _B2  ) | x1 == x2 = do
-    diffExpr _A1 _A2
-    diffExpr _B1 _B2
-diffExpr    (App f1 a1       )    (App f2 a2       )            = do
-    diffExpr  f1  f2
-    diffExpr  a1  a2
-diffExpr    (Annot a1 _A1    )    (Annot a2 _A2    )            = do
-    diffExpr  a1  a2
-    diffExpr _A1 _A2
-diffExpr e1@(Stmts ss1 e1') e2@(Stmts ss2 e2') = do
-    when (length ss1 /= length ss2) (Left (DiffExpr e1 e2))
-    zipWithM_ diffStmt ss1 ss2
-    diffExpr e1' e2'
-diffExpr e1                 e2                      = do
-    Left (DiffExpr e1 e2)
-
-diffStmtType :: StmtType -> StmtType -> Either LintError ()
-diffStmtType  Type     Type    = return ()
-diffStmtType  Data     Data    = return ()
-diffStmtType (Let e1) (Let e2) = diffExpr e1 e2
-diffStmtType  t1       t2      = Left (DiffStmtType t1 t2)
-
-diffStmt :: Stmt -> Stmt -> Either LintError ()
-diffStmt (Stmt d1 t1) (Stmt d2 t2) = do
-    diffDecl     d1 d2
-    diffStmtType t1 t2
-
-diffDecl :: Decl -> Decl -> Either LintError ()
-diffDecl d1@(Decl x1 args1 _A1) d2@(Decl x2 args2 _A2) = do
-    when (x1 /= x2 || length args1 /= length args2) (Left (DiffDecl d1 d2))
-    zipWithM_ diffArg args1 args2
-
-diffArg :: Arg -> Arg -> Either LintError ()
-diffArg arg1@(Arg x1 _A1) arg2@(Arg x2 _A2) = do
-    when (x1 /= x2) (Left (DiffArg arg1 arg2))
-    diffExpr _A1 _A2
- 
 -- | Render a pretty-printed `Arg` as a `Builder`
 buildArg :: Arg -> Builder
 buildArg (Arg x _A) = "(" <> fromLazyText x <> " : " <> buildExpr _A <> ")"
@@ -483,12 +336,6 @@ buildDecl (Decl x args _A)
     <>  mconcat (map (\arg -> buildArg arg <> " ") args)
     <>  ": "
     <>  buildExpr _A
-
--- | Render a pretty-printed `StmtType` as a `Builder`
-buildStmtType :: StmtType -> Builder
-buildStmtType  Type   = "type ..."
-buildStmtType (Let a) = "let  ... = " <> buildExpr a
-buildStmtType  Data   = "data ..."
 
 -- | Render a pretty-printed `Stmt` as a `Builder`
 buildStmt :: Stmt -> Builder
@@ -525,117 +372,9 @@ buildExpr = go 0
         quoteAbove :: Int -> Builder -> Builder
         quoteAbove n b = if prec > n then "(" <> b <> ")" else b
 
--- | Render a pretty-printed `TypeMessage` as a `Builder`
-buildTypeMessage :: TypeMessage -> Builder
-buildTypeMessage msg = case msg of
-    UnboundVariable          ->
-            "Type error: Unbound variable\n"
-    InvalidInputType expr    ->
-            "Type error: Invalid input type\n"
-        <>  "\n"
-        <>  "Type: " <> buildExpr expr <> "\n"
-    InvalidOutputType expr   ->
-            "Type error: Invalid output type\n"
-        <>  "\n"
-        <>  "Type: " <> buildExpr expr <> "\n"
-    NotAFunction             ->
-            "Type error: Only functions may be applied to values\n"
-    TypeMismatch expr1 expr2 ->
-            "Type error: Function applied to argument of the wrong type\n"
-        <>  "\n"
-        <>  "Expected type: " <> buildExpr expr1 <> "\n"
-        <>  "Argument type: " <> buildExpr expr2 <> "\n"
-    Untyped c                ->
-            "Type error: " <> M.buildConst c <> " has no type\n"
-    AnnotationMismatch expr1 expr2 ->
-            "Type error: Type annotation does not match inferred type\n"
-        <>  "\n"
-        <>  "Annotated type: " <> buildExpr expr1 <> "\n"
-        <>  "Actual    type: " <> buildExpr expr2 <> "\n"
-    InvalidAnnotationType expr ->
-            "Type error: Invalid annotation type\n"
-        <>  "\n"
-        <>  "Annotated type: " <> buildExpr expr <> "\n"
-
--- | Render a pretty-printed `TypeError` as a `Builder`
-buildTypeError :: TypeError -> Builder
-buildTypeError (TypeError ctx expr msg)
-    =   (    if Text.null (toLazyText buildContext )
-             then mempty
-             else "Context:\n" <> buildContext <> "\n"
-        )
-    <>  "Expression: " <> buildExpr expr <> "\n"
-    <>  "\n"
-    <>  buildTypeMessage msg
-  where
-    buildKV (key, val) = fromLazyText key <> " : " <> buildExpr val
-
-    buildContext =
-        (fromLazyText . Text.unlines . map (toLazyText . buildKV) . reverse) ctx
-
--- | Render a pretty-printed `LintError` as a `Builder`
-buildLintError :: LintError -> Builder
-buildLintError e
-     =   "Lint error:\n"
-     <>  "\n"
-     <>  "Instead of this: " <> before <> "\n"
-     <>  "...  write this: " <> after  <> "\n"
-  where
-    (before, after) = case e of
-        DiffExpr     e1 e2 -> (buildExpr     e1, buildExpr     e2)
-        DiffStmtType l1 l2 -> (buildStmtType l1, buildStmtType l2)
-        DiffArg      a1 a2 -> (buildArg      a1, buildArg      a2)
-        DiffDecl     d1 d2 -> (buildDecl     d1, buildDecl     d2)
-
 {-| Pretty-print an expression
 
     The result is a syntactically valid Annah program
 -}
 prettyExpr :: Expr -> Text
 prettyExpr = toLazyText . buildExpr
-
--- | Pretty-print a type error
-prettyTypeError :: TypeError -> Text
-prettyTypeError = toLazyText . buildTypeError
-
--- | Pretty-print a lint error
-prettyLintError :: LintError -> Text
-prettyLintError = toLazyText . buildLintError
-
-{-| Bound variables and their types
-
-    Earlier `Var`s shadow later matching `Var`s
--}
-type Context = [(Text, Expr)]
-
--- | A structured type error that includes context
-data TypeError = TypeError
-    { context     :: Context
-    , current     :: Expr
-    , typeMessage :: TypeMessage
-    } deriving (Show, Typeable)
-
-instance Exception TypeError
-
--- | The specific type error
-data TypeMessage
-    = UnboundVariable
-    | InvalidInputType Expr
-    | InvalidOutputType Expr
-    | NotAFunction
-    | TypeMismatch Expr Expr
-    | Untyped M.Const
-    | AnnotationMismatch Expr Expr
-    | InvalidAnnotationType Expr
-    deriving (Show, Typeable)
-
-{-| A structured lint error suggesting a better way to write an Annah expression
-
-    For each construtor, the left field is the code that needs to be rewritten and
-    the right field is the code that you should prefer
--}
-data LintError
-    = DiffExpr     Expr     Expr
-    | DiffStmtType StmtType StmtType
-    | DiffArg      Arg      Arg
-    | DiffDecl     Decl     Decl
