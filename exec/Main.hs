@@ -1,25 +1,19 @@
 module Main where
 
-import Annah.Parser (exprFromText, prettyParseError)
-import Annah.Core
+import qualified Annah.Parser as Annah
+import qualified Annah.Core   as Annah
 import Data.Monoid (mempty)
 import Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy    as Text
 import qualified Data.Text.Lazy.IO as Text
-import Morte.Core (typeOf, normalize, prettyTypeError)
+import qualified Morte.Core as Morte
 import Options.Applicative
 import System.IO (stderr)
-import System.Exit (exitFailure)
+import System.Exit (exitFailure, exitSuccess)
 
 using :: (e -> Text) -> Either e a -> Either Text a
 using f (Left  e) = Left (f e)
 using _ (Right a) = Right a
-
-handle :: Either Text a -> IO a
-handle e = case e of
-    Left msg -> do
-        Text.hPutStr stderr msg
-        exitFailure
-    Right a -> return a
 
 main :: IO ()
 main = do
@@ -33,13 +27,24 @@ main = do
         )
     inText <- Text.getContents
 
-    (at, ae') <- handle (do
-        ae  <- using prettyParseError             (exprFromText inText)
-        mt  <- using prettyTypeError (typeOf (desugar ae))
-        let at  = resugar (normalize  mt         )
-        let ae' = resugar (normalize (desugar ae))
-        return (at, ae') )
+    let compile = do
+            ae <- using Annah.prettyParseError (Annah.exprFromText inText)
 
-    Text.hPutStrLn stderr (prettyExpr at)
-    Text.hPutStrLn stderr mempty
-    Text.putStrLn (prettyExpr ae')
+            let me = Annah.desugar ae
+            let fullError te = Text.unlines
+                    [Morte.prettyExpr me, mempty, Morte.prettyTypeError te]
+            mt <- using fullError (Morte.typeOf me)
+
+            let at  = Annah.resugar (Morte.normalize mt)
+            let ae' = Annah.resugar (Morte.normalize me)
+            return (at, ae')
+
+    case compile of
+        Left msg -> do
+            Text.hPutStr stderr msg
+            exitFailure
+        Right (at, ae') -> do
+            Text.hPutStrLn stderr (Annah.prettyExpr at)
+            Text.hPutStrLn stderr mempty
+            Text.putStrLn (Annah.prettyExpr ae')
+            exitSuccess
