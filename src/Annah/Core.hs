@@ -180,10 +180,8 @@ desugarStmts stmts = reverse (do
                    ->  ∀(Right  : b -> Either a b)
                    ->  Either a b
 
-       The reason I do things this way is because:
-
-       * This encoding can implement GADTs
-       * It's simpler to implement!
+       The reason I do things this way is because this encoding can implement
+       GADTs.
 
        However, this approach complicates pattern matching since you need to
        supply a higher-kinded type constructor argument when pattern matching.
@@ -224,17 +222,6 @@ desugarStmts stmts = reverse (do
            type Fold (a : *) (b : *) : *
            -- The `x` is existentially quantified
            data MkFold (x : *) (step : x -> a -> x) (begin : x) (done : a -> b) : Fold a b
-
-           -- WRONG
-           type Either (a : *) (b : *) : *
-           data Left  (a : *) (b : *) (va : a) : Either a b
-           data Right (a : *) (b : *) (vb : b) : Either a b
-
-       The reason why is that this would actually existentially quantify the
-       `a` and `b` type variables for `Left` and `Right`.  In fact, this is the
-       recommended way to exist
-       type variables
-        
     -}
     let leftHandSide = 
             let go1 (App e _      ) = go1 e
