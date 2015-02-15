@@ -194,15 +194,52 @@ desugarStmts stmts = reverse (do
             (\(Decl c ps t) -> piOrLam c (foldArgs Pi t ps))
             saturatedCon
             (consDecls stmts)
-    let rhs = case st of
+    let rightHandSide = case st of
             Type     -> makeRhs Pi
             Data     -> makeRhs Lam
             Let rhs' -> rhs'
 
-    let lhs = 
+    
+    {- Data constructors are universally quantified over all type variables in
+       their matching type constructor.
+
+       So, for example, if you write:
+
+           type Either (a : *) (b : *) : *
+           data Left  (va : a) : Either a b
+           data Right (vb : b) : Either a b
+
+       ... the `Left` and `Right` data constructors are universally quantified
+       over `a` and `b`.
+
+       The following code locates the matching type constructor for any data
+       declaration and implicitly adds the type constructor's parameters as
+       additional arguments to the data constructor.
+
+      Note that if the user adds any type variables explicitly they will be
+      existentially quantified, not universally quantified.  Here's an example
+      of how the `Fold` type from Haskell's `foldl` library would be encoded:
+
+           -- The `a` and `b` are universally quantified
+           type Fold (a : *) (b : *) : *
+           -- The `x` is existentially quantified
+           data MkFold (x : *) (step : x -> a -> x) (begin : x) (done : a -> b) : Fold a b
+
+           -- WRONG
+           type Either (a : *) (b : *) : *
+           data Left  (a : *) (b : *) (va : a) : Either a b
+           data Right (a : *) (b : *) (vb : b) : Either a b
+
+       The reason why is that this would actually existentially quantify the
+       `a` and `b` type variables for `Left` and `Right`.  In fact, this is the
+       recommended way to exist
+       type variables
+        
+    -}
+    let leftHandSide = 
             let go1 (App e _      ) = go1 e
                 go1 (Var (M.V t n)) = go2 t n stmtsBefore
-                go1  _              = empty
+                go1  _              = decl
 
                 go2 t n (Stmt (Decl t' args _) Type:ss)
                     | t == t' =
@@ -210,15 +247,13 @@ desugarStmts stmts = reverse (do
                         then go3 args
                         else go2 t (n -1) ss
                 go2 t n (_:ss) = go2 t n ss
-                go2 _ _  []    = empty
+                go2 _ _  []    = decl
 
-                go3 args = return (Decl x (args ++ params) _A)
+                go3 args = Decl x (args ++ params) _A
 
-            in  case go1 _A of
-                    Just e  -> e
-                    Nothing -> decl
+            in  go1 _A
 
-    return (LetOnly lhs rhs) )
+    return (LetOnly leftHandSide rightHandSide) )
 
 -- | All type or data constructor declarations
 consDecls :: [Stmt] -> [Decl]
