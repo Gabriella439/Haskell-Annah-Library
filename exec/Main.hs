@@ -29,12 +29,8 @@ main = do
 
     let compile = do
             ae <- using Annah.prettyParseError (Annah.exprFromText inText)
-
-            let me = Annah.desugar ae
-            let fullError te = Text.unlines
-                    [Morte.prettyExpr me, mempty, Morte.prettyTypeError te]
-            mt <- using fullError (Morte.typeOf me)
-
+            let me  = Annah.desugar ae
+            mt <- using Morte.prettyTypeError (Morte.typeOf me)
             let at  = Annah.resugar (Morte.normalize mt)
             let ae' = Annah.resugar (Morte.normalize me)
             return (at, ae')
