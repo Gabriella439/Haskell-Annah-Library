@@ -160,9 +160,8 @@ desugar (Stmts stmts e) = desugarLets (desugarStmts stmts) e
    syntax.
 -}
 desugarStmts :: [Stmt] -> [Let]
-desugarStmts stmts = reverse (do
-    -- TODO: Can I eliminate this double-reverse?
-    (stmtsAfter, Stmt decl st, stmtsBefore) <- zippers (reverse stmts)
+desugarStmts stmts = do
+    (stmtsBefore, Stmt decl st, stmtsAfter) <- zippers stmts
     let Decl x params _A = decl
 
     {- The purpose of `conArgs` is to correctly assign De Bruijn indices to
@@ -224,7 +223,7 @@ desugarStmts stmts = reverse (do
             (consDecls stmts)
 
     case st of
-            Type    -> [LetOnly foldDecl foldRhs, LetOnly decl  rhs]
+            Type    -> [LetOnly decl rhs, LetOnly foldDecl foldRhs]
               where
                 rhs      = makeRhs Pi
                 foldType = Pi "_" (saturated (Var (M.V x 0))) rhs
@@ -281,7 +280,7 @@ desugarStmts stmts = reverse (do
 
                         go3 args = Decl x (args ++ params) _A
 
-                    in  go1 _A )
+                    in  go1 _A
 
 -- | All type or data constructor declarations
 consDecls :: [Stmt] -> [Decl]
