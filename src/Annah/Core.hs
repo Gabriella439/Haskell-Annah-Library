@@ -161,6 +161,7 @@ desugar (Stmts stmts e) = desugarLets (desugarStmts stmts) e
 -}
 desugarStmts :: [Stmt] -> [Let]
 desugarStmts stmts = reverse (do
+    -- TODO: Can I eliminate this double-reverse?
     (stmtsAfter, Stmt decl st, stmtsBefore) <- zippers (reverse stmts)
     let Decl x params _A = decl
 
@@ -215,18 +216,25 @@ desugarStmts stmts = reverse (do
     let names       = consNames stmtsAfter
     let constructor = Var (M.V x (count x names))
 
-    let saturatedConstructor =
-            foldr (flip App) constructor (reverse constructorArguments)
+    let saturated c =
+            foldr (flip App) c (reverse constructorArguments)
     let makeRhs piOrLam = foldr
             (\(Decl c ps t) -> piOrLam c (foldArgs Pi t ps))
-            saturatedConstructor
+            (saturated constructor)
             (consDecls stmts)
 
-    return (case st of
-            Type    -> LetOnly decl (makeRhs Pi)
-            Let rhs -> LetOnly decl  rhs
-            Data    -> LetOnly lhs  (makeRhs Lam)
+    case st of
+            Type    -> [LetOnly foldDecl foldRhs, LetOnly decl  rhs]
               where
+                rhs      = makeRhs Pi
+                foldType = Pi "_" (saturated (Var (M.V x 0))) rhs
+                foldDecl = Decl ("fold" <> x) params foldType
+                foldRhs  = Lam "x" rhs "x"
+            Let rhs -> [LetOnly decl  rhs]
+            Data    -> [LetOnly lhs   rhs]
+              where
+                rhs = makeRhs Lam
+
                 {- Data constructors are universally quantified over all type
                    variables in their matching type constructor.
 
@@ -273,7 +281,7 @@ desugarStmts stmts = reverse (do
 
                         go3 args = Decl x (args ++ params) _A
 
-                    in  go1 _A ) )
+                    in  go1 _A )
 
 -- | All type or data constructor declarations
 consDecls :: [Stmt] -> [Decl]
