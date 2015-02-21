@@ -47,6 +47,7 @@ module Annah.Core (
     , buildExpr
     ) where
 
+import Data.List (find)
 import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
 import Data.Text.Lazy (Text)
@@ -154,15 +155,35 @@ desugar (Stmts stmts e) = desugarLets (desugarStmts stmts) e
 
    The reason I do things this way is because this encoding can implement GADTs.
 
-   However, this approach complicates pattern matching since you need to supply
-   a higher-kinded type constructor argument when pattern matching.  I may
-   provide the former simpler version in the future using Haskell-like data
-   syntax.
+    This function uses several naming conventions:
+
+    * "sim"    - Simple, meaning non-recursive
+    * "rec"    - Recursive
+    * "con"    - Constructor
 -}
 desugarStmts :: [Stmt] -> [Let]
-desugarStmts stmts = do
-    (stmtsBefore, Stmt decl st, stmtsAfter) <- zippers stmts
-    let Decl x params _A = decl
+desugarStmts stmts0 = result
+  where
+    result = do
+    (stmtsBefore, Stmt decl st, stmtsAfter0) <- zippers stmts0
+    let Decl declName0 declArgs0 declType0 = decl
+
+    {-| Given a constructor applied to 0 or more arguments, find the matching
+        constructor declaration
+    -}
+    let matchingDecl :: Expr -> Maybe Decl
+        matchingDecl v0 = do
+            M.V x0 n0 <- unapply v0
+            go x0 n0 stmtsBefore
+          where
+            go x n (Stmt d@(Decl x' _ _) _:stmts)
+                | x == x' && n > 0 = go x (n - 1) stmts
+                | x == x'          = Just d
+                | otherwise        = go x  n      stmts
+            go _  _   []           = Nothing
+
+    let nonRecursive arg = matchingDecl (argType arg) == Nothing
+    let (simArgs, recArgs) = span nonRecursive declArgs0
 
     {- The purpose of `conArgs` is to correctly assign De Bruijn indices to
        constructor arguments.  For typical code all names will be unique and the
@@ -170,12 +191,12 @@ desugarStmts stmts = do
        names for constructors and their parameters, which results in non-zero
        DeBruijn indices.
 
-       On case where this is useful is when the user doesn't feel like naming
+       One case where this is useful is when the user doesn't feel like naming
        fields and just gives every field the empty label, like this example:
 
            type Pair (a : *) (b : *) : *
            data MkPair (_ : a) (_ : b) : Pair a b
-           in  MkPair
+           in   MkPair
 
        That will compile to this expression:
 
@@ -190,11 +211,16 @@ desugarStmts stmts = do
         Notice how the generated expression uses the DeBruijn index to
         distinguish the duplicate field names.
     -}
-    let constructorArguments = do
-            (_, Arg x' _, paramsAfter) <- zippers params
-            let names1 = map argName paramsAfter
-            let names2 = consNames stmts
-            return (Var (M.V x' (count x' (names1 ++ names2))))
+    let conArgs args k = do
+            (_, arg, argsAfter) <- zippers args
+            let names1 = map argName argsAfter
+            let names2 = conNames stmts0
+            return (k (argName arg `isPrecededBy` (names1 ++ names2)))
+    let cons = do
+            (_, conName, conNamesAfter) <- zippers (conNames stmts0)
+            return (conName `isPrecededBy` conNamesAfter)
+    let simConArgs = conArgs simArgs id
+    let recConArgs = conArgs recArgs (\v -> foldr (flip App) v (reverse cons))
 
     {- We also need to correctly compute the DeBruin index for the constructor.
        `annah` permits data constructors to have duplicate names and `annah`
@@ -204,7 +230,7 @@ desugarStmts stmts = do
            type A : *
            data A : A
            data A : A@1
-           in  A
+           in   A
 
        ... which compiles to:
 
@@ -212,27 +238,37 @@ desugarStmts stmts = do
 
        Needless to say, this is bad style, but I still permit it.
     -}
-    let names       = consNames stmtsAfter
-    let constructor = Var (M.V x (count x names))
+    let con = declName0 `isPrecededBy` conNames stmtsAfter0
 
-    let saturated c =
-            foldr (flip App) c (reverse constructorArguments)
+    let saturated c = foldr (flip App) c (reverse (simConArgs ++ recConArgs))
     let makeRhs piOrLam = foldr
-            (\(Decl c ps t) -> piOrLam c (foldArgs Pi t ps))
-            (saturated constructor)
-            (consDecls stmts)
+            (\(Stmt (Decl c ps t) _) -> piOrLam c (foldArgs Pi t ps))
+            (saturated con)
+            (keepCons stmts0)
 
     case st of
             Type    -> [LetOnly decl rhs, LetOnly foldDecl foldRhs]
               where
+                -- Every type constructor `foo` comes with an eliminator named
+                -- `foldfoo`
                 rhs      = makeRhs Pi
-                foldType = Pi "_" (saturated (Var (M.V x 0))) rhs
-                foldDecl = Decl ("fold" <> x) params foldType
+                foldType = Pi "_" (saturated (Var (M.V declName0 0))) rhs
+                foldDecl = Decl ("fold" <> declName0) declArgs0 foldType
                 foldRhs  = Lam "x" rhs "x"
             Let rhs -> [LetOnly decl  rhs]
             Data    -> [LetOnly lhs   rhs]
               where
-                rhs = makeRhs Lam
+                rhs = foldArgs Lam (makeRhs Lam) recArgs'
+
+                recArgs' = do
+                    Arg x _A <- recArgs
+                    let m = do
+                            d <- matchingDecl _A
+                            find (\(LetOnly d' _) -> d == d') result
+                    let _A' = case m of
+                            Just (LetOnly _ _A') -> _A'
+                            Nothing              -> _A
+                    return (Arg x _A')
 
                 {- Data constructors are universally quantified over all type
                    variables in their matching type constructor.
@@ -240,8 +276,8 @@ desugarStmts stmts = do
                    So, for example, if you write:
 
                        type Either (a : *) (b : *) : *
-                       data Left  (va : a) : Either a b
-                       data Right (vb : b) : Either a b
+                       data Left  (l : a) : Either a b
+                       data Right (r : b) : Either a b
 
                    ... the `Left` and `Right` data constructors are universally
                    quantified over `a` and `b`.
@@ -265,38 +301,39 @@ desugarStmts stmts = do
                                 (begin : x)
                                 (done : a -> b) : Fold a b
                 -}
-                lhs =  -- I apologize for all the `go`s
-                    let go1 (App e _      ) = go1 e
-                        go1 (Var (M.V t n)) = go2 t n stmtsBefore
-                        go1  _              = decl
+                lhs = case matchingDecl declType0 of
+                    Just (Decl _ args _) -> Decl
+                        declName0
+                        (args ++ simArgs)
+                        (foldArgs Pi declType0 recArgs)
+                    Nothing              ->
+                        decl -- TODO: Error out here
 
-                        go2 t n (Stmt (Decl t' args _) Type:ss)
-                            | t == t' =
-                                if n == 0
-                                then go3 args
-                                else go2 t (n -1) ss
-                        go2 t n (_:ss) = go2 t n ss
-                        go2 _ _  []    = decl
+-- | Returns `True` if the given `StmtType` is a type or data constructor
+isCons :: StmtType -> Bool
+isCons Type = True
+isCons Data = True
+isCons _    = False
 
-                        go3 args = Decl x (args ++ params) _A
-
-                    in  go1 _A
-
--- | All type or data constructor declarations
-consDecls :: [Stmt] -> [Decl]
-consDecls = map stmtDecl . filter (isCons . stmtType)
-  where
-    isCons Type = True
-    isCons Data = True
-    isCons _    = False
+-- | Keep only `Stmt`s that are type or data constructor declarations
+keepCons :: [Stmt] -> [Stmt]
+keepCons = filter (isCons . stmtType)
 
 -- | The names of all type or data constructors
-consNames :: [Stmt] -> [Text]
-consNames = map declName . consDecls
+conNames :: [Stmt] -> [Text]
+conNames = map (declName . stmtDecl) . keepCons
 
--- | Count the number of occurrences of `x` in `ys`
-count :: Eq a => a -> [a] -> Int
-count x ys = length (filter (== x) ys)
+-- | Extract a saturated type constructor's name
+unapply :: Expr -> Maybe M.Var
+unapply (App e _) = unapply e
+unapply (Var v  ) = Just v
+unapply  _        = Nothing
+
+{-| Compute the correct DeBruijn index for a synthetic `Var` (`x`) by providing
+    all variables bound in between when `x` is introduced and when `x` is used.
+-}
+isPrecededBy :: Text -> [Text] -> Expr
+x `isPrecededBy` vars = Var (M.V x (length (filter (== x) vars)))
 
 {-|
 > foldArgs Lam e [(Arg x0 _A0), ..., (Arg xj _Aj)]
@@ -307,7 +344,6 @@ count x ys = length (filter (== x) ys)
 -}
 foldArgs :: (Text -> Expr -> Expr -> Expr) -> Expr -> [Arg] -> Expr
 foldArgs f = foldr (\(Arg x _A) -> f x _A)
-
 
 {-| This is the intermdiate type that `Stmts` desugars to.  This is then fed
     into `desugarLets` for futher translation.
@@ -331,7 +367,7 @@ data Let = LetOnly Decl Expr deriving (Eq, Show)
 > let fi (xi0 : _Ai0) ... (xij : _Aij) _Bi = bi
 > in  e
 
-... to this:
+... into this:
 
 > (   \(f0 : forall (x00 : _A00) -> ... -> forall (x0j : _A0j) -> _B0)
 > ->  ...
