@@ -193,11 +193,13 @@ desugarStmts :: [Stmt Identity] -> [Let]
 desugarStmts stmts0 = result
   where
     result = do
-    (stmtsBefore, Stmt decl st, stmtsAfter0) <- zippers stmts0
+    (stmtsBefore, Stmt decl st0, stmtsAfter0) <- zippers stmts0
     let Decl declName0 declArgs0 declType0 = decl
 
-    {-| Given a constructor applied to 0 or more arguments, find the matching
-        constructor declaration along side the index of the matching statement
+    {-| Given a constructor applied to 0 or more arguments, find:
+
+        * the matching constructor declaration
+        * the index of the matching statement
     -}
     let matchingDecl :: Expr Identity -> Maybe (Decl Identity, Int)
         matchingDecl v0 = do
@@ -216,6 +218,9 @@ desugarStmts stmts0 = result
             Nothing -> True
             _       -> False
     let (simArgs, recArgs) = span nonRecursive declArgs0
+    let cons = do
+            (_, conName, conNamesAfter) <- zippers (conNames stmts0)
+            return (conName `isPrecededBy` conNamesAfter)
 
     {- The purpose of `conArgs` is to correctly assign De Bruijn indices to
        constructor arguments.  For typical code all names will be unique and the
@@ -243,16 +248,14 @@ desugarStmts stmts0 = result
         Notice how the generated expression uses the DeBruijn index to
         distinguish the duplicate field names.
     -}
-    let conArgs args k = do
-            (_, arg, argsAfter) <- zippers args
+    let conArgs = do
+            (_, arg, argsAfter) <- zippers declArgs0
             let names1 = map argName argsAfter
             let names2 = conNames stmts0
-            return (k (argName arg `isPrecededBy` (names1 ++ names2)))
-    let cons = do
-            (_, conName, conNamesAfter) <- zippers (conNames stmts0)
-            return (conName `isPrecededBy` conNamesAfter)
-    let simConArgs = conArgs simArgs id
-    let recConArgs = conArgs recArgs (\v -> foldr (flip App) v (reverse cons))
+            let v      = argName arg `isPrecededBy` (names1 ++ names2)
+            return (case matchingDecl (argType arg) of
+                Nothing -> v
+                _       -> foldr (flip App) v (reverse cons) )
 
     {- We also need to correctly compute the DeBruin index for the constructor.
        `annah` permits data constructors to have duplicate names and `annah`
@@ -272,13 +275,13 @@ desugarStmts stmts0 = result
     -}
     let con = declName0 `isPrecededBy` conNames stmtsAfter0
 
-    let saturated c = foldr (flip App) c (reverse (simConArgs ++ recConArgs))
+    let saturated c = foldr (flip App) c (reverse conArgs)
     let makeRhs piOrLam = foldr
             (\(Stmt (Decl c ps t) _) -> piOrLam c (foldArgs Pi t ps))
             (saturated con)
             (keepCons stmts0)
 
-    case st of
+    case st0 of
             Type    -> [LetOnly decl rhs, LetOnly foldDecl foldRhs]
               where
                 -- Every type constructor `foo` comes with an eliminator named
@@ -287,8 +290,8 @@ desugarStmts stmts0 = result
                 foldType = Pi "_" (saturated (Var (M.V declName0 0))) rhs
                 foldDecl = Decl ("fold" <> declName0) declArgs0 foldType
                 foldRhs  = Lam "x" rhs "x"
-            Let rhs -> [LetOnly decl  rhs]
-            Data    -> [LetOnly lhs   rhs]
+            Let rhs -> [LetOnly decl rhs]
+            Data    -> [LetOnly lhs  rhs]
               where
                 rhs = foldArgs Lam (makeRhs Lam) recArgs'
 
