@@ -14,7 +14,7 @@ module Annah.Parser (
     ParseMessage(..)
     ) where
 
-import Control.Exception (Exception)
+import Control.Exception (Exception, throwIO)
 import Control.Monad.Trans.Error (ErrorT, Error(..), throwError, runErrorT)
 import Control.Monad.Trans.State.Strict (State, runState)
 import Data.Functor.Identity (Identity, runIdentity)
@@ -23,6 +23,7 @@ import Data.Text.Lazy (Text, unpack)
 import qualified Data.Text.Lazy as Text
 import qualified Data.Text.Lazy.Builder as Builder
 import Data.Text.Lazy.Builder.Int (decimal)
+import qualified Data.Text.Lazy.IO as Text
 import Data.Typeable (Typeable)
 import Lens.Family.Stock (_1, _2)
 import Lens.Family.State.Strict ((.=), use, zoom)
@@ -57,6 +58,7 @@ import Annah.Lexer (Token, Position)
     'in'    { Lexer.In         }
     label   { Lexer.Label $$   }
     number  { Lexer.Number $$  }
+    file    { Lexer.File $$    }
 
 %%
 
@@ -105,10 +107,11 @@ Expr2 :: { Expr IO }
       | Expr3       { $1        }
 
 Expr3 :: { Expr IO }
-      : VExpr         { Var $1     }
-      | '*'           { Const Star }
-      | 'BOX'         { Const Box  }
-      | '(' Expr0 ')' { $2         }
+      : VExpr         { Var $1        }
+      | '*'           { Const Star    }
+      | 'BOX'         { Const Box     }
+      | file          { importFile $1 }
+      | '(' Expr0 ')' { $2            }
 
 {
 -- | The specific parsing error
@@ -188,4 +191,11 @@ prettyParseError (ParseError (Lexer.P l c) e) = Builder.toLazyText (
                 "Parsing: " <> Builder.fromString (show t) <> "\n"
             <>  "\n"
             <>  "Error: Parsing failed\n" )
+
+importFile :: Text -> Expr IO
+importFile path = Import (do
+    txt <- Text.readFile (unpack path)
+    case exprFromText txt of
+        Left pe    -> throwIO pe
+        Right expr -> return expr )
 }

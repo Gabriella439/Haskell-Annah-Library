@@ -32,6 +32,8 @@ $labelchar = [A-Za-z0-9_]
 
 $whiteNoNewline = $white # \n
 
+$path = . # $white
+
 tokens :-
 
     $whiteNoNewline+                    ;
@@ -42,6 +44,7 @@ tokens :-
     "("                                 { \_    -> yield OpenParen             }
     ")"                                 { \_    -> yield CloseParen            }
     ":"                                 { \_    -> yield Colon                 }
+    "@file:" $path+                     { \text -> yield (File (Text.drop 6 text)) }
     "@"                                 { \_    -> yield At                    }
     "*"                                 { \_    -> yield Star                  }
     "BOX" | "□"                         { \_    -> yield Box                   }
@@ -157,6 +160,7 @@ data Token
     | In
     | Label Text
     | Number Int
+    | File Text
     | EOF
     deriving (Show)
 }
