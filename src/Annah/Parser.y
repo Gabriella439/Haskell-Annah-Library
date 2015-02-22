@@ -1,5 +1,6 @@
 {
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 
 -- | Parsing logic for the Annah language
 
@@ -13,14 +14,16 @@ module Annah.Parser (
     ParseMessage(..)
     ) where
 
+import Control.Exception (Exception)
 import Control.Monad.Trans.Error (ErrorT, Error(..), throwError, runErrorT)
 import Control.Monad.Trans.State.Strict (State, runState)
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.Monoid (mempty, (<>))
-import Data.Text.Lazy (Text)
+import Data.Text.Lazy (Text, unpack)
 import qualified Data.Text.Lazy as Text
 import qualified Data.Text.Lazy.Builder as Builder
 import Data.Text.Lazy.Builder.Int (decimal)
+import Data.Typeable (Typeable)
 import Lens.Family.Stock (_1, _2)
 import Lens.Family.State.Strict ((.=), use, zoom)
 import Pipes (Producer, hoist, lift, next)
@@ -57,51 +60,51 @@ import Annah.Lexer (Token, Position)
 
 %%
 
-Expr0 :: { Expr }
+Expr0 :: { Expr IO }
       : Expr1 ':' Expr0 { Annot $1 $3 }
       | Expr1           { $1          }
 
-Decl :: { Decl }
+Decl :: { Decl IO }
      : label Args ':' Expr0 { Decl $1 $2 $4 }
 
-Stmt :: { Stmt }
+Stmt :: { Stmt IO }
 Stmt : 'type' Decl           { Stmt $2  Type    }
      | 'data' Decl           { Stmt $2  Data    }
      | 'let'  Decl '=' Expr1 { Stmt $2 (Let $4) }
 
-StmtsRev :: { [Stmt] }
+StmtsRev :: { [Stmt IO] }
          : StmtsRev Stmt { $2 : $1 }
          | Stmt         { [$1] }
 
-Stmts :: { [Stmt] }
+Stmts :: { [Stmt IO] }
 Stmts : StmtsRev { reverse $1 }
 
-Expr1 :: { Expr }
+Expr1 :: { Expr IO }
       : '\\'  '(' label ':' Expr1 ')' '->' Expr1      { Lam $3 $5 $8 }
       | '|~|' '(' label ':' Expr1 ')' '->' Expr1      { Pi  $3 $5 $8 }
       | Expr2 '->' Expr1                              { Pi "_" $1 $3 }
       | Stmts 'in' Expr1                              { Stmts $1 $3  }
       | Expr2                                         { $1           }
 
-Args :: { [Arg] }
+Args :: { [Arg IO] }
      : ArgsRev { reverse $1 }
 
-ArgsRev :: { [Arg] }
+ArgsRev :: { [Arg IO] }
         : ArgsRev Arg { $2 : $1 }
         |             { []      }
 
-Arg :: { Arg }
+Arg :: { Arg IO }
     : '(' label ':' Expr0 ')' { Arg $2 $4 }
 
 VExpr  :: { Var }
        : label '@' number { V $1 $3 }
        | label            { V $1 0  }
 
-Expr2 :: { Expr }
+Expr2 :: { Expr IO }
       : Expr2 Expr3 { App $1 $2 }
       | Expr3       { $1        }
 
-Expr3 :: { Expr }
+Expr3 :: { Expr IO }
       : VExpr         { Var $1     }
       | '*'           { Const Star }
       | 'BOX'         { Const Box  }
@@ -148,7 +151,7 @@ parseError :: Token -> Lex a
 parseError token = throwError (Parsing token)
 
 -- | Parse an `Expr` from `Text` or return a `ParseError` if parsing fails
-exprFromText :: Text -> Either ParseError Expr
+exprFromText :: Text -> Either ParseError (Expr IO)
 exprFromText text = case runState (runErrorT parseExpr) initialStatus of
     (x, (position, _)) -> case x of
         Left  e    -> Left (ParseError position e)
@@ -160,7 +163,12 @@ exprFromText text = case runState (runErrorT parseExpr) initialStatus of
 data ParseError = ParseError
     { position     :: Position
     , parseMessage :: ParseMessage
-    } deriving (Show)
+    } deriving (Typeable)
+
+instance Show ParseError where
+    show = unpack . prettyParseError
+
+instance Exception ParseError
 
 -- | Pretty-print a `ParseError`
 prettyParseError :: ParseError -> Text

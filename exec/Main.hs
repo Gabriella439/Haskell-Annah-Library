@@ -2,18 +2,16 @@ module Main where
 
 import qualified Annah.Parser as Annah
 import qualified Annah.Core   as Annah
+import Control.Exception (Exception, throwIO)
 import Data.Monoid (mempty)
-import Data.Text.Lazy (Text)
-import qualified Data.Text.Lazy    as Text
 import qualified Data.Text.Lazy.IO as Text
 import qualified Morte.Core as Morte
 import Options.Applicative
 import System.IO (stderr)
-import System.Exit (exitFailure, exitSuccess)
 
-using :: (e -> Text) -> Either e a -> Either Text a
-using f (Left  e) = Left (f e)
-using _ (Right a) = Right a
+throws :: Exception e => Either e a -> IO a
+throws (Left  e) = throwIO e
+throws (Right a) = return a
 
 main :: IO ()
 main = do
@@ -25,22 +23,15 @@ main = do
                      \to standard error, and writing the normalized program to\
                      \standard output"
         )
+
     inText <- Text.getContents
+    ae     <- throws (Annah.exprFromText inText)
+    ae'    <- Annah.load ae
+    let me = Annah.desugar ae'
+    mt     <- throws (Morte.typeOf me)
+    let at   = Annah.resugar (Morte.normalize mt)
+    let ae'' = Annah.resugar (Morte.normalize me)
 
-    let compile = do
-            ae <- using Annah.prettyParseError (Annah.exprFromText inText)
-            let me  = Annah.desugar ae
-            mt <- using Morte.prettyTypeError (Morte.typeOf me)
-            let at  = Annah.resugar (Morte.normalize mt)
-            let ae' = Annah.resugar (Morte.normalize me)
-            return (at, ae')
-
-    case compile of
-        Left msg -> do
-            Text.hPutStr stderr msg
-            exitFailure
-        Right (at, ae') -> do
-            Text.hPutStrLn stderr (Annah.prettyExpr at)
-            Text.hPutStrLn stderr mempty
-            Text.putStrLn (Annah.prettyExpr ae')
-            exitSuccess
+    Text.hPutStrLn stderr (Annah.prettyExpr at)
+    Text.hPutStrLn stderr mempty
+    Text.putStrLn (Annah.prettyExpr ae'')

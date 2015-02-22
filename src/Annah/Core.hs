@@ -39,6 +39,7 @@ module Annah.Core (
     , Expr(..)
 
     -- * Core functions
+    , load
     , desugar
     , resugar
 
@@ -47,6 +48,8 @@ module Annah.Core (
     , buildExpr
     ) where
 
+import Control.Applicative ((<$>), (<*>))
+import Data.Functor.Identity (Identity, runIdentity)
 import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
 import Data.Text.Lazy (Text)
@@ -58,20 +61,20 @@ import Prelude hiding (const, pi)
 
 > Arg x _A  ~  (x : _A)
 -}
-data Arg = Arg
+data Arg m = Arg
     { argName :: Text
-    , argType :: Expr
-    } deriving (Show)
+    , argType :: Expr m
+    }
 
 {-| Declaration for function or constructor definitions
 
 > Decl f [Arg x _A, Arg y _B] _C  ~  f (x : _A) (y : _B) : _C
 -}
-data Decl = Decl
+data Decl m = Decl
     { declName :: Text
-    , declArgs :: [Arg]
-    , declType :: Expr
-    } deriving (Show)
+    , declArgs :: [Arg m]
+    , declType :: Expr m
+    }
 
 {-| There are three types of statements:
 
@@ -81,7 +84,7 @@ data Decl = Decl
 
     Only @let@ statements have a right-hand side
 -}
-data StmtType = Type | Data | Let Expr deriving (Show)
+data StmtType m = Type | Data | Let (Expr m)
 
 {-| A @type@ \/ @data@ \/ @let@ declaration
 
@@ -89,39 +92,64 @@ data StmtType = Type | Data | Let Expr deriving (Show)
 > Stmt (Decl f [Arg x _A, Arg y _B] _C)  Data    ~  data f (x : _A) (y : _B) : _C
 > Stmt (Decl f [Arg x _A, Arg y _B] _C) (Let z)  ~  let  f (x : _A) (y : _B) : _C = z
 -}
-data Stmt = Stmt { stmtDecl :: Decl, stmtType :: StmtType } deriving (Show)
+data Stmt m =
+    Stmt { stmtDecl :: Decl m, stmtType :: StmtType m }
 
 {-| Syntax tree for expressions
 
     Note that equality of @annah@ expressions is purely syntactic
 -}
-data Expr
+data Expr m
     -- | > Const c           ~  c
     = Const M.Const
     -- | > Var (V x 0)       ~  x
     --   > Var (V x 0)       ~  x
     | Var M.Var
     -- | > Lam x     _A  b   ~  λ(x : _A) →  b
-    | Lam Text Expr Expr
+    | Lam Text (Expr m) (Expr m)
     -- | > Pi x      _A _B   ~  ∀(x : _A) → _B
     --   > Pi unused _A _B   ~        _A  → _B
-    | Pi  Text Expr Expr
+    | Pi  Text (Expr m) (Expr m)
     -- | > App f a           ~  f a
-    | App Expr Expr
+    | App (Expr m) (Expr m)
     -- | > Annot a _A        ~  a : _A
-    | Annot Expr Expr
+    | Annot (Expr m) (Expr m)
     -- | > Stmts decls e     ~  decls in e
-    | Stmts [Stmt] Expr
-    deriving (Show)
+    | Stmts [Stmt m] (Expr m)
+    | Import (m (Expr m))
 
-instance IsString Expr where
+instance IsString (Expr m) where
     fromString str = Var (fromString str)
+
+load :: Expr IO -> IO (Expr m)
+load (Const c      ) = return (Const c)
+load (Var v        ) = return (Var v)
+load (Lam x _A  b  ) = Lam x <$> load _A <*> load  b
+load (Pi  x _A _B  ) = Pi  x <$> load _A <*> load _B
+load (App f a      ) = App <$> load f <*> load a
+load (Annot a _A   ) = Annot <$> load a <*> load _A
+load (Stmts stmts e) = Stmts <$> mapM loadStmt stmts <*> load e
+load (Import io    ) = io >>= load
+
+loadStmt :: Stmt IO -> IO (Stmt m)
+loadStmt (Stmt d st) = Stmt <$> loadDecl d <*> loadStmtType st
+
+loadDecl :: Decl IO -> IO (Decl m)
+loadDecl (Decl x args _A) = Decl x <$> mapM loadArg args <*> load _A
+
+loadStmtType :: StmtType IO -> IO (StmtType m)
+loadStmtType  Type     = return Type
+loadStmtType  Data     = return Data
+loadStmtType (Let rhs) = Let <$> load rhs
+
+loadArg :: Arg IO -> IO (Arg m)
+loadArg (Arg x _A) = Arg x <$> load _A
 
 {-| Convert an Annah expression to a Morte expression
 
 > resugar . desugar = id  -- But not the other way around!
 -}
-desugar :: Expr -> M.Expr
+desugar :: Expr Identity -> M.Expr
 desugar (Const c      ) = M.Const c
 desugar (Var v        ) = M.Var   v
 desugar (Lam x _A  b  ) = M.Lam x (desugar _A) (desugar  b)
@@ -129,6 +157,7 @@ desugar (Pi  x _A _B  ) = M.Pi  x (desugar _A) (desugar _B)
 desugar (App f a      ) = M.App (desugar f) (desugar a)
 desugar (Annot a _A   ) = desugar (Stmts [Stmt (Decl "x" [] _A) (Let a)] "x")
 desugar (Stmts stmts e) = desugarLets (desugarStmts stmts) e
+desugar (Import m     ) = desugar (runIdentity m)
 
 {-| This is the meat of the Boehm-Berarducci encoding which translates the
     `type` or `data` declarations to their equivalent `let` expression.
@@ -160,7 +189,7 @@ desugar (Stmts stmts e) = desugarLets (desugarStmts stmts) e
     * "rec"    - Recursive
     * "con"    - Constructor
 -}
-desugarStmts :: [Stmt] -> [Let]
+desugarStmts :: [Stmt Identity] -> [Let]
 desugarStmts stmts0 = result
   where
     result = do
@@ -170,7 +199,7 @@ desugarStmts stmts0 = result
     {-| Given a constructor applied to 0 or more arguments, find the matching
         constructor declaration along side the index of the matching statement
     -}
-    let matchingDecl :: Expr -> Maybe (Decl, Int)
+    let matchingDecl :: Expr Identity -> Maybe (Decl Identity, Int)
         matchingDecl v0 = do
             M.V x0 n0 <- unapply v0
             go x0 n0 stmtsBefore 0
@@ -312,21 +341,21 @@ desugarStmts stmts0 = result
                         decl -- TODO: Error out here
 
 -- | Returns `True` if the given `StmtType` is a type or data constructor
-isCons :: StmtType -> Bool
+isCons :: StmtType m -> Bool
 isCons Type = True
 isCons Data = True
 isCons _    = False
 
 -- | Keep only `Stmt`s that are type or data constructor declarations
-keepCons :: [Stmt] -> [Stmt]
+keepCons :: [Stmt m] -> [Stmt m]
 keepCons = filter (isCons . stmtType)
 
 -- | The names of all type or data constructors
-conNames :: [Stmt] -> [Text]
+conNames :: [Stmt m] -> [Text]
 conNames = map (declName . stmtDecl) . keepCons
 
 -- | Extract a saturated type constructor's name
-unapply :: Expr -> Maybe M.Var
+unapply :: Expr m -> Maybe M.Var
 unapply (App e _) = unapply e
 unapply (Var v  ) = Just v
 unapply  _        = Nothing
@@ -342,7 +371,7 @@ safeIndex n (_:as) = n' `seq` safeIndex n' as
 {-| Compute the correct DeBruijn index for a synthetic `Var` (`x`) by providing
     all variables bound in between when `x` is introduced and when `x` is used.
 -}
-isPrecededBy :: Text -> [Text] -> Expr
+isPrecededBy :: Text -> [Text] -> Expr m
 x `isPrecededBy` vars = Var (M.V x (length (filter (== x) vars)))
 
 {-|
@@ -352,7 +381,7 @@ x `isPrecededBy` vars = Var (M.V x (length (filter (== x) vars)))
 > foldArgs Pi e [(Arg x0 _A0), ..., (Arg xj _Aj)]
 > = "forall (x0 : _A0) -> ... -> forall (xj : _Aj) -> e"
 -}
-foldArgs :: (Text -> Expr -> Expr -> Expr) -> Expr -> [Arg] -> Expr
+foldArgs :: (Text -> Expr m -> b -> b ) -> b -> [Arg m] -> b
 foldArgs f = foldr (\(Arg x _A) -> f x _A)
 
 {-| This is the intermediate type that `Stmt` desugars to.
@@ -360,7 +389,7 @@ foldArgs f = foldr (\(Arg x _A) -> f x _A)
     This is essentially a `let`-only subset of `Stmt` since all `data` and
     `type` statements can be translated to `let`s.
 -}
-data Let = LetOnly Decl Expr deriving (Show)
+data Let = LetOnly (Decl Identity) (Expr Identity)
 
 {-| `desugarLets` converts this:
 
@@ -382,7 +411,7 @@ data Let = LetOnly Decl Expr deriving (Show)
 > (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
 
 -}
-desugarLets :: [Let] -> Expr -> M.Expr
+desugarLets :: [Let] -> Expr Identity -> M.Expr
 desugarLets lets e = apps
   where
     -- > (   \(f0 : forall (x00 : _A00) -> ... -> forall (x0j : _A0j) -> _B0)
@@ -428,7 +457,7 @@ zippers (stmt:stmts') = z:go z
     Right now this desugaring is trivial, but it will start to become useful
     when I add syntactic sugar for natural numbers and anonymous records
 -}
-resugar :: M.Expr -> Expr
+resugar :: M.Expr -> Expr m
 resugar (M.Const c    ) = Const c
 resugar (M.Var v      ) = Var v
 resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
@@ -436,11 +465,11 @@ resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
 resugar (M.App f0 a0  ) = App (resugar f0) (resugar a0)
 
 -- | Render a pretty-printed `Arg` as a `Builder`
-buildArg :: Arg -> Builder
+buildArg :: Arg Identity -> Builder
 buildArg (Arg x _A) = "(" <> fromLazyText x <> " : " <> buildExpr _A <> ")"
 
 -- | Render a pretty-printed `Decl` as a `Builder`
-buildDecl :: Decl -> Builder
+buildDecl :: Decl Identity -> Builder
 buildDecl (Decl x args _A)
     =   fromLazyText x
     <>  " "
@@ -449,16 +478,16 @@ buildDecl (Decl x args _A)
     <>  buildExpr _A
 
 -- | Render a pretty-printed `Stmt` as a `Builder`
-buildStmt :: Stmt -> Builder
+buildStmt :: Stmt Identity -> Builder
 buildStmt (Stmt d  Type  ) = "type " <> buildDecl d                         <> " "
 buildStmt (Stmt d  Data  ) = "data " <> buildDecl d                         <> " "
 buildStmt (Stmt d (Let a)) = "let "  <> buildDecl d <> " = " <> buildExpr a <> " "
 
 -- | Render a pretty-printed `Expr` as a `Builder`
-buildExpr :: Expr -> Builder
+buildExpr :: Expr Identity -> Builder
 buildExpr = go 0
   where
-    go :: Int -> Expr -> Builder
+    go :: Int -> Expr Identity -> Builder
     go prec e = case e of
         Const c        -> M.buildConst c
         Var x          -> M.buildVar x
@@ -479,6 +508,7 @@ buildExpr = go 0
         Annot s t      -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
         Stmts ls e'    -> quoteAbove 1 (
             mconcat (map buildStmt ls) <> "in " <> go 1 e' )
+        Import m       -> go prec (runIdentity m)
       where
         quoteAbove :: Int -> Builder -> Builder
         quoteAbove n b = if prec > n then "(" <> b <> ")" else b
@@ -487,5 +517,5 @@ buildExpr = go 0
 
     The result is a syntactically valid Annah program
 -}
-prettyExpr :: Expr -> Text
+prettyExpr :: Expr Identity -> Text
 prettyExpr = toLazyText . buildExpr
