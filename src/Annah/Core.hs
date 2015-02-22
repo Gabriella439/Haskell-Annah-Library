@@ -204,10 +204,11 @@ desugarStmts stmts0 = result
             M.V x0 n0 <- unapply v0
             go x0 n0 stmtsBefore 0
           where
-            go x n (Stmt d@(Decl x' _ _) _:stmts) k
-                | x == x' && n > 0 = go x (n - 1) stmts $! k + 1
-                | x == x'          = Just (d, k)
-                | otherwise        = go x  n      stmts $! k + 1
+            go x n (Stmt d@(Decl x' _ _) st:stmts) k
+                | x == x' && n > 0 = go x (n - 1) stmts $! k'
+                | x == x'          = Just (d, length stmtsBefore - k - 1)
+                | otherwise        = go x  n      stmts $! k'
+                  where k' = k + (case st of Type -> 2; _ -> 1)
             go _  _   []                          _
                                    = Nothing
 
