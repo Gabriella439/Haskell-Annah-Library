@@ -298,7 +298,7 @@ desugarStmts stmts0 = result
                             safeIndex k result
                     let _A' = case m of
                             Just (LetOnly _ _A') -> _A'
-                            Nothing              -> _A
+                            -- TODO: Proper error handling
                     return (Arg x _A')
 
                 {- Data constructors are universally quantified over all type
@@ -337,8 +337,7 @@ desugarStmts stmts0 = result
                         declName0
                         (args ++ simArgs)
                         (foldArgs Pi declType0 recArgs)
-                    Nothing              ->
-                        decl -- TODO: Error out here
+                    -- TODO: Proper error handling
 
 -- | Returns `True` if the given `StmtType` is a type or data constructor
 isCons :: StmtType m -> Bool
