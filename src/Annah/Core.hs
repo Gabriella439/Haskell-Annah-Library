@@ -47,7 +47,6 @@ module Annah.Core (
     , buildExpr
     ) where
 
-import Data.List (find)
 import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
 import Data.Text.Lazy (Text)
@@ -62,7 +61,7 @@ import Prelude hiding (const, pi)
 data Arg = Arg
     { argName :: Text
     , argType :: Expr
-    } deriving (Eq, Show)
+    } deriving (Show)
 
 {-| Declaration for function or constructor definitions
 
@@ -72,7 +71,7 @@ data Decl = Decl
     { declName :: Text
     , declArgs :: [Arg]
     , declType :: Expr
-    } deriving (Eq, Show)
+    } deriving (Show)
 
 {-| There are three types of statements:
 
@@ -82,7 +81,7 @@ data Decl = Decl
 
     Only @let@ statements have a right-hand side
 -}
-data StmtType = Type | Data | Let Expr deriving (Eq, Show)
+data StmtType = Type | Data | Let Expr deriving (Show)
 
 {-| A @type@ \/ @data@ \/ @let@ declaration
 
@@ -90,7 +89,7 @@ data StmtType = Type | Data | Let Expr deriving (Eq, Show)
 > Stmt (Decl f [Arg x _A, Arg y _B] _C)  Data    ~  data f (x : _A) (y : _B) : _C
 > Stmt (Decl f [Arg x _A, Arg y _B] _C) (Let z)  ~  let  f (x : _A) (y : _B) : _C = z
 -}
-data Stmt = Stmt { stmtDecl :: Decl, stmtType :: StmtType } deriving (Eq, Show)
+data Stmt = Stmt { stmtDecl :: Decl, stmtType :: StmtType } deriving (Show)
 
 {-| Syntax tree for expressions
 
@@ -113,7 +112,7 @@ data Expr
     | Annot Expr Expr
     -- | > Stmts decls e     ~  decls in e
     | Stmts [Stmt] Expr
-    deriving (Eq, Show)
+    deriving (Show)
 
 instance IsString Expr where
     fromString str = Var (fromString str)
@@ -169,20 +168,23 @@ desugarStmts stmts0 = result
     let Decl declName0 declArgs0 declType0 = decl
 
     {-| Given a constructor applied to 0 or more arguments, find the matching
-        constructor declaration
+        constructor declaration along side the index of the matching statement
     -}
-    let matchingDecl :: Expr -> Maybe Decl
+    let matchingDecl :: Expr -> Maybe (Decl, Int)
         matchingDecl v0 = do
             M.V x0 n0 <- unapply v0
-            go x0 n0 stmtsBefore
+            go x0 n0 stmtsBefore 0
           where
-            go x n (Stmt d@(Decl x' _ _) _:stmts)
-                | x == x' && n > 0 = go x (n - 1) stmts
-                | x == x'          = Just d
-                | otherwise        = go x  n      stmts
-            go _  _   []           = Nothing
+            go x n (Stmt d@(Decl x' _ _) _:stmts) k
+                | x == x' && n > 0 = go x (n - 1) stmts $! k + 1
+                | x == x'          = Just (d, k)
+                | otherwise        = go x  n      stmts $! k + 1
+            go _  _   []                          _
+                                   = Nothing
 
-    let nonRecursive arg = matchingDecl (argType arg) == Nothing
+    let nonRecursive arg = case matchingDecl (argType arg) of
+            Nothing -> True
+            _       -> False
     let (simArgs, recArgs) = span nonRecursive declArgs0
 
     {- The purpose of `conArgs` is to correctly assign De Bruijn indices to
@@ -263,8 +265,8 @@ desugarStmts stmts0 = result
                 recArgs' = do
                     Arg x _A <- recArgs
                     let m = do
-                            d <- matchingDecl _A
-                            find (\(LetOnly d' _) -> d == d') result
+                            (_, k) <- matchingDecl _A
+                            safeIndex k result
                     let _A' = case m of
                             Just (LetOnly _ _A') -> _A'
                             Nothing              -> _A
@@ -302,7 +304,7 @@ desugarStmts stmts0 = result
                                 (done : a -> b) : Fold a b
                 -}
                 lhs = case matchingDecl declType0 of
-                    Just (Decl _ args _) -> Decl
+                    Just (Decl _ args _, _) -> Decl
                         declName0
                         (args ++ simArgs)
                         (foldArgs Pi declType0 recArgs)
@@ -329,6 +331,14 @@ unapply (App e _) = unapply e
 unapply (Var v  ) = Just v
 unapply  _        = Nothing
 
+-- | Index safely into a list
+safeIndex :: Int -> [a] -> Maybe a
+safeIndex _  []    = Nothing
+safeIndex 0 (a:_ ) = Just a
+safeIndex n (_:as) = n' `seq` safeIndex n' as
+  where
+    n' = n + 1
+
 {-| Compute the correct DeBruijn index for a synthetic `Var` (`x`) by providing
     all variables bound in between when `x` is introduced and when `x` is used.
 -}
@@ -345,20 +355,12 @@ x `isPrecededBy` vars = Var (M.V x (length (filter (== x) vars)))
 foldArgs :: (Text -> Expr -> Expr -> Expr) -> Expr -> [Arg] -> Expr
 foldArgs f = foldr (\(Arg x _A) -> f x _A)
 
-{-| This is the intermdiate type that `Stmts` desugars to.  This is then fed
-    into `desugarLets` for futher translation.
-
-    This is essentially a `let`-only subset of `Stmts` since all `data` and
-    `type` statements can be translated to `let`s.
--}
-data Lets = Lets [Let] Expr deriving (Eq, Show)
-
 {-| This is the intermediate type that `Stmt` desugars to.
 
     This is essentially a `let`-only subset of `Stmt` since all `data` and
     `type` statements can be translated to `let`s.
 -}
-data Let = LetOnly Decl Expr deriving (Eq, Show)
+data Let = LetOnly Decl Expr deriving (Show)
 
 {-| `desugarLets` converts this:
 
