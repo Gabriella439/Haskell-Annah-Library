@@ -53,6 +53,7 @@ tokens :-
     "\" | "λ"                           { \_    -> yield Lambda                }
     "type"                              { \_    -> yield Type                  }
     "data"                              { \_    -> yield Data                  }
+    "fold"                              { \_    -> yield Fold                  }
     "let"                               { \_    -> yield Let                   }
     "="                                 { \_    -> yield Equals                }
     "in"                                { \_    -> yield In                    }
@@ -155,6 +156,7 @@ data Token
     | Pi
     | Type
     | Data
+    | Fold
     | Let
     | Equals
     | In

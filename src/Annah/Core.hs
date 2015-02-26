@@ -76,15 +76,16 @@ data Decl m = Decl
     , declType :: Expr m
     }
 
-{-| There are three types of statements:
+{-| There are four types of statements:
 
 * @type@, which creates a new type constructor
 * @data@, which creates a new data constructor
+* @fold@, which creates a fold for a type
 * @let@, which defines a function or value in terms of another expression
 
     Only @let@ statements have a right-hand side
 -}
-data StmtType m = Type | Data | Let (Expr m)
+data StmtType m = Type | Data | Fold | Let (Expr m)
 
 {-| A @type@ \/ @data@ \/ @let@ declaration
 
@@ -140,6 +141,7 @@ loadDecl (Decl x args _A) = Decl x <$> mapM loadArg args <*> load _A
 loadStmtType :: StmtType IO -> IO (StmtType m)
 loadStmtType  Type     = return Type
 loadStmtType  Data     = return Data
+loadStmtType  Fold     = return Fold
 loadStmtType (Let rhs) = Let <$> load rhs
 
 loadArg :: Arg IO -> IO (Arg m)
@@ -182,12 +184,6 @@ desugar (Import m     ) = desugar (runIdentity m)
             ->  Either a b
 
    The reason I do things this way is because this encoding can implement GADTs.
-
-    This function uses several naming conventions:
-
-    * "sim"    - Simple, meaning non-recursive
-    * "rec"    - Recursive
-    * "con"    - Constructor
 -}
 desugarStmts :: [Stmt Identity] -> [Let]
 desugarStmts stmts0 = result
@@ -198,26 +194,23 @@ desugarStmts stmts0 = result
 
     {-| Given a constructor applied to 0 or more arguments, find:
 
-        * the matching constructor declaration
-        * the index of the matching statement
+        * the matching statement for that constructor
+        * the desugared let-binding for that constructor
     -}
-    let matchingDecl :: Expr Identity -> Maybe (Decl Identity, Int)
+    let matchingDecl :: Expr Identity -> Maybe (Stmt Identity, Let)
         matchingDecl v0 = do
             M.V x0 n0 <- unapply v0
             go x0 n0 stmtsBefore 0
           where
-            go x n (Stmt d@(Decl x' _ _) st:stmts) k
-                | x == x' && n > 0 = go x (n - 1) stmts $! k'
-                | x == x'          = Just (d, length stmtsBefore - k - 1)
-                | otherwise        = go x  n      stmts $! k'
-                  where k' = k + (case st of Type -> 2; _ -> 1)
-            go _  _   []                          _
+            go x n (s@(Stmt (Decl x' _ _) _):stmts) k
+                | x == x' && n > 0 = go x (n - 1) stmts $! k + 1
+                | x == x'          = do
+                    l <- safeIndex (length stmtsBefore - k - 1) result
+                    return (s, l)
+                | otherwise        = go x  n      stmts $! k + 1
+            go _  _   []                             _
                                    = Nothing
 
-    let nonRecursive arg = case matchingDecl (argType arg) of
-            Nothing -> True
-            _       -> False
-    let (simArgs, recArgs) = span nonRecursive declArgs0
     let cons = do
             (_, conName, conNamesAfter) <- zippers (conNames stmts0)
             return (conName `isPrecededBy` conNamesAfter)
@@ -281,67 +274,69 @@ desugarStmts stmts0 = result
             (saturated con)
             (keepCons stmts0)
 
-    case st0 of
-            Type    -> [LetOnly decl rhs, LetOnly foldDecl foldRhs]
-              where
-                -- Every type constructor `foo` comes with an eliminator named
-                -- `foldfoo`
-                rhs      = makeRhs Pi
-                foldType = Pi "_" (saturated (Var (M.V declName0 0))) rhs
-                foldDecl = Decl ("fold" <> declName0) declArgs0 foldType
-                foldRhs  = Lam "x" rhs "x"
-            Let rhs -> [LetOnly decl rhs]
-            Data    -> [LetOnly lhs  rhs]
-              where
-                rhs = foldArgs Lam (makeRhs Lam) recArgs'
+    let declArgs' = do
+            Arg x _A <- declArgs0
+            let _A' = case matchingDecl _A  of
+                    Just (_, LetOnly _ _A') -> _A'
+                    Nothing                 -> _A
+            return (Arg x _A')
 
-                recArgs' = do
-                    Arg x _A <- recArgs
-                    let m = do
-                            (_, k) <- matchingDecl _A
-                            safeIndex k result
-                    let _A' = case m of
-                            Just (LetOnly _ _A') -> _A'
-                            -- TODO: Proper error handling
-                    return (Arg x _A')
+    return (case st0 of
+        Fold    -> LetOnly lhs rhs
+          where
+            rhs = Lam "x" declType0 "x"
 
-                {- Data constructors are universally quantified over all type
-                   variables in their matching type constructor.
+            declType' = foldArgs Pi declType0 declArgs0
 
-                   So, for example, if you write:
+            lhs = case declArgs0 of
+                [Arg _ _A] -> case matchingDecl _A of
+                    Just (Stmt (Decl _ args _) _, _) ->
+                        Decl declName0 args declType'
+                -- TODO: Better error handling
+        Type    -> LetOnly decl rhs
+          where
+            rhs = makeRhs Pi
+        Let rhs -> LetOnly decl rhs
+        Data    -> LetOnly lhs  rhs
+          where
+            rhs = foldArgs Lam (makeRhs Lam) declArgs'
 
-                       type Either (a : *) (b : *) : *
-                       data Left  (l : a) : Either a b
-                       data Right (r : b) : Either a b
+            declType' = foldArgs Pi declType0 declArgs0
 
-                   ... the `Left` and `Right` data constructors are universally
-                   quantified over `a` and `b`.
+            {- Data constructors are universally quantified over all type
+               variables in their matching type constructor.
 
-                   The following code locates the matching type constructor for
-                   any data declaration and implicitly adds the type
-                   constructor's parameters as additional arguments to the data
-                   constructor.
+               So, for example, if you write:
 
-                   Note that if the user adds any type variables explicitly they
-                   will be existentially quantified, not universally quantified.
-                   Here's an example of how the `Fold` type from Haskell's
-                   `foldl` library would be encoded:
+                   type Either (a : *) (b : *) : *
+                   data Left  (l : a) : Either a b
+                   data Right (r : b) : Either a b
 
-                       -- The `a` and `b` are universally quantified
-                       type Fold (a : *) (b : *) : *
-                       -- The `x` is existentially quantified
-                       data MkFold
-                                (x : *)
-                                (step : x -> a -> x)
-                                (begin : x)
-                                (done : a -> b) : Fold a b
-                -}
-                lhs = case matchingDecl declType0 of
-                    Just (Decl _ args _, _) -> Decl
-                        declName0
-                        (args ++ simArgs)
-                        (foldArgs Pi declType0 recArgs)
-                    -- TODO: Proper error handling
+               ... the `Left` and `Right` data constructors are universally
+               quantified over `a` and `b`.
+
+               The following code locates the matching type constructor for any
+               data declaration and implicitly adds the type constructor's
+               parameters as additional arguments to the data constructor.
+
+               Note that if the user adds any type variables explicitly they
+               will be existentially quantified, not universally quantified.
+               Here's an example of how the `Fold` type from Haskell's `foldl`
+               library would be encoded:
+
+                   -- The `a` and `b` are universally quantified
+                   type Fold (a : *) (b : *) : *
+                   -- The `x` is existentially quantified
+                   data MkFold
+                            (x : *)
+                            (step : x -> a -> x)
+                            (begin : x)
+                            (done : a -> b) : Fold a b
+            -}
+            lhs = case matchingDecl declType0 of
+                Just (Stmt (Decl _ args _) _, _) ->
+                    Decl declName0 args declType' )
+                -- TODO: Proper error handling
 
 -- | Returns `True` if the given `StmtType` is a type or data constructor
 isCons :: StmtType m -> Bool
@@ -484,6 +479,7 @@ buildDecl (Decl x args _A)
 buildStmt :: Stmt Identity -> Builder
 buildStmt (Stmt d  Type  ) = "type " <> buildDecl d                         <> " "
 buildStmt (Stmt d  Data  ) = "data " <> buildDecl d                         <> " "
+buildStmt (Stmt d  Fold  ) = "fold " <> buildDecl d                         <> " "
 buildStmt (Stmt d (Let a)) = "let "  <> buildDecl d <> " = " <> buildExpr a <> " "
 
 -- | Render a pretty-printed `Expr` as a `Builder`

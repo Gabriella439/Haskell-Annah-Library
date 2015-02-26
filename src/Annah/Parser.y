@@ -53,6 +53,7 @@ import Annah.Lexer (Token, Position)
     '|~|'   { Lexer.Pi         }
     'type'  { Lexer.Type       }
     'data'  { Lexer.Data       }
+    'fold'  { Lexer.Fold       }
     'let'   { Lexer.Let        }
     '='     { Lexer.Equals     }
     'in'    { Lexer.In         }
@@ -72,6 +73,7 @@ Decl :: { Decl IO }
 Stmt :: { Stmt IO }
 Stmt : 'type' Decl           { Stmt $2  Type    }
      | 'data' Decl           { Stmt $2  Data    }
+     | 'fold' Decl           { Stmt $2  Fold    }
      | 'let'  Decl '=' Expr1 { Stmt $2 (Let $4) }
 
 StmtsRev :: { [Stmt IO] }
