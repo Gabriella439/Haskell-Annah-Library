@@ -306,7 +306,7 @@ desugarStmts stmts0 = result
                     LetOnly lhs declType' rhs
                   where
                     declType' = pi declArgs0 rhs'
-                    lhs = Decl declName0 (filter namedArg args)
+                    lhs = Decl declName0 args
                     rhs = Lam x rhs' (Var (M.V x 0))
               where
                 m = do
