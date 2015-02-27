@@ -68,17 +68,17 @@ Expr0 :: { Expr IO }
       | Expr1           { $1          }
 
 Decl :: { Decl IO }
-     : label Args ':' Expr0 { Decl $1 $2 $4 }
+     : label Args { Decl $1 $2 }
 
 Stmt :: { Stmt IO }
-Stmt : 'type' Decl           { Stmt $2  Type    }
-     | 'data' Decl           { Stmt $2  Data    }
-     | 'fold' Decl           { Stmt $2  Fold    }
-     | 'let'  Decl '=' Expr1 { Stmt $2 (Let $4) }
+Stmt : 'type' Decl                     { Stmt $2  Type       }
+     | 'data' Decl ':' Expr0           { Stmt $2 (Data $4)   }
+     | 'fold' Decl                     { Stmt $2  Fold       }
+     | 'let'  Decl ':' Expr0 '=' Expr1 { Stmt $2 (Let $4 $6) }
 
 StmtsRev :: { [Stmt IO] }
          : StmtsRev Stmt { $2 : $1 }
-         | Stmt         { [$1] }
+         | Stmt          { [$1]    }
 
 Stmts :: { [Stmt IO] }
 Stmts : StmtsRev { reverse $1 }

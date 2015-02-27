@@ -74,7 +74,6 @@ data Arg m = Arg
 data Decl m = Decl
     { declName :: Text
     , declArgs :: [Arg m]
-    , declType :: Expr m
     }
 
 {-| There are four types of statements:
@@ -86,7 +85,11 @@ data Decl m = Decl
 
     Only @let@ statements have a right-hand side
 -}
-data StmtType m = Type | Data | Fold | Let (Expr m)
+data StmtType m
+    = Type
+    | Data (Expr m)
+    | Fold
+    | Let (Expr m) (Expr m)
 
 {-| A @type@ \/ @data@ \/ @let@ declaration
 
@@ -139,13 +142,13 @@ loadStmt :: Stmt IO -> IO (Stmt m)
 loadStmt (Stmt d st) = Stmt <$> loadDecl d <*> loadStmtType st
 
 loadDecl :: Decl IO -> IO (Decl m)
-loadDecl (Decl x args _A) = Decl x <$> mapM loadArg args <*> load _A
+loadDecl (Decl x args) = Decl x <$> mapM loadArg args
 
 loadStmtType :: StmtType IO -> IO (StmtType m)
 loadStmtType  Type     = return Type
-loadStmtType  Data     = return Data
+loadStmtType (Data a ) = Data <$> load a
 loadStmtType  Fold     = return Fold
-loadStmtType (Let rhs) = Let <$> load rhs
+loadStmtType (Let a b) = Let <$> load a <*> load b
 
 loadArg :: Arg IO -> IO (Arg m)
 loadArg (Arg x _A) = Arg x <$> load _A
@@ -160,7 +163,7 @@ desugar (Var v        ) = M.Var   v
 desugar (Lam x _A  b  ) = M.Lam x (desugar _A) (desugar  b)
 desugar (Pi  x _A _B  ) = M.Pi  x (desugar _A) (desugar _B)
 desugar (App f a      ) = M.App (desugar f) (desugar a)
-desugar (Annot a _A   ) = desugar (Stmts [Stmt (Decl "x" [] _A) (Let a)] "x")
+desugar (Annot a _A   ) = desugar (Stmts [Stmt (Decl "x" []) (Let _A a)] "x")
 desugar (Stmts stmts e) = desugarLets (desugarStmts stmts) e
 desugar (Import m     ) = desugar (runIdentity m)
 
@@ -173,9 +176,9 @@ desugarStmts stmts0 = result
   where
     result = do
     (stmtsBefore, stmt0@(Stmt decl st0), stmtsAfter0) <- zippers stmts0
-    let Decl declName0 declArgs0 declType0 = decl
+    let Decl declName0 declArgs0 = decl
 
-    {-| Given a constructor applied to 0 or more arguments, find:
+    {-| Given a constructor name, find:
 
         * the matching statement for that constructor
         * the desugared let-binding for that constructor
@@ -183,7 +186,7 @@ desugarStmts stmts0 = result
     let matchingDecl :: M.Var -> Maybe (Stmt Identity, Let)
         matchingDecl (M.V x0 n0) = go x0 n0 (stmt0:stmtsBefore) 0
           where
-            go x n (s@(Stmt (Decl x' _ _) _):stmts) k
+            go x n (s@(Stmt (Decl x' _) _):stmts) k
                 | x == x' && n > 0 = go x (n - 1) stmts $! k + 1
                 | x == x'          = do
                     l <- safeIndex (length stmtsBefore - k) result
@@ -261,21 +264,20 @@ desugarStmts stmts0 = result
           where
             m = do
                 (f, as) <- unapply t
-                (Stmt (Decl _ args _) _, _) <- matchingDecl f
+                (Stmt (Decl _ args) _, _) <- matchingDecl f
                 let as' = do
                         (a, Arg "_" _) <- zip as args
                         return a
                 return (apply f as')
 
     let makeRhs piOrLam = foldr
-            (\(Stmt (Decl c ps t) st) ->
-                let ps' = case st of
-                        Type -> filter (not . namedArg) ps
-                        _    -> do
+            (\(Stmt (Decl c ps) st) ->
+                let (t', ps') = case st of
+                        Type   -> (Const M.Star, filter (not . namedArg) ps)
+                        Data t -> (reType t, do
                             Arg x _A <- ps
-                            return (Arg x (reType _A))
-
-                    t' = reType t
+                            return (Arg x (reType _A)) )
+                        -- TODO: Make this total
                 in  piOrLam c (pi ps' t') )
             (apply con conArgs)
             (filter (isCons . stmtType) stmts0)
@@ -284,7 +286,7 @@ desugarStmts stmts0 = result
             Arg x _A <- declArgs0
             let m = do
                     (f, as) <- unapply _A
-                    (Stmt (Decl _ params _) _, LetOnly _ rhs) <- matchingDecl f
+                    (Stmt (Decl _ params) _, LetOnly _ _ rhs) <- matchingDecl f
                     let (args, e) = unPi rhs
                     (f', _) <- unapply e
                     let as' = do
@@ -298,38 +300,36 @@ desugarStmts stmts0 = result
             return (Arg x _A')
 
     return (case st0 of
-        Fold    -> LetOnly lhs rhs
-          where
-            rhs = Lam "x" declType0 "x"
-
-            declType' = pi declArgs0 declType0
-
-            lhs = case declArgs0 of
-                [Arg _ _A] -> case m of
-                    Just (Stmt (Decl _ args _) _, _) ->
-                        Decl declName0 (filter namedArg args) declType'
+        Fold    -> case declArgs0 of
+            [Arg x _A] -> case m of
+                Just (Stmt (Decl _ args) _, LetOnly _ _ rhs') ->
+                    LetOnly lhs declType' rhs
                   where
-                    m = do
-                        (f, _) <- unapply _A
-                        matchingDecl f
+                    declType' = pi declArgs0 rhs'
+                    lhs = Decl declName0 (filter namedArg args)
+                    rhs = Lam x rhs' (Var (M.V x 0))
+              where
+                m = do
+                    (f, _) <- unapply _A
+                    matchingDecl f
                 -- TODO: Better error handling
-        Type    -> LetOnly decl rhs
+        Type              -> LetOnly decl (Const M.Star) rhs
           where
             rhs = makeRhs Pi
-        Let rhs -> LetOnly decl rhs
-        Data    -> LetOnly lhs  rhs
+        Let  declType rhs -> LetOnly decl declType  rhs
+        Data declType     -> LetOnly lhs  declType' rhs
           where
             rhs = lam declArgs' (makeRhs Lam)
 
-            declType' = pi declArgs0 declType0
+            declType' = pi declArgs0 declType
 
             m = do
-                (f, _) <- unapply declType0
+                (f, _) <- unapply declType
                 matchingDecl f
 
             lhs = case m of
-                Just (Stmt (Decl _ args _) _, _) ->
-                    Decl declName0 (filter namedArg args) declType' )
+                Just (Stmt (Decl _ args) _, _) ->
+                    Decl declName0 (filter namedArg args) )
                 -- TODO: Proper error handling
 
 namedArg :: Arg m -> Bool
@@ -337,9 +337,9 @@ namedArg a = argName a /= "_"
 
 -- | Returns `True` if the given `StmtType` is a type or data constructor
 isCons :: StmtType m -> Bool
-isCons Type = True
-isCons Data = True
-isCons _    = False
+isCons  Type    = True
+isCons (Data _) = True
+isCons  _       = False
 
 -- | The names of all type or data constructors
 conNames :: [Stmt m] -> [Text]
@@ -398,7 +398,7 @@ unLam  e           = ([], e)
     This is essentially a `let`-only subset of `Stmt` since all `data` and
     `type` statements can be translated to `let`s.
 -}
-data Let = LetOnly (Decl Identity) (Expr Identity)
+data Let = LetOnly (Decl Identity) (Expr Identity) (Expr Identity)
 
 {-| `desugarLets` converts this:
 
@@ -429,7 +429,7 @@ desugarLets lets e = apps
     -- > ->  e
     -- > )
     lams = foldr
-        (\(LetOnly (Decl fn args _Bn) _) rest ->
+        (\(LetOnly (Decl fn args) _Bn _) rest ->
             -- > forall (xn0 : _An0) -> ... -> forall (xnj : _Anj) -> _Bn
             let rhsType = pi args _Bn
 
@@ -443,7 +443,7 @@ desugarLets lets e = apps
     -- > ...
     -- > (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
     apps = foldr
-        (\(LetOnly (Decl _ args _) bn) rest ->
+        (\(LetOnly (Decl _ args) _ bn) rest ->
             -- > rest (\(xn0 : _An0) -> ... -> \(xnj : _Anj) -> bn)
             M.App rest (desugar (lam args bn)) )
         lams
@@ -479,19 +479,21 @@ buildArg (Arg x _A) = "(" <> fromLazyText x <> " : " <> buildExpr _A <> ")"
 
 -- | Render a pretty-printed `Decl` as a `Builder`
 buildDecl :: Decl Identity -> Builder
-buildDecl (Decl x args _A)
+buildDecl (Decl x args)
     =   fromLazyText x
     <>  " "
     <>  mconcat (map (\arg -> buildArg arg <> " ") args)
-    <>  ": "
-    <>  buildExpr _A
 
 -- | Render a pretty-printed `Stmt` as a `Builder`
 buildStmt :: Stmt Identity -> Builder
-buildStmt (Stmt d  Type  ) = "type " <> buildDecl d                         <> " "
-buildStmt (Stmt d  Data  ) = "data " <> buildDecl d                         <> " "
-buildStmt (Stmt d  Fold  ) = "fold " <> buildDecl d                         <> " "
-buildStmt (Stmt d (Let a)) = "let "  <> buildDecl d <> " = " <> buildExpr a <> " "
+buildStmt (Stmt d  Type    ) =
+    "type " <> buildDecl d                                                <> " "
+buildStmt (Stmt d (Data a )) =
+    "data " <> buildDecl d <> ": " <> buildExpr a                         <> " "
+buildStmt (Stmt d  Fold    ) =
+    "fold " <> buildDecl d                                                <> " "
+buildStmt (Stmt d (Let a b)) =
+    "let "  <> buildDecl d <> ": " <> buildExpr a <> " = " <> buildExpr b <> " "
 
 -- | Render a pretty-printed `Expr` as a `Builder`
 buildExpr :: Expr Identity -> Builder
