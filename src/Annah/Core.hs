@@ -49,6 +49,7 @@ module Annah.Core (
     ) where
 
 import Control.Applicative ((<$>), (<*>))
+import Control.Monad (guard)
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
@@ -93,8 +94,10 @@ data StmtType m = Type | Data | Fold | Let (Expr m)
 > Stmt (Decl f [Arg x _A, Arg y _B] _C)  Data    ~  data f (x : _A) (y : _B) : _C
 > Stmt (Decl f [Arg x _A, Arg y _B] _C) (Let z)  ~  let  f (x : _A) (y : _B) : _C = z
 -}
-data Stmt m =
-    Stmt { stmtDecl :: Decl m, stmtType :: StmtType m }
+data Stmt m = Stmt
+    { stmtDecl :: Decl m
+    , stmtType :: StmtType m
+    }
 
 {-| Syntax tree for expressions
 
@@ -162,34 +165,14 @@ desugar (Stmts stmts e) = desugarLets (desugarStmts stmts) e
 desugar (Import m     ) = desugar (runIdentity m)
 
 {-| This is the meat of the Boehm-Berarducci encoding which translates the
-    `type` or `data` declarations to their equivalent `let` expression.
-
-    This is technically a variation on Boehm-Berarducci encoding which supports
-    generalized algebraic data types (GADTs).  For example, a true
-    Boehm-Berarducci encoding would encode the `Either` type constructor like
-    this:
-
-    let Either (a : *) (b : *) : *
-            =   forall (Either : *)
-            ->  forall (Left   : a -> Either)
-            ->  forall (Right  : b -> Either)
-            ->  Either
-
-    ... whereas `annah` encodes `Either` like this:
-
-    let Either (a : *) (b : *) : *
-            =   forall (Either : * -> * -> *)
-            ->  forall (Left   : a -> Either a b)
-            ->  forall (Right  : b -> Either a b)
-            ->  Either a b
-
-   The reason I do things this way is because this encoding can implement GADTs.
+    `type`, `data`, and `fold` declarations to their equivalent `let`
+    expression.
 -}
 desugarStmts :: [Stmt Identity] -> [Let]
 desugarStmts stmts0 = result
   where
     result = do
-    (stmtsBefore, Stmt decl st0, stmtsAfter0) <- zippers stmts0
+    (stmtsBefore, stmt0@(Stmt decl st0), stmtsAfter0) <- zippers stmts0
     let Decl declName0 declArgs0 declType0 = decl
 
     {-| Given a constructor applied to 0 or more arguments, find:
@@ -197,15 +180,13 @@ desugarStmts stmts0 = result
         * the matching statement for that constructor
         * the desugared let-binding for that constructor
     -}
-    let matchingDecl :: Expr Identity -> Maybe (Stmt Identity, Let)
-        matchingDecl v0 = do
-            M.V x0 n0 <- unapply v0
-            go x0 n0 stmtsBefore 0
+    let matchingDecl :: M.Var -> Maybe (Stmt Identity, Let)
+        matchingDecl (M.V x0 n0) = go x0 n0 (stmt0:stmtsBefore) 0
           where
             go x n (s@(Stmt (Decl x' _ _) _):stmts) k
                 | x == x' && n > 0 = go x (n - 1) stmts $! k + 1
                 | x == x'          = do
-                    l <- safeIndex (length stmtsBefore - k - 1) result
+                    l <- safeIndex (length stmtsBefore - k) result
                     return (s, l)
                 | otherwise        = go x  n      stmts $! k + 1
             go _  _   []                             _
@@ -213,7 +194,7 @@ desugarStmts stmts0 = result
 
     let cons = do
             (_, conName, conNamesAfter) <- zippers (conNames stmts0)
-            return (conName `isPrecededBy` conNamesAfter)
+            return (Var (conName `isPrecededBy` conNamesAfter))
 
     {- The purpose of `conArgs` is to correctly assign De Bruijn indices to
        constructor arguments.  For typical code all names will be unique and the
@@ -234,8 +215,8 @@ desugarStmts stmts0 = result
            ->  \(b : *)
            ->  \(_ : a)
            ->  \(_ : b)
-           ->  \(Pair : * -> * -> *)
-           ->  \(MkPair : a -> b -> Pair a b)
+           ->  \(Pair : *)
+           ->  \(MkPair : a -> b -> Pair)
            ->  MkPair _@1 _
 
         Notice how the generated expression uses the DeBruijn index to
@@ -243,12 +224,18 @@ desugarStmts stmts0 = result
     -}
     let conArgs = do
             (_, arg, argsAfter) <- zippers declArgs0
+            case st0 of
+                Type -> guard (argName arg == "_")
+                _    -> return ()
             let names1 = map argName argsAfter
             let names2 = conNames stmts0
             let v      = argName arg `isPrecededBy` (names1 ++ names2)
-            return (case matchingDecl (argType arg) of
-                Nothing -> v
-                _       -> foldr (flip App) v (reverse cons) )
+            let m = do
+                    (f, _) <- unapply (argType arg)
+                    matchingDecl f
+            return (case m of
+                Nothing -> Var v
+                _       -> apply v cons )
 
     {- We also need to correctly compute the DeBruin index for the constructor.
        `annah` permits data constructors to have duplicate names and `annah`
@@ -268,17 +255,46 @@ desugarStmts stmts0 = result
     -}
     let con = declName0 `isPrecededBy` conNames stmtsAfter0
 
-    let saturated c = foldr (flip App) c (reverse conArgs)
+    let reType t = case m of
+            Nothing -> t
+            Just t' -> t'
+          where
+            m = do
+                (f, as) <- unapply t
+                (Stmt (Decl _ args _) _, _) <- matchingDecl f
+                let as' = do
+                        (a, Arg "_" _) <- zip as args
+                        return a
+                return (apply f as')
+
     let makeRhs piOrLam = foldr
-            (\(Stmt (Decl c ps t) _) -> piOrLam c (foldArgs Pi t ps))
-            (saturated con)
-            (keepCons stmts0)
+            (\(Stmt (Decl c ps t) st) ->
+                let ps' = case st of
+                        Type -> filter (not . namedArg) ps
+                        _    -> do
+                            Arg x _A <- ps
+                            return (Arg x (reType _A))
+
+                    t' = reType t
+                in  piOrLam c (pi ps' t') )
+            (apply con conArgs)
+            (filter (isCons . stmtType) stmts0)
 
     let declArgs' = do
             Arg x _A <- declArgs0
-            let _A' = case matchingDecl _A  of
-                    Just (_, LetOnly _ _A') -> _A'
-                    Nothing                 -> _A
+            let m = do
+                    (f, as) <- unapply _A
+                    (Stmt (Decl _ params _) _, LetOnly _ rhs) <- matchingDecl f
+                    let (args, e) = unPi rhs
+                    (f', _) <- unapply e
+                    let as' = do
+                            (a, Arg "_" _) <- zip as params
+                            return a
+                    let e' = apply f' as'
+                    return (pi args e')
+            let _A' = case m of
+                    Just _A' -> _A'
+                    Nothing  -> _A
             return (Arg x _A')
 
     return (case st0 of
@@ -286,12 +302,16 @@ desugarStmts stmts0 = result
           where
             rhs = Lam "x" declType0 "x"
 
-            declType' = foldArgs Pi declType0 declArgs0
+            declType' = pi declArgs0 declType0
 
             lhs = case declArgs0 of
-                [Arg _ _A] -> case matchingDecl _A of
+                [Arg _ _A] -> case m of
                     Just (Stmt (Decl _ args _) _, _) ->
-                        Decl declName0 args declType'
+                        Decl declName0 (filter namedArg args) declType'
+                  where
+                    m = do
+                        (f, _) <- unapply _A
+                        matchingDecl f
                 -- TODO: Better error handling
         Type    -> LetOnly decl rhs
           where
@@ -299,44 +319,21 @@ desugarStmts stmts0 = result
         Let rhs -> LetOnly decl rhs
         Data    -> LetOnly lhs  rhs
           where
-            rhs = foldArgs Lam (makeRhs Lam) declArgs'
+            rhs = lam declArgs' (makeRhs Lam)
 
-            declType' = foldArgs Pi declType0 declArgs0
+            declType' = pi declArgs0 declType0
 
-            {- Data constructors are universally quantified over all type
-               variables in their matching type constructor.
+            m = do
+                (f, _) <- unapply declType0
+                matchingDecl f
 
-               So, for example, if you write:
-
-                   type Either (a : *) (b : *) : *
-                   data Left  (l : a) : Either a b
-                   data Right (r : b) : Either a b
-
-               ... the `Left` and `Right` data constructors are universally
-               quantified over `a` and `b`.
-
-               The following code locates the matching type constructor for any
-               data declaration and implicitly adds the type constructor's
-               parameters as additional arguments to the data constructor.
-
-               Note that if the user adds any type variables explicitly they
-               will be existentially quantified, not universally quantified.
-               Here's an example of how the `Fold` type from Haskell's `foldl`
-               library would be encoded:
-
-                   -- The `a` and `b` are universally quantified
-                   type Fold (a : *) (b : *) : *
-                   -- The `x` is existentially quantified
-                   data MkFold
-                            (x : *)
-                            (step : x -> a -> x)
-                            (begin : x)
-                            (done : a -> b) : Fold a b
-            -}
-            lhs = case matchingDecl declType0 of
+            lhs = case m of
                 Just (Stmt (Decl _ args _) _, _) ->
-                    Decl declName0 args declType' )
+                    Decl declName0 (filter namedArg args) declType' )
                 -- TODO: Proper error handling
+
+namedArg :: Arg m -> Bool
+namedArg a = argName a /= "_"
 
 -- | Returns `True` if the given `StmtType` is a type or data constructor
 isCons :: StmtType m -> Bool
@@ -344,19 +341,25 @@ isCons Type = True
 isCons Data = True
 isCons _    = False
 
--- | Keep only `Stmt`s that are type or data constructor declarations
-keepCons :: [Stmt m] -> [Stmt m]
-keepCons = filter (isCons . stmtType)
-
 -- | The names of all type or data constructors
 conNames :: [Stmt m] -> [Text]
-conNames = map (declName . stmtDecl) . keepCons
+conNames = map (declName . stmtDecl) . filter (isCons . stmtType)
 
--- | Extract a saturated type constructor's name
-unapply :: Expr m -> Maybe M.Var
-unapply (App e _) = unapply e
-unapply (Var v  ) = Just v
-unapply  _        = Nothing
+-- | Unapply a function, returning the function name and the arguments
+unapply :: Expr m -> Maybe (M.Var, [Expr m])
+unapply e0 = do
+    ~(f, diffAs) <- go e0
+    return (f, diffAs [])
+  where
+    go (App e a) = do
+        ~(f, diffAs) <- go e
+        return (f, diffAs . (a:))
+    go (Var v  ) = Just (v, id)
+    go  _        = Nothing
+
+-- | Apply a function to a list of arguments
+apply :: M.Var -> [Expr m] -> Expr m
+apply f as = foldr (flip App) (Var f) (reverse as)
 
 -- | Index safely into a list
 safeIndex :: Int -> [a] -> Maybe a
@@ -369,18 +372,26 @@ safeIndex n (_:as) = n' `seq` safeIndex n' as
 {-| Compute the correct DeBruijn index for a synthetic `Var` (`x`) by providing
     all variables bound in between when `x` is introduced and when `x` is used.
 -}
-isPrecededBy :: Text -> [Text] -> Expr m
-x `isPrecededBy` vars = Var (M.V x (length (filter (== x) vars)))
+isPrecededBy :: Text -> [Text] -> M.Var
+x `isPrecededBy` vars = M.V x (length (filter (== x) vars))
 
-{-|
-> foldArgs Lam e [(Arg x0 _A0), ..., (Arg xj _Aj)]
-> = "\(x0 : _A0) -> ... -> \(xj : _Aj) -> e"
->
-> foldArgs Pi e [(Arg x0 _A0), ..., (Arg xj _Aj)]
-> = "forall (x0 : _A0) -> ... -> forall (xj : _Aj) -> e"
--}
-foldArgs :: (Text -> Expr m -> b -> b ) -> b -> [Arg m] -> b
-foldArgs f = foldr (\(Arg x _A) -> f x _A)
+pi :: [Arg m] -> Expr m -> Expr m
+pi args e = foldr (\(Arg x _A) -> Pi x _A) e args
+
+unPi :: Expr m -> ([Arg m], Expr m)
+unPi (Pi x _A _B) = (Arg x _A:args, e)
+  where
+    ~(args, e) = unPi _B
+unPi  e           = ([], e)
+
+lam :: [Arg m] -> Expr m -> Expr m
+lam args e = foldr (\(Arg x _A) -> Lam x _A) e args
+
+unLam :: Expr m -> ([Arg m], Expr m)
+unLam (Lam x _A b) = (Arg x _A:args, e)
+  where
+    ~(args, e) = unLam b
+unLam  e           = ([], e)
 
 {-| This is the intermediate type that `Stmt` desugars to.
 
@@ -420,7 +431,7 @@ desugarLets lets e = apps
     lams = foldr
         (\(LetOnly (Decl fn args _Bn) _) rest ->
             -- > forall (xn0 : _An0) -> ... -> forall (xnj : _Anj) -> _Bn
-            let rhsType = foldArgs Pi _Bn args
+            let rhsType = pi args _Bn
 
             -- > \(fn : rhsType) -> rest
             in  M.Lam fn (desugar rhsType) rest )
@@ -434,7 +445,7 @@ desugarLets lets e = apps
     apps = foldr
         (\(LetOnly (Decl _ args _) bn) rest ->
             -- > rest (\(xn0 : _An0) -> ... -> \(xnj : _Anj) -> bn)
-            M.App rest (desugar (foldArgs Lam bn args)) )
+            M.App rest (desugar (lam args bn)) )
         lams
         (reverse lets)
 
