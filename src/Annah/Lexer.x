@@ -27,8 +27,8 @@ $digit = 0-9
 -- Same as Haskell
 $opchar = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~]
 
-$fst       = [A-Za-z_]
-$labelchar = [A-Za-z0-9_]
+$fst   = [A-Za-z_]
+$label = [A-Za-z0-9_]
 
 $whiteNoNewline = $white # \n
 
@@ -36,29 +36,31 @@ $path = . # $white
 
 tokens :-
 
-    $whiteNoNewline+                    ;
-    \n                                  { \_    -> lift (do
-                                            line   += 1
-                                            column .= 0 )                      }
-    "--".*                              ;
-    "("                                 { \_    -> yield OpenParen             }
-    ")"                                 { \_    -> yield CloseParen            }
-    ":"                                 { \_    -> yield Colon                 }
-    "@file:" $path+                     { \text -> yield (File (Text.drop 6 text)) }
-    "@"                                 { \_    -> yield At                    }
-    "*"                                 { \_    -> yield Star                  }
-    "BOX" | "□"                         { \_    -> yield Box                   }
-    "->" | "→"                          { \_    -> yield Arrow                 }
-    "\/" | "|~|" | "forall" | "∀" | "Π" { \_    -> yield Pi                    }
-    "\" | "λ"                           { \_    -> yield Lambda                }
-    "type"                              { \_    -> yield Type                  }
-    "data"                              { \_    -> yield Data                  }
-    "fold"                              { \_    -> yield Fold                  }
-    "let"                               { \_    -> yield Let                   }
-    "="                                 { \_    -> yield Equals                }
-    "in"                                { \_    -> yield In                    }
-    $digit+                             { \text -> yield (Number (toInt text)) }
-    $fst $labelchar* | "(" $opchar+ ")" { \text -> yield (Label text)          }
+    $whiteNoNewline+                  ;
+    \n                              { \_    -> lift (do
+                                        line   += 1
+                                        column .= 0 )                          }
+    "--".*                          ;
+    "("                             { \_    -> yield OpenParen                 }
+    ")"                             { \_    -> yield CloseParen                }
+    "{"                             { \_    -> yield OpenBrace                 }
+    "}"                             { \_    -> yield CloseBrace                }
+    ":"                             { \_    -> yield Colon                     }
+    "@file:" $path+                 { \text -> yield (File (Text.drop 6 text)) }
+    "@"                             { \_    -> yield At                        }
+    "*"                             { \_    -> yield Star                      }
+    "BOX" | "□"                     { \_    -> yield Box                       }
+    "->" | "→"                      { \_    -> yield Arrow                     }
+    "\/" | "|~|" | "forall" | "∀" | "Π" { \_ -> yield Pi                       }
+    "\" | "λ"                       { \_    -> yield Lambda                    }
+    "type"                          { \_    -> yield Type                      }
+    "data"                          { \_    -> yield Data                      }
+    "fold"                          { \_    -> yield Fold                      }
+    "let"                           { \_    -> yield Let                       }
+    "="                             { \_    -> yield Equals                    }
+    "in"                            { \_    -> yield In                        }
+    $digit+                         { \text -> yield (Number (toInt text))     }
+    $fst $label* | "(" $opchar+ ")" { \text -> yield (Label text)              }
 
 {
 toInt :: Text -> Int
@@ -147,6 +149,8 @@ lexExpr text = go (AlexInput '\n' [] text)
 data Token
     = OpenParen
     | CloseParen
+    | OpenBrace
+    | CloseBrace
     | Colon
     | At
     | Star

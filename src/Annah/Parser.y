@@ -44,6 +44,8 @@ import Annah.Lexer (Token, Position)
 %token
     '('     { Lexer.OpenParen  }
     ')'     { Lexer.CloseParen }
+    '{'     { Lexer.OpenBrace  }
+    '}'     { Lexer.CloseBrace }
     ':'     { Lexer.Colon      }
     '@'     { Lexer.At         }
     '*'     { Lexer.Star       }
@@ -67,14 +69,11 @@ Expr0 :: { Expr IO }
       : Expr1 ':' Expr0 { Annot $1 $3 }
       | Expr1           { $1          }
 
-Decl :: { Decl IO }
-     : label Args { Decl $1 $2 }
-
 Stmt :: { Stmt IO }
-Stmt : 'type' Decl                     { Stmt $2  Type       }
-     | 'data' Decl ':' Expr0           { Stmt $2 (Data $4)   }
-     | 'fold' Decl                     { Stmt $2  Fold       }
-     | 'let'  Decl ':' Expr0 '=' Expr1 { Stmt $2 (Let $4 $6) }
+Stmt : 'type' label Args                     { StmtType (Type $2 $3      ) }
+     | 'data' label Args ':' Expr0           { StmtData (Data $2 $3 $5   ) }
+     | 'fold' label Arg                      { StmtFold (Fold $2 $3      ) }
+     | 'let'  label Args ':' Expr0 '=' Expr1 { StmtLet  (Let  $2 $3 $5 $7) }
 
 StmtsRev :: { [Stmt IO] }
          : StmtsRev Stmt { $2 : $1 }
