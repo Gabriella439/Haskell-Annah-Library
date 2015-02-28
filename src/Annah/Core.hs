@@ -33,19 +33,21 @@ module Annah.Core (
       M.Var(..)
     , M.Const(..)
     , Arg(..)
-    , Decl(..)
     , Stmt(..)
-    , StmtType(..)
+    , Type(..)
+    , Data(..)
+    , Fold(..)
+    , Let(..)
     , Expr(..)
 
     -- * Core functions
-    , load
+    , Load(..)
     , desugar
     , resugar
 
     -- * Utilities
+    , Build(..)
     , prettyExpr
-    , buildExpr
     ) where
 
 import Control.Applicative ((<$>), (<*>))
@@ -67,40 +69,86 @@ data Arg m = Arg
     , argType :: Expr m
     }
 
-{-| Declaration for function or constructor definitions
-
-> Decl f [Arg x _A, Arg y _B] _C  ~  f (x : _A) (y : _B) : _C
+{-|
+> Type f [Arg x _A, Arg y _B]  ~  type f (x : _A) (y : _B)
 -}
-data Decl m = Decl
-    { declName :: Text
-    , declArgs :: [Arg m]
+data Type m = Type
+    { typeName :: Text
+    , typeArgs :: [Arg m]
+    }
+
+{-|
+> Data f [Arg x _A, Arg y _B] _C  ~  data f (x : _A) (y : _B) : _C
+-}
+data Data m = Data
+    { dataName :: Text
+    , dataArgs :: [Arg m]
+    , dataType :: Expr m
+    }
+
+{-|
+> Fold f (Arg x _A)  ~  fold f (x : _A)
+-}
+data Fold m = Fold
+    { foldName :: Text
+    , foldArg  :: Arg m
+    }
+
+{-|
+> Let f [Arg x _A, Arg y _B] _C rhs  ~  let f (x : _A) (y : _B) : _C = rhs
+-}
+data Let m = Let
+    { letName :: Text
+    , letArgs :: [Arg m]
+    , letType :: Expr m
+    , letRhs  :: Expr m
     }
 
 {-| There are four types of statements:
 
-* @type@, which creates a new type constructor
-* @data@, which creates a new data constructor
-* @fold@, which creates a fold for a type
-* @let@, which defines a function or value in terms of another expression
+    * @type@, which creates a new type constructor
+    * @data@, which creates a new data constructor
+    * @fold@, which creates a fold for a type
+    * @let@, which defines a function or value in terms of another expression
 
-    Only @let@ statements have a right-hand side
+    Annah is liberal about statement order, but statements can only refer to
+    values introduced by previous statements.  Also, statement order affects the
+    derived implementation of types.  For example, if you define:
+
+    > type Bool
+    > data True  : Bool
+    > data False : Bool
+    > in   True
+
+    ... then it will desugar to:
+
+    > \(Bool : *) -> \(True : Bool) -> \(False : Bool) -> True
+
+    ... but if you reorder the `True` and `False` constructors:
+
+    > type Bool
+    > data False : Bool
+    > data True  : Bool
+    > in   True
+
+    ... then underlying implementation will change:
+
+    > \(Bool : *) -> \(False : Bool) -> \(True : Bool) -> True
+
+    This affects any generated `fold` for the type because the expected order
+    of branches will correspond to the order of constructor statements.
 -}
-data StmtType m
-    = Type
-    | Data (Expr m)
-    | Fold
-    | Let (Expr m) (Expr m)
+data Stmt m
+    = StmtType (Type m)
+    | StmtData (Data m)
+    | StmtFold (Fold m)
+    | StmtLet  (Let  m)
 
-{-| A @type@ \/ @data@ \/ @let@ declaration
-
-> Stmt (Decl f [Arg x _A, Arg y _B] _C)  Type    ~  type f (x : _A) (y : _B) : _C
-> Stmt (Decl f [Arg x _A, Arg y _B] _C)  Data    ~  data f (x : _A) (y : _B) : _C
-> Stmt (Decl f [Arg x _A, Arg y _B] _C) (Let z)  ~  let  f (x : _A) (y : _B) : _C = z
--}
-data Stmt m = Stmt
-    { stmtDecl :: Decl m
-    , stmtType :: StmtType m
-    }
+stmtName :: Stmt m -> Text
+stmtName (StmtType t) = typeName t
+stmtName (StmtData d) = dataName d
+stmtName (StmtFold f) = foldName f
+stmtName (StmtLet  l) =  letName l
 
 {-| Syntax tree for expressions
 
@@ -128,30 +176,39 @@ data Expr m
 instance IsString (Expr m) where
     fromString str = Var (fromString str)
 
-load :: Expr IO -> IO (Expr m)
-load (Const c      ) = return (Const c)
-load (Var v        ) = return (Var v)
-load (Lam x _A  b  ) = Lam x <$> load _A <*> load  b
-load (Pi  x _A _B  ) = Pi  x <$> load _A <*> load _B
-load (App f a      ) = App <$> load f <*> load a
-load (Annot a _A   ) = Annot <$> load a <*> load _A
-load (Stmts stmts e) = Stmts <$> mapM loadStmt stmts <*> load e
-load (Import io    ) = io >>= load
+class Load f where
+    load :: f IO  -> IO (f m)
 
-loadStmt :: Stmt IO -> IO (Stmt m)
-loadStmt (Stmt d st) = Stmt <$> loadDecl d <*> loadStmtType st
+instance Load Expr where
+    load (Const c      ) = return (Const c)
+    load (Var v        ) = return (Var v)
+    load (Lam x _A  b  ) = Lam x <$> load _A <*> load  b
+    load (Pi  x _A _B  ) = Pi  x <$> load _A <*> load _B
+    load (App f a      ) = App <$> load f <*> load a
+    load (Annot a _A   ) = Annot <$> load a <*> load _A
+    load (Stmts stmts e) = Stmts <$> mapM load stmts <*> load e
+    load (Import io    ) = io >>= load
 
-loadDecl :: Decl IO -> IO (Decl m)
-loadDecl (Decl x args) = Decl x <$> mapM loadArg args
+instance Load Stmt where
+    load (StmtType a) = StmtType <$> load a
+    load (StmtData a) = StmtData <$> load a
+    load (StmtFold a) = StmtFold <$> load a
+    load (StmtLet  a) = StmtLet  <$> load a
 
-loadStmtType :: StmtType IO -> IO (StmtType m)
-loadStmtType  Type     = return Type
-loadStmtType (Data a ) = Data <$> load a
-loadStmtType  Fold     = return Fold
-loadStmtType (Let a b) = Let <$> load a <*> load b
+instance Load Type where
+    load (Type f args) = Type f <$> mapM load args
 
-loadArg :: Arg IO -> IO (Arg m)
-loadArg (Arg x _A) = Arg x <$> load _A
+instance Load Data where
+    load (Data f args _B) = Data f <$> mapM load args <*> load _B
+
+instance Load Fold where
+    load (Fold f arg) = Fold f <$> load arg
+
+instance Load Let where
+    load (Let f args _B b) = Let f <$> mapM load args <*> load _B <*> load b
+
+instance Load Arg where
+    load (Arg x _A) = Arg x <$> load _A
 
 {-| Convert an Annah expression to a Morte expression
 
@@ -163,187 +220,190 @@ desugar (Var v        ) = M.Var   v
 desugar (Lam x _A  b  ) = M.Lam x (desugar _A) (desugar  b)
 desugar (Pi  x _A _B  ) = M.Pi  x (desugar _A) (desugar _B)
 desugar (App f a      ) = M.App (desugar f) (desugar a)
-desugar (Annot a _A   ) = desugar (Stmts [Stmt (Decl "x" []) (Let _A a)] "x")
+desugar (Annot a _A   ) = desugar (Stmts [StmtLet (Let "x" [] _A a)] "x")
 desugar (Stmts stmts e) = desugarLets (desugarStmts stmts) e
 desugar (Import m     ) = desugar (runIdentity m)
 
 {-| This is the meat of the Boehm-Berarducci encoding which translates the
     `type`, `data`, and `fold` declarations to their equivalent `let`
     expression.
+
+    Annah permits data constructors to have duplicate names and Annah also
+    permits data constructors to share the same name as type constructors.  This
+    means that this is valid Annah code:
+
+    > type A : *
+    > data A : A
+    > data A : A@1
+    > in   A
+
+    ... which compiles to:
+
+    > \(A : *) -> \(A : A) -> \(A : A@1) -> A
+
+    Constructor fields can also have duplicate field names, too.  One case where
+    this is useful is when the user doesn't feel like naming fields and just
+    gives every field the empty label, like this example:
+
+    > type Pair (a : *) (b : *) : *
+    > data MkPair (_ : a) (_ : b) : Pair a b
+    > in   MkPair
+
+    ... which compiles to:
+
+    >     \(a : *)
+    > ->  \(b : *)
+    > ->  \(_ : a)
+    > ->  \(_ : b)
+    > ->  \(Pair : *)
+    > ->  \(MkPair : a -> b -> Pair)
+    > ->  MkPair _@1 _
 -}
-desugarStmts :: [Stmt Identity] -> [Let]
+desugarStmts :: [Stmt Identity] -> [Let Identity]
 desugarStmts stmts0 = result
   where
     result = do
-    (stmtsBefore, stmt0@(Stmt decl st0), stmtsAfter0) <- zippers stmts0
-    let Decl declName0 declArgs0 = decl
+    (stmtsBefore0, stmt0, stmtsAfter0) <- zippers stmts0
 
-    {-| Given a constructor name, find:
+    {-| Given a type constructor name, find:
 
-        * the matching statement for that constructor
-        * the desugared let-binding for that constructor
+        * the matching statement for that type constructor
+        * the desugared let-binding for that type constructor
     -}
-    let matchingDecl :: M.Var -> Maybe (Stmt Identity, Let)
-        matchingDecl (M.V x0 n0) = go x0 n0 (stmt0:stmtsBefore) 0
+    let matchingDecl :: M.Var -> Maybe (Type Identity, Let Identity)
+        matchingDecl (M.V x0 n0) = go x0 n0 (stmt0:stmtsBefore0) 0
           where
-            go x n (s@(Stmt (Decl x' _) _):stmts) k
-                | x == x' && n > 0 = go x (n - 1) stmts $! k + 1
-                | x == x'          = do
-                    l <- safeIndex (length stmtsBefore - k) result
-                    return (s, l)
-                | otherwise        = go x  n      stmts $! k + 1
-            go _  _   []                             _
-                                   = Nothing
+            go x n (stmt:stmts) k
+                | stmtName stmt == x && n > 0 = go x (n - 1) stmts $! k + 1
+                | stmtName stmt == x          = do
+                    StmtType t <- return stmt
+                    l <- safeIndex (length stmtsBefore0 - k) result
+                    return (t, l)
+                | otherwise                   = go x  n      stmts $! k + 1
+            go _ _  []          _             = Nothing
 
+    {- "Pinning" a saturated type constructor means deleting all universally
+        quantified arguments
+    -}
+    let pin fas = case m of
+            Nothing   -> fas
+            Just fas' -> fas'
+          where
+            m = do
+                (f, as) <- unapply fas
+                (t, _)  <- matchingDecl f
+                let as' = do
+                        (a, Arg "_" _) <- zip as (typeArgs t)
+                        return a
+                return (apply f as')
+
+    -- Compute the DeBruijn indices for constructors in case of duplicate names
+    let con  = stmtName stmt0 `isPrecededBy` conNames stmtsAfter0
     let cons = do
             (_, conName, conNamesAfter) <- zippers (conNames stmts0)
             return (Var (conName `isPrecededBy` conNamesAfter))
 
-    {- The purpose of `conArgs` is to correctly assign De Bruijn indices to
-       constructor arguments.  For typical code all names will be unique and the
-       DeBruijn indices will all be zero.  However, Annah permits duplicate
-       names for constructors and their parameters, which results in non-zero
-       DeBruijn indices.
-
-       One case where this is useful is when the user doesn't feel like naming
-       fields and just gives every field the empty label, like this example:
-
-           type Pair (a : *) (b : *) : *
-           data MkPair (_ : a) (_ : b) : Pair a b
-           in   MkPair
-
-       That will compile to this expression:
-
-               \(a : *)
-           ->  \(b : *)
-           ->  \(_ : a)
-           ->  \(_ : b)
-           ->  \(Pair : *)
-           ->  \(MkPair : a -> b -> Pair)
-           ->  MkPair _@1 _
-
-        Notice how the generated expression uses the DeBruijn index to
-        distinguish the duplicate field names.
-    -}
-    let conArgs = do
-            (_, arg, argsAfter) <- zippers declArgs0
-            case st0 of
-                Type -> guard (argName arg == "_")
-                _    -> return ()
-            let names1 = map argName argsAfter
-            let names2 = conNames stmts0
-            let v      = argName arg `isPrecededBy` (names1 ++ names2)
-            let m = do
-                    (f, _) <- unapply (argType arg)
-                    matchingDecl f
-            return (case m of
-                Nothing -> Var v
-                _       -> apply v cons )
-
-    {- We also need to correctly compute the DeBruin index for the constructor.
-       `annah` permits data constructors to have duplicate names and `annah`
-       also permits data constructors to share the same name as type
-       constructors.  This means that this is syntactically valid code:
-
-           type A : *
-           data A : A
-           data A : A@1
-           in   A
-
-       ... which compiles to:
-
-           \(A : *) -> \(A : A) -> \(A : A@1) -> A
-
-       Needless to say, this is bad style, but I still permit it.
-    -}
-    let con = declName0 `isPrecededBy` conNames stmtsAfter0
-
-    let reType t = case m of
-            Nothing -> t
-            Just t' -> t'
+    let makeRhs piOrLam conArgs = go stmts0
           where
-            m = do
-                (f, as) <- unapply t
-                (Stmt (Decl _ args) _, _) <- matchingDecl f
-                let as' = do
-                        (a, Arg "_" _) <- zip as args
-                        return a
-                return (apply f as')
-
-    let makeRhs piOrLam = foldr
-            (\(Stmt (Decl c ps) st) ->
-                let (t', ps') = case st of
-                        Type   -> (Const M.Star, filter (not . namedArg) ps)
-                        Data t -> (reType t, do
-                            Arg x _A <- ps
-                            return (Arg x (reType _A)) )
-                        -- TODO: Make this total
-                in  piOrLam c (pi ps' t') )
-            (apply con conArgs)
-            (filter (isCons . stmtType) stmts0)
-
-    let declArgs' = do
-            Arg x _A <- declArgs0
-            let m = do
-                    (f, as) <- unapply _A
-                    (Stmt (Decl _ params) _, LetOnly _ _ rhs) <- matchingDecl f
-                    let (args, e) = unPi rhs
-                    (f', _) <- unapply e
-                    let as' = do
-                            (a, Arg "_" _) <- zip as params
-                            return a
-                    let e' = apply f' as'
-                    return (pi args e')
-            let _A' = case m of
-                    Just _A' -> _A'
-                    Nothing  -> _A
-            return (Arg x _A')
-
-    return (case st0 of
-        Fold    -> case declArgs0 of
-            [Arg x _A] -> case m of
-                Just (Stmt (Decl _ args) _, LetOnly _ _ rhs') ->
-                    LetOnly lhs declType' rhs
-                  where
-                    declType' = pi declArgs0 rhs'
-                    lhs = Decl declName0 args
-                    rhs = Lam x rhs' (Var (M.V x 0))
+            go (StmtType t:stmts) =
+                piOrLam (typeName t) (pi pinnedArgs (Const M.Star)) (go stmts)
               where
-                m = do
-                    (f, _) <- unapply _A
-                    matchingDecl f
-                -- TODO: Better error handling
-        Type              -> LetOnly decl (Const M.Star) rhs
-          where
-            rhs = makeRhs Pi
-        Let  declType rhs -> LetOnly decl declType  rhs
-        Data declType     -> LetOnly lhs  declType' rhs
-          where
-            rhs = lam declArgs' (makeRhs Lam)
+                pinnedArgs = filter pinnedArg (typeArgs t)
+            go (StmtData d:stmts) =
+                piOrLam (dataName d) (pi pinnedArgs  pinnedType   ) (go stmts)
+              where
+                pinnedType = pin (dataType d)
+                pinnedArgs = do
+                    Arg x _A <- dataArgs d
+                    return (Arg x (pin _A))
+            go (_:stmts) = go stmts
+            go  []       = apply con conArgs
 
-            declType' = pi declArgs0 declType
+    return (case stmt0 of
+        StmtType t0 ->
+            Let (typeName t0) (typeArgs t0) (Const M.Star) (makeRhs Pi conArgs)
+          where
+            conArgs = do
+                (_, arg, argsAfter) <- zippers (typeArgs t0)
+                guard (pinnedArg arg)
+                let names1 = map argName argsAfter
+                let names2 = conNames stmts0
+                let v      = argName arg `isPrecededBy` (names1 ++ names2)
+                return (Var v)
 
+        StmtData d0 ->
+            Let (dataName d0) universalArgs abstractType rhs'
+          where
             m = do
-                (f, _) <- unapply declType
+                (f, _) <- unapply (dataType d0)
                 matchingDecl f
 
-            lhs = case m of
-                Just (Stmt (Decl _ args) _, _) ->
-                    Decl declName0 (filter namedArg args) )
+            universalArgs = case m of
+                Just (t, _) -> filter namedArg (typeArgs t)
                 -- TODO: Proper error handling
+
+            abstractType = pi (dataArgs d0) (dataType d0)
+
+            dataArgs' = do
+                Arg x _A <- dataArgs d0
+                let m' = do
+                        (f, as) <- unapply _A
+                        (t, l) <- matchingDecl f
+                        let (args, e) = unPi (letRhs l)
+                        (f', _) <- unapply e
+                        let as' = do
+                                (a, Arg "_" _) <- zip as (typeArgs t)
+                                return a
+                        let e' = apply f' as'
+                        return (pi args e')
+                let _A' = case m' of
+                        Just _A' -> _A'
+                        Nothing  -> _A
+                return (Arg x _A')
+
+            conArgs = do
+                (_, arg, argsAfter) <- zippers (dataArgs d0)
+                let names1 = map argName argsAfter
+                let names2 = conNames stmts0
+                let v      = argName arg `isPrecededBy` (names1 ++ names2)
+                let m' = do
+                        (f, _) <- unapply (argType arg)
+                        matchingDecl f
+                return (case m' of
+                    Nothing -> Var v
+                    _       -> apply v cons )
+    
+            rhs' = lam dataArgs' (makeRhs Lam conArgs)
+
+        StmtFold f0 -> case m of
+            Just (t, l) -> Let (foldName f0) (typeArgs t) foldType' rhs
+              where
+                foldType' = Pi x _A (letRhs l)
+                rhs = Lam x (letRhs l) (Var (M.V x 0))
+          where
+            Arg x _A = foldArg f0
+            m = do
+                (f, _) <- unapply _A
+                matchingDecl f
+            -- TODO: Better error handling
+
+        StmtLet  l0 -> l0 )
 
 namedArg :: Arg m -> Bool
 namedArg a = argName a /= "_"
 
+pinnedArg :: Arg m -> Bool
+pinnedArg = not . namedArg
+
 -- | Returns `True` if the given `StmtType` is a type or data constructor
-isCons :: StmtType m -> Bool
-isCons  Type    = True
-isCons (Data _) = True
-isCons  _       = False
+isCons :: Stmt m -> Bool
+isCons (StmtType _) = True
+isCons (StmtData _) = True
+isCons  _           = False
 
 -- | The names of all type or data constructors
 conNames :: [Stmt m] -> [Text]
-conNames = map (declName . stmtDecl) . filter (isCons . stmtType)
+conNames = map stmtName . filter isCons
 
 -- | Unapply a function, returning the function name and the arguments
 unapply :: Expr m -> Maybe (M.Var, [Expr m])
@@ -387,19 +447,6 @@ unPi  e           = ([], e)
 lam :: [Arg m] -> Expr m -> Expr m
 lam args e = foldr (\(Arg x _A) -> Lam x _A) e args
 
-unLam :: Expr m -> ([Arg m], Expr m)
-unLam (Lam x _A b) = (Arg x _A:args, e)
-  where
-    ~(args, e) = unLam b
-unLam  e           = ([], e)
-
-{-| This is the intermediate type that `Stmt` desugars to.
-
-    This is essentially a `let`-only subset of `Stmt` since all `data` and
-    `type` statements can be translated to `let`s.
--}
-data Let = LetOnly (Decl Identity) (Expr Identity) (Expr Identity)
-
 {-| `desugarLets` converts this:
 
 > let f0 (x00 : _A00) ... (x0j : _A0j) _B0 = b0
@@ -420,7 +467,7 @@ data Let = LetOnly (Decl Identity) (Expr Identity) (Expr Identity)
 > (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
 
 -}
-desugarLets :: [Let] -> Expr Identity -> M.Expr
+desugarLets :: [Let Identity] -> Expr Identity -> M.Expr
 desugarLets lets e = apps
   where
     -- > (   \(f0 : forall (x00 : _A00) -> ... -> forall (x0j : _A0j) -> _B0)
@@ -429,7 +476,7 @@ desugarLets lets e = apps
     -- > ->  e
     -- > )
     lams = foldr
-        (\(LetOnly (Decl fn args) _Bn _) rest ->
+        (\(Let fn args _Bn _) rest ->
             -- > forall (xn0 : _An0) -> ... -> forall (xnj : _Anj) -> _Bn
             let rhsType = pi args _Bn
 
@@ -443,7 +490,7 @@ desugarLets lets e = apps
     -- > ...
     -- > (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
     apps = foldr
-        (\(LetOnly (Decl _ args) _ bn) rest ->
+        (\(Let _ args _ bn) rest ->
             -- > rest (\(xn0 : _An0) -> ... -> \(xnj : _Anj) -> bn)
             M.App rest (desugar (lam args bn)) )
         lams
@@ -473,61 +520,87 @@ resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
 resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
 resugar (M.App f0 a0  ) = App (resugar f0) (resugar a0)
 
--- | Render a pretty-printed `Arg` as a `Builder`
-buildArg :: Arg Identity -> Builder
-buildArg (Arg x _A) = "(" <> fromLazyText x <> " : " <> buildExpr _A <> ")"
+class Build f where
+    build :: f Identity -> Builder
 
--- | Render a pretty-printed `Decl` as a `Builder`
-buildDecl :: Decl Identity -> Builder
-buildDecl (Decl x args)
-    =   fromLazyText x
-    <>  " "
-    <>  mconcat (map (\arg -> buildArg arg <> " ") args)
+instance Build Arg where
+    build (Arg x _A) = "(" <> fromLazyText x <> " : " <> build _A <> ")"
 
--- | Render a pretty-printed `Stmt` as a `Builder`
-buildStmt :: Stmt Identity -> Builder
-buildStmt (Stmt d  Type    ) =
-    "type " <> buildDecl d                                                <> " "
-buildStmt (Stmt d (Data a )) =
-    "data " <> buildDecl d <> ": " <> buildExpr a                         <> " "
-buildStmt (Stmt d  Fold    ) =
-    "fold " <> buildDecl d                                                <> " "
-buildStmt (Stmt d (Let a b)) =
-    "let "  <> buildDecl d <> ": " <> buildExpr a <> " = " <> buildExpr b <> " "
+instance Build Stmt where
+    build (StmtType t) = build t
+    build (StmtData d) = build d
+    build (StmtFold f) = build f
+    build (StmtLet  l) = build l
 
--- | Render a pretty-printed `Expr` as a `Builder`
-buildExpr :: Expr Identity -> Builder
-buildExpr = go 0
-  where
-    go :: Int -> Expr Identity -> Builder
-    go prec e = case e of
-        Const c        -> M.buildConst c
-        Var x          -> M.buildVar x
-        Lam x _A b     -> quoteAbove 1 (
-                "λ("
-            <>  fromLazyText x
-            <>  " : "
-            <>  go 1 _A
-            <>  ") → "
-            <>  go 1 b )
-        Pi  x _A b    -> quoteAbove 1 (
-                (if M.used x (desugar b)
-                 then "∀(" <> fromLazyText x <> " : " <> go 1 _A <> ")"
-                 else go 2 _A )
-            <>  " → "
-            <>  go 1 b )
-        App f a        -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
-        Annot s t      -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
-        Stmts ls e'    -> quoteAbove 1 (
-            mconcat (map buildStmt ls) <> "in " <> go 1 e' )
-        Import m       -> go prec (runIdentity m)
+instance Build Type where
+    build (Type n args)
+        =   "type "
+        <>  fromLazyText n
+        <>  " "
+        <>  mconcat (map (\arg -> build arg <> " ") args)
+
+instance Build Data where
+    build (Data n args t)
+        =   "data "
+        <>  fromLazyText n
+        <>  " "
+        <>  mconcat (map (\arg -> build arg <> " ") args)
+        <>  ": "
+        <>  build t
+        <>  " "
+
+instance Build Fold where
+    build (Fold n arg)
+        =   "fold "
+        <>  fromLazyText n
+        <>  " "
+        <>  build arg
+        <>  " "
+
+instance Build Let where
+    build (Let n args t r)
+        =   "let "
+        <>  fromLazyText n
+        <>  " "
+        <>  mconcat (map (\arg -> build arg <> " ") args)
+        <>  ": "
+        <>  build t
+        <>  " = "
+        <>  build r
+        <>  " "
+
+instance Build Expr where
+    build = go 0
       where
-        quoteAbove :: Int -> Builder -> Builder
-        quoteAbove n b = if prec > n then "(" <> b <> ")" else b
+        go :: Int -> Expr Identity -> Builder
+        go prec e = case e of
+            Const c        -> M.buildConst c
+            Var x          -> M.buildVar x
+            Lam x _A b     -> quoteAbove 1 (
+                    "λ("
+                <>  fromLazyText x
+                <>  " : "
+                <>  go 1 _A
+                <>  ") → "
+                <>  go 1 b )
+            Pi  x _A b    -> quoteAbove 1 (
+                    (if M.used x (desugar b)
+                     then "∀(" <> fromLazyText x <> " : " <> go 1 _A <> ")"
+                     else go 2 _A )
+                <>  " → "
+                <>  go 1 b )
+            App f a        -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
+            Annot s t      -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
+            Stmts ls e'    -> quoteAbove 1 (
+                mconcat (map build ls) <> "in " <> go 1 e' )
+            Import m       -> go prec (runIdentity m)
+          where
+            quoteAbove :: Int -> Builder -> Builder
+            quoteAbove n b = if prec > n then "(" <> b <> ")" else b
 
 {-| Pretty-print an expression
 
     The result is a syntactically valid Annah program
 -}
 prettyExpr :: Expr Identity -> Text
-prettyExpr = toLazyText . buildExpr
+prettyExpr = toLazyText . build
