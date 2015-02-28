@@ -33,6 +33,7 @@ module Annah.Core (
       M.Var(..)
     , M.Const(..)
     , Arg(..)
+    , TypeArg(..)
     , Stmt(..)
     , Type(..)
     , Data(..)
@@ -69,12 +70,17 @@ data Arg m = Arg
     , argType :: Expr m
     }
 
+data TypeArg m = TypeArg
+    { pinned :: Bool
+    , typeArg :: Arg m
+    }
+
 {-|
 > Type f [Arg x _A, Arg y _B]  ~  type f (x : _A) (y : _B)
 -}
 data Type m = Type
     { typeName :: Text
-    , typeArgs :: [Arg m]
+    , typeArgs :: [TypeArg m]
     }
 
 {-|
@@ -210,6 +216,9 @@ instance Load Let where
 instance Load Arg where
     load (Arg x _A) = Arg x <$> load _A
 
+instance Load TypeArg where
+    load (TypeArg p arg) = TypeArg p <$> load arg
+
 {-| Convert an Annah expression to a Morte expression
 
 > resugar . desugar = id  -- But not the other way around!
@@ -293,7 +302,8 @@ desugarStmts stmts0 = result
                 (f, as) <- unapply fas
                 (t, _)  <- matchingDecl f
                 let as' = do
-                        (a, Arg "_" _) <- zip as (typeArgs t)
+                        (a, tv) <- zip as (typeArgs t)
+                        guard (pinned tv)
                         return a
                 return (apply f as')
 
@@ -308,7 +318,7 @@ desugarStmts stmts0 = result
             go (StmtType t:stmts) =
                 piOrLam (typeName t) (pi pinnedArgs (Const M.Star)) (go stmts)
               where
-                pinnedArgs = filter pinnedArg (typeArgs t)
+                pinnedArgs = map typeArg (filter pinned (typeArgs t))
             go (StmtData d:stmts) =
                 piOrLam (dataName d) (pi pinnedArgs  pinnedType   ) (go stmts)
               where
@@ -321,14 +331,15 @@ desugarStmts stmts0 = result
 
     return (case stmt0 of
         StmtType t0 ->
-            Let (typeName t0) (typeArgs t0) (Const M.Star) (makeRhs Pi conArgs)
+            Let (typeName t0) letArgs' (Const M.Star) (makeRhs Pi conArgs)
           where
+            letArgs' = map typeArg (typeArgs t0)
             conArgs = do
                 (_, arg, argsAfter) <- zippers (typeArgs t0)
-                guard (pinnedArg arg)
-                let names1 = map argName argsAfter
+                guard (pinned arg)
+                let names1 = map argName (map typeArg argsAfter)
                 let names2 = conNames stmts0
-                let v      = argName arg `isPrecededBy` (names1 ++ names2)
+                let v = argName (typeArg arg) `isPrecededBy` (names1 ++ names2)
                 return (Var v)
 
         StmtData d0 ->
@@ -339,7 +350,7 @@ desugarStmts stmts0 = result
                 matchingDecl f
 
             universalArgs = case m of
-                Just (t, _) -> filter namedArg (typeArgs t)
+                Just (t, _) -> map typeArg (filter (not . pinned) (typeArgs t))
                 -- TODO: Proper error handling
 
             abstractType = pi (dataArgs d0) (dataType d0)
@@ -352,7 +363,8 @@ desugarStmts stmts0 = result
                         let (args, e) = unPi (letRhs l)
                         (f', _) <- unapply e
                         let as' = do
-                                (a, Arg "_" _) <- zip as (typeArgs t)
+                                (a, tv) <- zip as (typeArgs t)
+                                guard (pinned tv)
                                 return a
                         let e' = apply f' as'
                         return (pi args e')
@@ -376,8 +388,9 @@ desugarStmts stmts0 = result
             rhs' = lam dataArgs' (makeRhs Lam conArgs)
 
         StmtFold f0 -> case m of
-            Just (t, l) -> Let (foldName f0) (typeArgs t) foldType' rhs
+            Just (t, l) -> Let (foldName f0) foldArgs' foldType' rhs
               where
+                foldArgs' = map typeArg (typeArgs t)
                 foldType' = Pi x _A (letRhs l)
                 rhs = Lam x (letRhs l) (Var (M.V x 0))
           where
@@ -388,12 +401,6 @@ desugarStmts stmts0 = result
             -- TODO: Better error handling
 
         StmtLet  l0 -> l0 )
-
-namedArg :: Arg m -> Bool
-namedArg a = argName a /= "_"
-
-pinnedArg :: Arg m -> Bool
-pinnedArg = not . namedArg
 
 -- | Returns `True` if the given `StmtType` is a type or data constructor
 isCons :: Stmt m -> Bool
@@ -525,6 +532,14 @@ class Build f where
 
 instance Build Arg where
     build (Arg x _A) = "(" <> fromLazyText x <> " : " <> build _A <> ")"
+
+instance Build TypeArg where
+    build (TypeArg p arg) =
+        if p
+        then "{" <> fromLazyText x <> " : " <> build _A <> "}"
+        else build arg
+      where
+        Arg x _A = arg
 
 instance Build Stmt where
     build (StmtType t) = build t
