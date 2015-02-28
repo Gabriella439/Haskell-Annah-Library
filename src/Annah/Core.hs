@@ -42,12 +42,12 @@ module Annah.Core (
     , Expr(..)
 
     -- * Core functions
-    , Load(..)
+    , loadExpr
     , desugar
     , resugar
 
     -- * Utilities
-    , Build(..)
+    , buildExpr
     , prettyExpr
     ) where
 
@@ -219,6 +219,10 @@ instance Load Arg where
 instance Load TypeArg where
     load (TypeArg p arg) = TypeArg p <$> load arg
 
+-- | Evaluate all `Import`s, leaving behind a pure expression
+loadExpr :: Expr IO -> IO (Expr m)
+loadExpr = load
+
 {-| Convert an Annah expression to a Morte expression
 
 > resugar . desugar = id  -- But not the other way around!
@@ -274,7 +278,7 @@ desugarStmts stmts0 = result
     result = do
     (stmtsBefore0, stmt0, stmtsAfter0) <- zippers stmts0
 
-    {-| Given a type constructor name, find:
+    {- Given a type constructor name, find:
 
         * the matching statement for that type constructor
         * the desugared let-binding for that type constructor
@@ -612,6 +616,10 @@ instance Build Expr where
           where
             quoteAbove :: Int -> Builder -> Builder
             quoteAbove n b = if prec > n then "(" <> b <> ")" else b
+
+-- | Render a pretty-printed expression as a `Builder`
+buildExpr :: Expr Identity -> Builder
+buildExpr = build
 
 {-| Pretty-print an expression
 
