@@ -40,6 +40,7 @@ module Annah.Core (
     , Fold(..)
     , Let(..)
     , Expr(..)
+    , Nat(..)
 
     -- * Core functions
     , loadExpr
