@@ -460,7 +460,7 @@ safeIndex _  []    = Nothing
 safeIndex 0 (a:_ ) = Just a
 safeIndex n (_:as) = n' `seq` safeIndex n' as
   where
-    n' = n + 1
+    n' = n - 1
 
 {-| Compute the correct DeBruijn index for a synthetic `Var` (`x`) by providing
     all variables bound in between when `x` is introduced and when `x` is used.
