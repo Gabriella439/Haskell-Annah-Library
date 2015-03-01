@@ -32,7 +32,7 @@ $label = [A-Za-z0-9_]
 
 $whiteNoNewline = $white # \n
 
-$path = . # $white
+$path = [$label \\\/]
 
 tokens :-
 
@@ -46,7 +46,7 @@ tokens :-
     "{"                             { \_    -> yield OpenBrace                 }
     "}"                             { \_    -> yield CloseBrace                }
     ":"                             { \_    -> yield Colon                     }
-    "@file:" $path+                 { \text -> yield (File (Text.drop 6 text)) }
+    "@" $path+                      { \text -> yield (File (Text.drop 1 text)) }
     "@"                             { \_    -> yield At                        }
     "*"                             { \_    -> yield Star                      }
     "BOX" | "□"                     { \_    -> yield Box                       }
