@@ -32,7 +32,7 @@ $label = [A-Za-z0-9_]
 
 $whiteNoNewline = $white # \n
 
-$path = [$label \\\/]
+$path = [$label \\\/\.]
 
 tokens :-
 
