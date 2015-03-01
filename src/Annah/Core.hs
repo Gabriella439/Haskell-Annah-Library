@@ -40,7 +40,6 @@ module Annah.Core (
     , Fold(..)
     , Let(..)
     , Expr(..)
-    , Nat(..)
 
     -- * Core functions
     , loadExpr
@@ -180,7 +179,7 @@ data Expr m
     -- | > Stmts decls e     ~  decls in e
     | Stmts [Stmt m] (Expr m)
     -- | > Nat n             ~  n
-    | Natural Nat
+    | Natural Integer
     | Import (m (Expr m))
 
 instance IsString (Expr m) where
@@ -238,51 +237,26 @@ desugar (Stmts stmts e) = desugarLets (desugarStmts stmts) e
 desugar (Natural n    ) = desugarNat n
 desugar (Import m     ) = desugar (runIdentity m)
 
-data Nat = Zero | Succ Nat
-
-instance Num Nat where
-    fromInteger n | n <= 0 = Zero
-    fromInteger n          = Succ (fromInteger (n - 1))
-
-    Zero   + n = n
-    Succ m + n = Succ (m + n)
-
-    Zero   * _ = Zero
-    Succ m * n = n + (m * n)
-
-    negate _ = Zero
-
-    abs n = n
-
-    signum Zero = Zero
-    signum _    = Succ Zero
-
-natToInteger :: Nat -> Integer
-natToInteger n0 = go n0 0
-  where
-    go  Zero    m = m
-    go (Succ n) m = go n $! m + 1
-
-desugarNat :: Nat -> M.Expr
+desugarNat :: Integer -> M.Expr
 desugarNat n0 =
     M.Lam "Nat" (M.Const M.Star) (
         M.Lam "Zero" "Nat" (
             M.Lam "Succ" (M.Pi "pred" "Nat" "Nat") (go n0) ) )
   where
-    go  Zero    = "Zero"
-    go (Succ n) = M.App "Succ" (go n)
+    go n | n <= 0    = "Zero"
+         | otherwise = M.App "Succ" (go $! n - 1)
 
-resugarNat :: M.Expr -> Maybe Nat
+resugarNat :: M.Expr -> Maybe Integer
 resugarNat (
     M.Lam "Nat" (M.Const M.Star) (
         M.Lam "Zero" (M.Var (M.V "Nat" 0)) (
             M.Lam "Succ"
                   (M.Pi _ (M.Var (M.V "Nat" 0)) (M.Var (M.V "Nat" 0))) e0) ))
-    = go e0
+    = go e0 0
   where
-    go (M.Var (M.V "Zero" 0))           = pure Zero
-    go (M.App (M.Var (M.V "Succ" 0)) e) = fmap Succ (go e)
-    go  _                               = empty
+    go (M.Var (M.V "Zero" 0))           n = pure n
+    go (M.App (M.Var (M.V "Succ" 0)) e) n = go e $! n + 1
+    go  _                               _ = empty
 resugarNat _ = empty
 
 {-| This is the meat of the Boehm-Berarducci encoding which translates the
@@ -656,7 +630,7 @@ buildExpr = go 0
         Annot s t      -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
         Stmts ls e'    -> quoteAbove 1 (
             mconcat (map buildStmt ls) <> "in " <> go 1 e' )
-        Natural n      -> decimal (natToInteger n)
+        Natural n      -> decimal n
         Import m       -> go prec (runIdentity m)
       where
         quoteAbove :: Int -> Builder -> Builder
