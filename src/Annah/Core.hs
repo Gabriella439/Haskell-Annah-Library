@@ -182,46 +182,41 @@ data Expr m
 instance IsString (Expr m) where
     fromString str = Var (fromString str)
 
-class Load f where
-    load :: f IO  -> IO (f m)
-
-instance Load Expr where
-    load (Const c      ) = return (Const c)
-    load (Var v        ) = return (Var v)
-    load (Lam x _A  b  ) = Lam x <$> load _A <*> load  b
-    load (Pi  x _A _B  ) = Pi  x <$> load _A <*> load _B
-    load (App f a      ) = App <$> load f <*> load a
-    load (Annot a _A   ) = Annot <$> load a <*> load _A
-    load (Stmts stmts e) = Stmts <$> mapM load stmts <*> load e
-    load (Import io    ) = io >>= load
-
-instance Load Stmt where
-    load (StmtType a) = StmtType <$> load a
-    load (StmtData a) = StmtData <$> load a
-    load (StmtFold a) = StmtFold <$> load a
-    load (StmtLet  a) = StmtLet  <$> load a
-
-instance Load Type where
-    load (Type f args) = Type f <$> mapM load args
-
-instance Load Data where
-    load (Data f args _B) = Data f <$> mapM load args <*> load _B
-
-instance Load Fold where
-    load (Fold f arg) = Fold f <$> load arg
-
-instance Load Let where
-    load (Let f args _B b) = Let f <$> mapM load args <*> load _B <*> load b
-
-instance Load Arg where
-    load (Arg x _A) = Arg x <$> load _A
-
-instance Load TypeArg where
-    load (TypeArg p arg) = TypeArg p <$> load arg
-
 -- | Evaluate all `Import`s, leaving behind a pure expression
 loadExpr :: Expr IO -> IO (Expr m)
-loadExpr = load
+loadExpr (Const c      ) = return (Const c)
+loadExpr (Var v        ) = return (Var v)
+loadExpr (Lam x _A  b  ) = Lam x <$> loadExpr _A <*> loadExpr  b
+loadExpr (Pi  x _A _B  ) = Pi  x <$> loadExpr _A <*> loadExpr _B
+loadExpr (App f a      ) = App <$> loadExpr f <*> loadExpr a
+loadExpr (Annot a _A   ) = Annot <$> loadExpr a <*> loadExpr _A
+loadExpr (Stmts stmts e) = Stmts <$> mapM loadStmt stmts <*> loadExpr e
+loadExpr (Import io    ) = io >>= loadExpr
+
+loadStmt :: Stmt IO -> IO (Stmt m)
+loadStmt (StmtType a) = StmtType <$> loadType a
+loadStmt (StmtData a) = StmtData <$> loadData a
+loadStmt (StmtFold a) = StmtFold <$> loadFold a
+loadStmt (StmtLet  a) = StmtLet  <$> loadLet  a
+
+loadType :: Type IO -> IO (Type m)
+loadType (Type f args) = Type f <$> mapM loadTypeArg args
+
+loadData :: Data IO -> IO (Data m)
+loadData (Data f args _B) = Data f <$> mapM loadArg args <*> loadExpr _B
+
+loadFold :: Fold IO -> IO (Fold m)
+loadFold (Fold f arg) = Fold f <$> loadArg arg
+
+loadLet :: Let IO -> IO (Let m)
+loadLet (Let f args _B b) =
+    Let f <$> mapM loadArg args <*> loadExpr _B <*> loadExpr b
+
+loadArg :: Arg IO -> IO (Arg m)
+loadArg (Arg x _A) = Arg x <$> loadExpr _A
+
+loadTypeArg :: TypeArg IO -> IO (TypeArg m)
+loadTypeArg (TypeArg p arg) = TypeArg p <$> loadArg arg
 
 {-| Convert an Annah expression to a Morte expression
 
@@ -531,99 +526,93 @@ resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
 resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
 resugar (M.App f0 a0  ) = App (resugar f0) (resugar a0)
 
-class Build f where
-    build :: f Identity -> Builder
+buildArg :: Arg Identity -> Builder
+buildArg (Arg x _A) = "(" <> fromLazyText x <> " : " <> buildExpr _A <> ")"
 
-instance Build Arg where
-    build (Arg x _A) = "(" <> fromLazyText x <> " : " <> build _A <> ")"
+buildTypeArg :: TypeArg Identity -> Builder
+buildTypeArg (TypeArg p arg) =
+    if p
+    then "{" <> fromLazyText x <> " : " <> buildExpr _A <> "}"
+    else buildArg arg
+  where
+    Arg x _A = arg
 
-instance Build TypeArg where
-    build (TypeArg p arg) =
-        if p
-        then "{" <> fromLazyText x <> " : " <> build _A <> "}"
-        else build arg
-      where
-        Arg x _A = arg
+buildStmt :: Stmt Identity -> Builder
+buildStmt (StmtType t) = buildType t
+buildStmt (StmtData d) = buildData d
+buildStmt (StmtFold f) = buildFold f
+buildStmt (StmtLet  l) = buildLet  l
 
-instance Build Stmt where
-    build (StmtType t) = build t
-    build (StmtData d) = build d
-    build (StmtFold f) = build f
-    build (StmtLet  l) = build l
+buildType :: Type Identity -> Builder
+buildType (Type n args)
+    =   "type "
+    <>  fromLazyText n
+    <>  " "
+    <>  mconcat (map (\arg -> buildTypeArg arg <> " ") args)
 
-instance Build Type where
-    build (Type n args)
-        =   "type "
-        <>  fromLazyText n
-        <>  " "
-        <>  mconcat (map (\arg -> build arg <> " ") args)
+buildData :: Data Identity -> Builder
+buildData (Data n args t)
+    =   "data "
+    <>  fromLazyText n
+    <>  " "
+    <>  mconcat (map (\arg -> buildArg arg <> " ") args)
+    <>  ": "
+    <>  buildExpr t
+    <>  " "
 
-instance Build Data where
-    build (Data n args t)
-        =   "data "
-        <>  fromLazyText n
-        <>  " "
-        <>  mconcat (map (\arg -> build arg <> " ") args)
-        <>  ": "
-        <>  build t
-        <>  " "
+buildFold :: Fold Identity -> Builder
+buildFold (Fold n arg)
+    =   "fold "
+    <>  fromLazyText n
+    <>  " "
+    <>  buildArg arg
+    <>  " "
 
-instance Build Fold where
-    build (Fold n arg)
-        =   "fold "
-        <>  fromLazyText n
-        <>  " "
-        <>  build arg
-        <>  " "
-
-instance Build Let where
-    build (Let n args t r)
-        =   "let "
-        <>  fromLazyText n
-        <>  " "
-        <>  mconcat (map (\arg -> build arg <> " ") args)
-        <>  ": "
-        <>  build t
-        <>  " = "
-        <>  build r
-        <>  " "
-
-instance Build Expr where
-    build = go 0
-      where
-        go :: Int -> Expr Identity -> Builder
-        go prec e = case e of
-            Const c        -> M.buildConst c
-            Var x          -> M.buildVar x
-            Lam x _A b     -> quoteAbove 1 (
-                    "λ("
-                <>  fromLazyText x
-                <>  " : "
-                <>  go 1 _A
-                <>  ") → "
-                <>  go 1 b )
-            Pi  x _A b    -> quoteAbove 1 (
-                    (if M.used x (desugar b)
-                     then "∀(" <> fromLazyText x <> " : " <> go 1 _A <> ")"
-                     else go 2 _A )
-                <>  " → "
-                <>  go 1 b )
-            App f a        -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
-            Annot s t      -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
-            Stmts ls e'    -> quoteAbove 1 (
-                mconcat (map build ls) <> "in " <> go 1 e' )
-            Import m       -> go prec (runIdentity m)
-          where
-            quoteAbove :: Int -> Builder -> Builder
-            quoteAbove n b = if prec > n then "(" <> b <> ")" else b
+buildLet :: Let Identity -> Builder
+buildLet (Let n args t r)
+    =   "let "
+    <>  fromLazyText n
+    <>  " "
+    <>  mconcat (map (\arg -> buildArg arg <> " ") args)
+    <>  ": "
+    <>  buildExpr t
+    <>  " = "
+    <>  buildExpr r
+    <>  " "
 
 -- | Render a pretty-printed expression as a `Builder`
 buildExpr :: Expr Identity -> Builder
-buildExpr = build
+buildExpr = go 0
+  where
+    go :: Int -> Expr Identity -> Builder
+    go prec e = case e of
+        Const c        -> M.buildConst c
+        Var x          -> M.buildVar x
+        Lam x _A b     -> quoteAbove 1 (
+                "λ("
+            <>  fromLazyText x
+            <>  " : "
+            <>  go 1 _A
+            <>  ") → "
+            <>  go 1 b )
+        Pi  x _A b    -> quoteAbove 1 (
+                (if M.used x (desugar b)
+                 then "∀(" <> fromLazyText x <> " : " <> go 1 _A <> ")"
+                 else go 2 _A )
+            <>  " → "
+            <>  go 1 b )
+        App f a        -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
+        Annot s t      -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
+        Stmts ls e'    -> quoteAbove 1 (
+            mconcat (map buildStmt ls) <> "in " <> go 1 e' )
+        Import m       -> go prec (runIdentity m)
+      where
+        quoteAbove :: Int -> Builder -> Builder
+        quoteAbove n b = if prec > n then "(" <> b <> ")" else b
 
 {-| Pretty-print an expression
 
     The result is a syntactically valid Annah program
 -}
 prettyExpr :: Expr Identity -> Text
-prettyExpr = toLazyText . build
+prettyExpr = toLazyText . buildExpr
