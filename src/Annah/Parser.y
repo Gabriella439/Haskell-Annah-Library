@@ -119,11 +119,12 @@ Expr2 :: { Expr IO }
       | Expr3       { $1        }
 
 Expr3 :: { Expr IO }
-      : VExpr         { Var $1        }
-      | '*'           { Const Star    }
-      | 'BOX'         { Const Box     }
-      | file          { importFile $1 }
-      | '(' Expr0 ')' { $2            }
+      : VExpr         { Var $1                                  }
+      | '*'           { Const Star                              }
+      | 'BOX'         { Const Box                               }
+      | file          { importFile $1                           }
+      | number        { Natural (fromInteger (fromIntegral $1)) }
+      | '(' Expr0 ')' { $2                                      }
 
 {
 -- | The specific parsing error

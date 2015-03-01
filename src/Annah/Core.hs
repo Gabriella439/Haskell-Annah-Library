@@ -51,12 +51,13 @@ module Annah.Core (
     , prettyExpr
     ) where
 
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative (pure, empty, (<$>), (<*>))
 import Control.Monad (guard)
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
 import Data.Text.Lazy (Text)
+import Data.Text.Lazy.Builder.Int (decimal)
 import Data.Text.Lazy.Builder (Builder, toLazyText, fromLazyText)
 import qualified Morte.Core as M
 import Prelude hiding (const, pi)
@@ -177,6 +178,8 @@ data Expr m
     | Annot (Expr m) (Expr m)
     -- | > Stmts decls e     ~  decls in e
     | Stmts [Stmt m] (Expr m)
+    -- | > Nat n             ~  n
+    | Natural Nat
     | Import (m (Expr m))
 
 instance IsString (Expr m) where
@@ -191,6 +194,7 @@ loadExpr (Pi  x _A _B  ) = Pi  x <$> loadExpr _A <*> loadExpr _B
 loadExpr (App f a      ) = App <$> loadExpr f <*> loadExpr a
 loadExpr (Annot a _A   ) = Annot <$> loadExpr a <*> loadExpr _A
 loadExpr (Stmts stmts e) = Stmts <$> mapM loadStmt stmts <*> loadExpr e
+loadExpr (Natural n    ) = return (Natural n)
 loadExpr (Import io    ) = io >>= loadExpr
 
 loadStmt :: Stmt IO -> IO (Stmt m)
@@ -230,7 +234,55 @@ desugar (Pi  x _A _B  ) = M.Pi  x (desugar _A) (desugar _B)
 desugar (App f a      ) = M.App (desugar f) (desugar a)
 desugar (Annot a _A   ) = desugar (Stmts [StmtLet (Let "x" [] _A a)] "x")
 desugar (Stmts stmts e) = desugarLets (desugarStmts stmts) e
+desugar (Natural n    ) = desugarNat n
 desugar (Import m     ) = desugar (runIdentity m)
+
+data Nat = Zero | Succ Nat
+
+instance Num Nat where
+    fromInteger n | n <= 0 = Zero
+    fromInteger n          = Succ (fromInteger (n - 1))
+
+    Zero   + n = n
+    Succ m + n = Succ (m + n)
+
+    Zero   * _ = Zero
+    Succ m * n = n + (m * n)
+
+    negate _ = Zero
+
+    abs n = n
+
+    signum Zero = Zero
+    signum _    = Succ Zero
+
+natToInteger :: Nat -> Integer
+natToInteger n0 = go n0 0
+  where
+    go  Zero    m = m
+    go (Succ n) m = go n $! m + 1
+
+desugarNat :: Nat -> M.Expr
+desugarNat n0 =
+    M.Lam "Nat" (M.Const M.Star) (
+        M.Lam "Zero" "Nat" (
+            M.Lam "Succ" (M.Pi "pred" "Nat" "Nat") (go n0) ) )
+  where
+    go  Zero    = "Zero"
+    go (Succ n) = M.App "Succ" (go n)
+
+resugarNat :: M.Expr -> Maybe Nat
+resugarNat (
+    M.Lam "Nat" (M.Const M.Star) (
+        M.Lam "Zero" (M.Var (M.V "Nat" 0)) (
+            M.Lam "Succ"
+                  (M.Pi _ (M.Var (M.V "Nat" 0)) (M.Var (M.V "Nat" 0))) e0) ))
+    = go e0
+  where
+    go (M.Var (M.V "Zero" 0))           = pure Zero
+    go (M.App (M.Var (M.V "Succ" 0)) e) = fmap Succ (go e)
+    go  _                               = empty
+resugarNat _ = empty
 
 {-| This is the meat of the Boehm-Berarducci encoding which translates the
     `type`, `data`, and `fold` declarations to their equivalent `let`
@@ -514,17 +566,15 @@ zippers (stmt:stmts') = z:go z
       where
         z' = (m:ls, r, rs)
 
-{-| Convert a Morte expression to an Annah expression
-
-    Right now this desugaring is trivial, but it will start to become useful
-    when I add syntactic sugar for natural numbers and anonymous records
--}
+-- | Convert a Morte expression to an Annah expression
 resugar :: M.Expr -> Expr m
-resugar (M.Const c    ) = Const c
-resugar (M.Var v      ) = Var v
-resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
-resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
-resugar (M.App f0 a0  ) = App (resugar f0) (resugar a0)
+resugar   (M.Const c    ) = Const c
+resugar   (M.Var v      ) = Var v
+resugar e@(M.Lam x _A  b) = case resugarNat e of
+    Nothing -> Lam x (resugar _A) (resugar  b)
+    Just n  -> Natural n
+resugar   (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
+resugar   (M.App f0 a0  ) = App (resugar f0) (resugar a0)
 
 buildArg :: Arg Identity -> Builder
 buildArg (Arg x _A) = "(" <> fromLazyText x <> " : " <> buildExpr _A <> ")"
@@ -605,6 +655,7 @@ buildExpr = go 0
         Annot s t      -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
         Stmts ls e'    -> quoteAbove 1 (
             mconcat (map buildStmt ls) <> "in " <> go 1 e' )
+        Natural n      -> decimal (natToInteger n)
         Import m       -> go prec (runIdentity m)
       where
         quoteAbove :: Int -> Builder -> Builder
