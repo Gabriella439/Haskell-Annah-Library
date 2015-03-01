@@ -46,7 +46,7 @@ tokens :-
     "{"                             { \_    -> yield OpenBrace                 }
     "}"                             { \_    -> yield CloseBrace                }
     ":"                             { \_    -> yield Colon                     }
-    "@" $path+                      { \text -> yield (File (Text.drop 1 text)) }
+    "#" $path+                      { \text -> yield (File (Text.drop 1 text)) }
     "@"                             { \_    -> yield At                        }
     "*"                             { \_    -> yield Star                      }
     "BOX" | "□"                     { \_    -> yield Box                       }
