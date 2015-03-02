@@ -322,18 +322,7 @@ desugarStmts stmts0 = result
             go (StmtType t:stmts) =
                 piOrLam (typeName t) (pi (typeArgs t) (Const M.Star)) (go stmts)
             go (StmtData d:stmts) =
-                piOrLam (dataName d) (pi  dataArgs'   (dataType d  )) (go stmts)
-              where
-                dataArgs' = do
-                    Arg x _A <- dataArgs d
-                    let m = do
-                            (f, _) <- unapply _A
-                            _      <- matchingDecl f
-                            return (Var f)
-                    let _A' = case m of
-                            Nothing  -> _A
-                            Just _A' -> _A'
-                    return (Arg x _A')
+                piOrLam (dataName d) (pi (dataArgs d) (dataType d  )) (go stmts)
             go (_:stmts) = go stmts
             go  []       = apply con conArgs
 
