@@ -294,13 +294,15 @@ desugarStmts stmts0 = result
     result = do
     (stmtsBefore0, stmt0, stmtsAfter0) <- zippers stmts0
 
-    {- Given a type constructor name, find:
+    {- Given a saturated type constructor, find:
 
         * the matching statement for that type constructor
         * the desugared let-binding for that type constructor
     -}
-    let matchingDecl :: M.Var -> Maybe (Type Identity, Let Identity)
-        matchingDecl (M.V x0 n0) = go x0 n0 (stmt0:stmtsBefore0) 0
+    let matchingDecl :: Expr Identity -> Maybe (Type Identity, Let Identity)
+        matchingDecl e = do
+            (M.V x0 n0, _) <- unapply e
+            go x0 n0 (stmt0:stmtsBefore0) 0
           where
             go x n (stmt:stmts) k
                 | stmtName stmt == x && n > 0 = go x (n - 1) stmts $! k + 1
@@ -331,10 +333,7 @@ desugarStmts stmts0 = result
                 let names1 = map argName argsAfter
                 let names2 = conNames stmts0
                 let v      = argName arg `isShadowedBy` (names1 ++ names2)
-                let m = do
-                        (f, _) <- unapply (argType arg)
-                        matchingDecl f
-                return (case m of
+                return (case matchingDecl (argType arg) of
                     Nothing -> Var v
                     _       -> apply v cons )
 
@@ -350,8 +349,7 @@ desugarStmts stmts0 = result
             dataArgs' = do
                 Arg x _A <- dataArgs d0
                 let m = do
-                        (f, _) <- unapply _A
-                        (_, l) <- matchingDecl f
+                        (_, l) <- matchingDecl _A
                         return (letRhs l)
                 let _A' = case m of
                         Just _A' -> _A'
@@ -360,16 +358,13 @@ desugarStmts stmts0 = result
 
             rhs' = lam dataArgs' (makeRhs Lam (dataArgs d0))
 
-        StmtFold f0 -> case m of
+        StmtFold f0 -> case matchingDecl _A of
             Just (_, l) -> Let (foldName f0) universalArgs foldType' rhs
               where
                 foldType' = Pi x _A (letRhs l)
                 rhs = Lam x (letRhs l) (Var (M.V x 0))
           where
             Arg x _A = foldArg f0
-            m = do
-                (f, _) <- unapply _A
-                matchingDecl f
             -- TODO: Better error handling
 
         StmtLet  l0 -> l0 )
