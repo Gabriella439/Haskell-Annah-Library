@@ -51,6 +51,7 @@ module Annah.Core (
     ) where
 
 import Control.Applicative (pure, empty, (<$>), (<*>))
+import Data.Function (on)
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
@@ -287,9 +288,14 @@ resugarNat _ = empty
 desugarStmts :: [Stmt Identity] -> [Let Identity]
 desugarStmts stmts0 = result
   where
-    universalArgs = do
+    universalArgs :: [Arg Identity]
+    universalArgs = the (do
         StmtType t <- stmts0
-        typeArgs t
+        return (typeArgs t) )
+      where
+        the (x:xs) | all (eq x) xs = x
+          where
+            eq = (==) `on` map argName
 
     result = do
     (stmtsBefore0, stmt0, stmtsAfter0) <- zippers stmts0
@@ -338,7 +344,7 @@ desugarStmts stmts0 = result
                     _       -> apply v cons )
 
     return (case stmt0 of
-        StmtType t0 -> Let (typeName t0) (typeArgs t0) (Const M.Star) rhs
+        StmtType t0 -> Let (typeName t0) universalArgs (Const M.Star) rhs
           where
             rhs = makeRhs Pi (typeArgs t0)
 
