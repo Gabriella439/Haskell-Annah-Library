@@ -70,7 +70,7 @@ Expr0 :: { Expr IO }
       | Expr1           { $1          }
 
 Stmt :: { Stmt IO }
-Stmt : 'type' label TypeArgs                 { StmtType (Type $2 $3      ) }
+Stmt : 'type' label Args                     { StmtType (Type $2 $3      ) }
      | 'data' label Args ':' Expr0           { StmtData (Data $2 $3 $5   ) }
      | 'fold' label Arg                      { StmtFold (Fold $2 $3      ) }
      | 'let'  label Args ':' Expr0 '=' Expr1 { StmtLet  (Let  $2 $3 $5 $7) }
@@ -98,17 +98,6 @@ ArgsRev :: { [Arg IO] }
 
 Arg :: { Arg IO }
     : '(' label ':' Expr0 ')' { Arg $2 $4 }
-
-TypeArg :: { TypeArg IO }
-        : '{' label ':' Expr0 '}' { TypeArg True (Arg $2 $4) }
-        | Arg                     { TypeArg False $1         }
-
-TypeArgsRev :: { [TypeArg IO] }
-            : TypeArgsRev TypeArg { $2 : $1 }
-            |                     { []      }
-
-TypeArgs :: { [TypeArg IO] }
-         : TypeArgsRev { reverse $1 }
 
 VExpr  :: { Var }
        : label '@' number { V $1 $3 }

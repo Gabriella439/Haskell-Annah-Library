@@ -33,7 +33,6 @@ module Annah.Core (
       M.Var(..)
     , M.Const(..)
     , Arg(..)
-    , TypeArg(..)
     , Stmt(..)
     , Type(..)
     , Data(..)
@@ -52,7 +51,6 @@ module Annah.Core (
     ) where
 
 import Control.Applicative (pure, empty, (<$>), (<*>))
-import Control.Monad (guard)
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
@@ -71,17 +69,12 @@ data Arg m = Arg
     , argType :: Expr m
     }
 
-data TypeArg m = TypeArg
-    { pinned :: Bool
-    , typeArg :: Arg m
-    }
-
 {-|
 > Type f [Arg x _A, Arg y _B]  ~  type f (x : _A) (y : _B)
 -}
 data Type m = Type
     { typeName :: Text
-    , typeArgs :: [TypeArg m]
+    , typeArgs :: [Arg m]
     }
 
 {-|
@@ -116,7 +109,7 @@ data Let m = Let
     * @type@, which creates a new type constructor
     * @data@, which creates a new data constructor
     * @fold@, which creates a fold for a type
-    * @let@, which defines a function or value in terms of another expression
+    * @let@ , which defines a function or value in terms of another expression
 
     Annah is liberal about statement order, but statements can only refer to
     values introduced by previous statements.  Also, statement order affects the
@@ -204,7 +197,7 @@ loadStmt (StmtFold a) = StmtFold <$> loadFold a
 loadStmt (StmtLet  a) = StmtLet  <$> loadLet  a
 
 loadType :: Type IO -> IO (Type m)
-loadType (Type f args) = Type f <$> mapM loadTypeArg args
+loadType (Type f args) = Type f <$> mapM loadArg args
 
 loadData :: Data IO -> IO (Data m)
 loadData (Data f args _B) = Data f <$> mapM loadArg args <*> loadExpr _B
@@ -218,9 +211,6 @@ loadLet (Let f args _B b) =
 
 loadArg :: Arg IO -> IO (Arg m)
 loadArg (Arg x _A) = Arg x <$> loadExpr _A
-
-loadTypeArg :: TypeArg IO -> IO (TypeArg m)
-loadTypeArg (TypeArg p arg) = TypeArg p <$> loadArg arg
 
 {-| Convert an Annah expression to a Morte expression
 
@@ -297,6 +287,10 @@ resugarNat _ = empty
 desugarStmts :: [Stmt Identity] -> [Let Identity]
 desugarStmts stmts0 = result
   where
+    universalArgs = do
+        StmtType t <- stmts0
+        typeArgs t
+
     result = do
     (stmtsBefore0, stmt0, stmtsAfter0) <- zippers stmts0
 
@@ -317,106 +311,69 @@ desugarStmts stmts0 = result
                 | otherwise                   = go x  n      stmts $! k + 1
             go _ _  []          _             = Nothing
 
-    {- "Pinning" a saturated type constructor means deleting all universally
-        quantified arguments
-    -}
-    let pin fas = case m of
-            Nothing   -> fas
-            Just fas' -> fas'
-          where
-            m = do
-                (f, as) <- unapply fas
-                (t, _)  <- matchingDecl f
-                let as' = do
-                        (a, tv) <- zip as (typeArgs t)
-                        guard (pinned tv)
-                        return a
-                return (apply f as')
-
     -- Compute the DeBruijn indices for constructors in case of duplicate names
-    let con  = stmtName stmt0 `isPrecededBy` conNames stmtsAfter0
+    let con  = stmtName stmt0 `isShadowedBy` conNames stmtsAfter0
     let cons = do
             (_, conName, conNamesAfter) <- zippers (conNames stmts0)
-            return (Var (conName `isPrecededBy` conNamesAfter))
+            return (Var (conName `isShadowedBy` conNamesAfter))
 
-    let makeRhs piOrLam conArgs = go stmts0
+    let makeRhs piOrLam args = go stmts0
           where
             go (StmtType t:stmts) =
-                piOrLam (typeName t) (pi pinnedArgs (Const M.Star)) (go stmts)
-              where
-                pinnedArgs = map typeArg (filter pinned (typeArgs t))
+                piOrLam (typeName t) (pi (typeArgs t) (Const M.Star)) (go stmts)
             go (StmtData d:stmts) =
-                piOrLam (dataName d) (pi pinnedArgs  pinnedType   ) (go stmts)
+                piOrLam (dataName d) (pi  dataArgs'   (dataType d  )) (go stmts)
               where
-                pinnedType = pin (dataType d)
-                pinnedArgs = do
+                dataArgs' = do
                     Arg x _A <- dataArgs d
-                    return (Arg x (pin _A))
+                    let m = do
+                            (f, _) <- unapply _A
+                            _      <- matchingDecl f
+                            return (Var f)
+                    let _A' = case m of
+                            Nothing  -> _A
+                            Just _A' -> _A'
+                    return (Arg x _A')
             go (_:stmts) = go stmts
             go  []       = apply con conArgs
 
-    return (case stmt0 of
-        StmtType t0 ->
-            Let (typeName t0) letArgs' (Const M.Star) (makeRhs Pi conArgs)
-          where
-            letArgs' = map typeArg (typeArgs t0)
             conArgs = do
-                (_, arg, argsAfter) <- zippers (typeArgs t0)
-                guard (pinned arg)
-                let names1 = map argName (map typeArg argsAfter)
+                (_, arg, argsAfter) <- zippers args
+                let names1 = map argName argsAfter
                 let names2 = conNames stmts0
-                let v = argName (typeArg arg) `isPrecededBy` (names1 ++ names2)
-                return (Var v)
+                let v      = argName arg `isShadowedBy` (names1 ++ names2)
+                let m = do
+                        (f, _) <- unapply (argType arg)
+                        matchingDecl f
+                return (case m of
+                    Nothing -> Var v
+                    _       -> apply v cons )
 
-        StmtData d0 ->
-            Let (dataName d0) universalArgs abstractType rhs'
+    return (case stmt0 of
+        StmtType t0 -> Let (typeName t0) (typeArgs t0) (Const M.Star) rhs
           where
-            m = do
-                (f, _) <- unapply (dataType d0)
-                matchingDecl f
+            rhs = makeRhs Pi (typeArgs t0)
 
-            universalArgs = case m of
-                Just (t, _) -> map typeArg (filter (not . pinned) (typeArgs t))
-                -- TODO: Proper error handling
-
+        StmtData d0 -> Let (dataName d0) universalArgs  abstractType  rhs'
+          where
             abstractType = pi (dataArgs d0) (dataType d0)
 
             dataArgs' = do
                 Arg x _A <- dataArgs d0
-                let m' = do
-                        (f, as) <- unapply _A
-                        (t, l) <- matchingDecl f
-                        let (args, e) = unPi (letRhs l)
-                        (f', _) <- unapply e
-                        let as' = do
-                                (a, tv) <- zip as (typeArgs t)
-                                guard (pinned tv)
-                                return a
-                        let e' = apply f' as'
-                        return (pi args e')
-                let _A' = case m' of
+                let m = do
+                        (f, _) <- unapply _A
+                        (_, l) <- matchingDecl f
+                        return (letRhs l)
+                let _A' = case m of
                         Just _A' -> _A'
                         Nothing  -> _A
                 return (Arg x _A')
 
-            conArgs = do
-                (_, arg, argsAfter) <- zippers (dataArgs d0)
-                let names1 = map argName argsAfter
-                let names2 = conNames stmts0
-                let v      = argName arg `isPrecededBy` (names1 ++ names2)
-                let m' = do
-                        (f, _) <- unapply (argType arg)
-                        matchingDecl f
-                return (case m' of
-                    Nothing -> Var v
-                    _       -> apply v cons )
-    
-            rhs' = lam dataArgs' (makeRhs Lam conArgs)
+            rhs' = lam dataArgs' (makeRhs Lam (dataArgs d0))
 
         StmtFold f0 -> case m of
-            Just (t, l) -> Let (foldName f0) foldArgs' foldType' rhs
+            Just (_, l) -> Let (foldName f0) universalArgs foldType' rhs
               where
-                foldArgs' = map typeArg (typeArgs t)
                 foldType' = Pi x _A (letRhs l)
                 rhs = Lam x (letRhs l) (Var (M.V x 0))
           where
@@ -465,17 +422,11 @@ safeIndex n (_:as) = n' `seq` safeIndex n' as
 {-| Compute the correct DeBruijn index for a synthetic `Var` (`x`) by providing
     all variables bound in between when `x` is introduced and when `x` is used.
 -}
-isPrecededBy :: Text -> [Text] -> M.Var
-x `isPrecededBy` vars = M.V x (length (filter (== x) vars))
+isShadowedBy :: Text -> [Text] -> M.Var
+x `isShadowedBy` vars = M.V x (length (filter (== x) vars))
 
 pi :: [Arg m] -> Expr m -> Expr m
 pi args e = foldr (\(Arg x _A) -> Pi x _A) e args
-
-unPi :: Expr m -> ([Arg m], Expr m)
-unPi (Pi x _A _B) = (Arg x _A:args, e)
-  where
-    ~(args, e) = unPi _B
-unPi  e           = ([], e)
 
 lam :: [Arg m] -> Expr m -> Expr m
 lam args e = foldr (\(Arg x _A) -> Lam x _A) e args
@@ -554,14 +505,6 @@ resugar   (M.App f0 a0  ) = App (resugar f0) (resugar a0)
 buildArg :: Arg Identity -> Builder
 buildArg (Arg x _A) = "(" <> fromLazyText x <> " : " <> buildExpr _A <> ")"
 
-buildTypeArg :: TypeArg Identity -> Builder
-buildTypeArg (TypeArg p arg) =
-    if p
-    then "{" <> fromLazyText x <> " : " <> buildExpr _A <> "}"
-    else buildArg arg
-  where
-    Arg x _A = arg
-
 buildStmt :: Stmt Identity -> Builder
 buildStmt (StmtType t) = buildType t
 buildStmt (StmtData d) = buildData d
@@ -573,7 +516,7 @@ buildType (Type n args)
     =   "type "
     <>  fromLazyText n
     <>  " "
-    <>  mconcat (map (\arg -> buildTypeArg arg <> " ") args)
+    <>  mconcat (map (\arg -> buildArg arg <> " ") args)
 
 buildData :: Data Identity -> Builder
 buildData (Data n args t)
