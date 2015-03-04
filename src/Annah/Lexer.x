@@ -53,9 +53,9 @@ tokens :-
     "->" | "→"                      { \_    -> yield Arrow                     }
     "\/" | "|~|" | "forall" | "∀" | "Π" { \_ -> yield Pi                       }
     "\" | "λ"                       { \_    -> yield Lambda                    }
+    "given"                         { \_    -> yield Given                     }
     "type"                          { \_    -> yield Type                      }
     "data"                          { \_    -> yield Data                      }
-    "fold"                          { \_    -> yield Fold                      }
     "let"                           { \_    -> yield Let                       }
     "="                             { \_    -> yield Equals                    }
     "in"                            { \_    -> yield In                        }
@@ -158,9 +158,9 @@ data Token
     | Arrow
     | Lambda
     | Pi
+    | Given
     | Type
     | Data
-    | Fold
     | Let
     | Equals
     | In
