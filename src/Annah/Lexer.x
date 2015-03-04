@@ -55,6 +55,7 @@ tokens :-
     "\" | "λ"                       { \_    -> yield Lambda                    }
     "given"                         { \_    -> yield Given                     }
     "type"                          { \_    -> yield Type                      }
+    "fold"                          { \_    -> yield Fold                      }
     "data"                          { \_    -> yield Data                      }
     "let"                           { \_    -> yield Let                       }
     "="                             { \_    -> yield Equals                    }
@@ -160,6 +161,7 @@ data Token
     | Pi
     | Given
     | Type
+    | Fold
     | Data
     | Let
     | Equals

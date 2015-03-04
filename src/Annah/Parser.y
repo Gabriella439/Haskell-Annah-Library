@@ -55,6 +55,7 @@ import Annah.Lexer (Token, Position)
     '|~|'   { Lexer.Pi         }
     'given' { Lexer.Given      }
     'type'  { Lexer.Type       }
+    'fold'  { Lexer.Fold       }
     'data'  { Lexer.Data       }
     'let'   { Lexer.Let        }
     '='     { Lexer.Equals     }
@@ -122,7 +123,7 @@ Datas :: { [Data IO] }
 Datas : DatasRev { reverse $1 }
 
 Type :: { Type IO }
-Type : 'type' label Datas { Type $2 $3 }
+Type : 'type' label 'fold' label Datas { Type $2 $4 $5 }
 
 TypesRev :: { [Type IO] }
 TypesRev : TypesRev Type { $2 : $1 }

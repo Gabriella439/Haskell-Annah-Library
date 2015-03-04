@@ -85,6 +85,7 @@ data Family m = Family
 
 data Type m = Type
     { typeName  :: Text
+    , typeFold  :: Text
     , typeDatas :: [Data m]
     }
 
@@ -138,7 +139,7 @@ loadFamily :: Family IO -> IO (Family m)
 loadFamily (Family as bs) = Family as <$> mapM loadType bs
 
 loadType :: Type IO -> IO (Type m)
-loadType (Type a bs) = Type a <$> mapM loadData bs
+loadType (Type a b cs) = Type a b <$> mapM loadData cs
 
 loadData :: Data IO -> IO (Data m)
 loadData (Data a bs) = Data a <$> mapM loadArg bs
@@ -231,8 +232,7 @@ data Cons = Cons
     > ->  MkPair _@1 _
 -}
 desugarFamily :: Family Identity -> [Let Identity]
-desugarFamily fam = typeLets ++ dataLets
-    -- TODO: Add folds?
+desugarFamily fam = typeLets ++ dataLets ++ foldLets
   where
     universalArgs :: [Arg Identity]
     universalArgs = do
@@ -266,14 +266,20 @@ desugarFamily fam = typeLets ++ dataLets
         go ((Cons x args _A):stmts) = piOrLam x (pi args _A) (go stmts)
         go  []                      = con
 
-    typeLets :: [Let Identity]
-    typeLets = do
-        (_, t, typeConstructorsAfter) <- zippers typeConstructors
-        let names1   = map consName typeConstructorsAfter
-        let names2   = map consName dataConstructors
-        let con      = consName t `isShadowedBy` (names1 ++ names2)
-        let letRhs'  = makeRhs Pi con
-        return (Let (consName t) universalArgs (consType t) letRhs')
+    typeLets, foldLets :: [Let Identity]
+    (typeLets, foldLets) = unzip (do
+        let folds = map typeFold (familyTypes fam)
+        ((_, t, tsAfter), fold) <- zip (zippers typeConstructors) folds
+        let names1    = map consName tsAfter
+        let names2    = map consName dataConstructors
+        let con       = consName t `isShadowedBy` (names1 ++ names2)
+        let typeName' = consName t
+        let typeRhs'  = makeRhs Pi con
+        let foldType' = Pi "x" (apply con universalVars) typeRhs'
+        let foldRhs'  = Lam "x" typeRhs' "x"
+        return ( Let typeName' universalArgs (consType t) typeRhs'
+               , Let fold      universalArgs  foldType'   foldRhs'
+               ) )
 
     -- TODO: Enforce that argument types are `Var`s?
     desugarType :: Expr Identity -> Maybe (Expr Identity)
@@ -413,9 +419,11 @@ buildFamily (Family gs ts)
     <>  mconcat (map buildType ts)
 
 buildType :: Type Identity -> Builder
-buildType (Type t ds)
+buildType (Type t f ds)
     =   "type "
     <>  fromLazyText t
+    <>  " fold "
+    <>  fromLazyText f
     <>  " "
     <>  mconcat (map buildData ds)
 
