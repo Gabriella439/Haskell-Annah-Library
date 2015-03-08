@@ -316,8 +316,8 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
         let (lhsArgs, rhsArgs) = unzip (do
                 Arg x _A <- consArgs d
                 return (case desugarType _A of
-                        Just _A' -> (Arg x (apply _A universalVars), Arg x _A')
-                        Nothing  -> (Arg x        _A               , Arg x _A ) ) )
+                    Just _A' -> (Arg x (apply _A universalVars), Arg x _A')
+                    Nothing  -> (Arg x        _A               , Arg x _A ) ) )
         let letType' = pi  lhsArgs (apply (consType d) universalVars)
         let letRhs'  = lam rhsArgs (makeRhs Lam (apply conVar conArgs))
         return (Let (consName d) universalArgs letType' letRhs')
