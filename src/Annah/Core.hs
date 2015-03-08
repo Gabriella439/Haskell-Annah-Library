@@ -33,6 +33,8 @@ module Annah.Core (
       M.Var(..)
     , M.Const(..)
     , Arg(..)
+    , TupleTypeField(..)
+    , TupleValueField(..)
     , Data(..)
     , Type(..)
     , Family(..)
@@ -49,8 +51,10 @@ module Annah.Core (
     , prettyExpr
     ) where
 
-import Control.Applicative (pure, empty, (<$>), (<*>))
+import Control.Applicative (pure, empty, (<$>), (<*>), (<|>))
+import Control.Monad (guard)
 import Data.Functor.Identity (Identity, runIdentity)
+import Data.List (intersperse)
 import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
 import Data.Text.Lazy (Text)
@@ -66,6 +70,16 @@ import Prelude hiding (const, pi)
 data Arg m = Arg
     { argName :: Text
     , argType :: Expr m
+    }
+
+data TupleTypeField m = TupleTypeField
+    { tupleTypeName :: Text
+    , tupleTypeType :: Expr m
+    }
+
+data TupleValueField m = TupleValueField
+    { tupleValueFieldExpr :: Expr m
+    , tupleValueFieldType :: Expr m
     }
 
 {-|
@@ -117,6 +131,8 @@ data Expr m
     | Fam (Family m) (Expr m)
     -- | > Nat n             ~  n
     | Natural Integer
+    | TupleValue [TupleValueField m]
+    | TupleType [TupleTypeField m]
     | Import (m (Expr m))
 
 instance IsString (Expr m) where
@@ -133,6 +149,8 @@ loadExpr (Annot a _A   ) = Annot <$> loadExpr a <*> loadExpr _A
 loadExpr (Lets ls e    ) = Lets <$> mapM loadLet ls <*> loadExpr e
 loadExpr (Fam f e      ) = Fam <$> loadFamily f <*> loadExpr e
 loadExpr (Natural n    ) = pure (Natural n)
+loadExpr (TupleValue fs) = TupleValue <$> mapM loadTupleValueField fs
+loadExpr (TupleType  as) = TupleType <$> mapM loadTupleTypeField as
 loadExpr (Import io    ) = io >>= loadExpr
 
 loadFamily :: Family IO -> IO (Family m)
@@ -151,6 +169,13 @@ loadLet (Let f args _B b) =
 loadArg :: Arg IO -> IO (Arg m)
 loadArg (Arg x _A) = Arg x <$> loadExpr _A
 
+loadTupleTypeField :: TupleTypeField IO -> IO (TupleTypeField m)
+loadTupleTypeField (TupleTypeField x _A) = TupleTypeField x <$> loadExpr _A
+
+loadTupleValueField :: TupleValueField IO -> IO (TupleValueField m)
+loadTupleValueField (TupleValueField f t) =
+    TupleValueField <$> loadExpr f <*> loadExpr t
+
 {-| Convert an Annah expression to a Morte expression
 
 > resugar . desugar = id  -- But not the other way around!
@@ -165,6 +190,8 @@ desugar (Annot a _A   ) = desugar (Lets [Let "x" [] _A a] "x")
 desugar (Lets ls e    ) = desugarLets  ls               e
 desugar (Fam f e      ) = desugarLets (desugarFamily f) e
 desugar (Natural n    ) = desugarNat n
+desugar (TupleValue fs) = desugarTupleValue fs
+desugar (TupleType  as) = desugarTupleType as
 desugar (Import m     ) = desugar (runIdentity m)
 
 desugarNat :: Integer -> M.Expr
@@ -176,7 +203,7 @@ desugarNat n0 =
     go n | n <= 0    = "Zero"
          | otherwise = M.App "Succ" (go $! n - 1)
 
-resugarNat :: M.Expr -> Maybe Integer
+resugarNat :: M.Expr -> Maybe (Expr m)
 resugarNat (
     M.Lam "Nat" (M.Const M.Star) (
         M.Lam "Zero" (M.Var (M.V "Nat" 0)) (
@@ -184,10 +211,59 @@ resugarNat (
                   (M.Pi _ (M.Var (M.V "Nat" 0)) (M.Var (M.V "Nat" 0))) e0) ))
     = go e0 0
   where
-    go (M.Var (M.V "Zero" 0))           n = pure n
+    go (M.Var (M.V "Zero" 0))           n = pure (Natural n)
     go (M.App (M.Var (M.V "Succ" 0)) e) n = go e $! n + 1
     go  _                               _ = empty
 resugarNat _ = empty
+
+desugarTupleValue :: [TupleValueField Identity] -> M.Expr
+desugarTupleValue fs0 =
+    M.Lam "Tuple" (M.Const M.Star)
+        (M.Lam "MakeTuple" (go0 fs0) (go1 (reverse fs0)))
+  where
+    go0 (TupleValueField _ t:fs) = M.Pi "_" (desugar t) (go0 fs)
+    go0  []                      = "Tuple"
+
+    go1 (TupleValueField f _:fs) = M.App (go1 fs) (desugar f)
+    go1  []                      = "MakeTuple"
+-- TODO: Shift all occurrences of `Tuple` and `k` in `t` and `f`
+
+resugarTupleValue :: M.Expr -> Maybe (Expr m)
+resugarTupleValue
+    (M.Lam "Tuple" (M.Const M.Star) (M.Lam "MakeTuple" t0 e0)) = do
+        es <- fmap reverse (go0 e0)
+        ts <- go1 t0
+        guard (length es == length ts)
+        return (TupleValue (zipWith TupleValueField es ts))
+  where
+    go0 (M.App e a)                 = fmap (resugar a:) (go0 e)
+    go0 (M.Var (M.V "MakeTuple" _)) = pure []
+    go0  _                          = empty
+
+    go1 (M.Pi "_" t e)          = fmap (resugar t:) (go1 e)
+    go1 (M.Var (M.V "Tuple" _)) = pure []
+    go1  _                      = empty
+resugarTupleValue _ = empty
+
+desugarTupleType :: [TupleTypeField Identity] -> M.Expr
+desugarTupleType args0 =
+    M.Pi "Tuple" (M.Const M.Star) (M.Pi "MakeTuple" (go args0 0) "Tuple")
+  where
+    go (TupleTypeField x _A:args) n = M.Pi x (desugar _A) (go args $! n')
+      where
+        n' = if x == "Tuple" then n + 1 else n
+    go  []             n = M.Var (M.V "Tuple" n)
+
+resugarTupleType :: M.Expr -> Maybe (Expr m)
+resugarTupleType (M.Pi "Tuple" (M.Const M.Star) (M.Pi "MakeTuple" t0 "Tuple")) =
+    fmap TupleType (go t0 0)
+  where
+    go (M.Pi x _A e) n = fmap (TupleTypeField x (resugar _A):) (go e n')
+      where
+        n' = if x == "Tuple" then n + 1 else n
+    go (M.Var (M.V "Tuple" n')) n | (n == n') = pure []
+    go  _                       _             = empty
+resugarTupleType _ = empty
 
 -- | A type or data constructor
 data Cons = Cons
@@ -401,16 +477,25 @@ zippers (stmt:stmts') = z:go z
 
 -- | Convert a Morte expression to an Annah expression
 resugar :: M.Expr -> Expr m
-resugar   (M.Const c    ) = Const c
-resugar   (M.Var v      ) = Var v
-resugar e@(M.Lam x _A  b) = case resugarNat e of
-    Nothing -> Lam x (resugar _A) (resugar  b)
-    Just n  -> Natural n
-resugar   (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
-resugar   (M.App f0 a0  ) = App (resugar f0) (resugar a0)
+resugar e | Just e' <- resugarNat        e
+                   <|> resugarTupleValue e
+                   <|> resugarTupleType  e
+          = e'
+resugar (M.Const c    ) = Const c
+resugar (M.Var v      ) = Var v
+resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
+resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
+resugar (M.App f0 a0  ) = App (resugar f0) (resugar a0)
 
 buildArg :: Arg Identity -> Builder
 buildArg (Arg x _A) = "(" <> fromLazyText x <> " : " <> buildExpr _A <> ")"
+
+buildTupleTypeField :: TupleTypeField Identity -> Builder
+buildTupleTypeField (TupleTypeField x _A) =
+    fromLazyText x <> " : " <> buildExpr _A
+
+buildTupleValueField :: TupleValueField Identity -> Builder
+buildTupleValueField (TupleValueField a b) = buildExpr a <> ": " <> buildExpr b
 
 buildFamily :: Family Identity -> Builder
 buildFamily (Family gs ts)
@@ -452,28 +537,36 @@ buildExpr = go 0
   where
     go :: Int -> Expr Identity -> Builder
     go prec e = case e of
-        Const c        -> M.buildConst c
-        Var x          -> M.buildVar x
-        Lam x _A b     -> quoteAbove 1 (
+        Const c           -> M.buildConst c
+        Var x             -> M.buildVar x
+        Lam x _A b        -> quoteAbove 1 (
                 "λ("
             <>  fromLazyText x
             <>  " : "
             <>  go 1 _A
             <>  ") → "
             <>  go 1 b )
-        Pi  x _A b    -> quoteAbove 1 (
+        Pi  x _A b        -> quoteAbove 1 (
                 (if M.used x (desugar b)
                  then "∀(" <> fromLazyText x <> " : " <> go 1 _A <> ")"
                  else go 2 _A )
             <>  " → "
             <>  go 1 b )
-        App f a        -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
-        Annot s t      -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
-        Lets ls e'     -> quoteAbove 1 (
+        App f a           -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
+        Annot s t         -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
+        Lets ls e'        -> quoteAbove 1 (
             mconcat (map buildLet ls) <> "in " <> go 1 e' )
-        Fam f e'       -> quoteAbove 1 (buildFamily f <> "in " <> go 1 e')
-        Natural n      -> decimal n
-        Import m       -> go prec (runIdentity m)
+        Fam f e'          -> quoteAbove 1 (buildFamily f <> "in " <> go 1 e')
+        Natural n         -> decimal n
+        TupleValue fields ->
+                "("
+            <>  mconcat (intersperse ", " (map buildTupleValueField fields))
+            <>  ")"
+        TupleType args    ->
+                "{"
+            <>  mconcat (intersperse ", " (map buildTupleTypeField args))
+            <>  "}"
+        Import m          -> go prec (runIdentity m)
       where
         quoteAbove :: Int -> Builder -> Builder
         quoteAbove n b = if prec > n then "(" <> b <> ")" else b

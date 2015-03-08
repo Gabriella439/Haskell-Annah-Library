@@ -46,6 +46,7 @@ import Annah.Lexer (Token, Position)
     ')'     { Lexer.CloseParen }
     '{'     { Lexer.OpenBrace  }
     '}'     { Lexer.CloseBrace }
+    ','     { Lexer.Comma      }
     ':'     { Lexer.Colon      }
     '@'     { Lexer.At         }
     '*'     { Lexer.Star       }
@@ -87,12 +88,14 @@ Expr2 :: { Expr IO }
       | Expr3       { $1        }
 
 Expr3 :: { Expr IO }
-      : VExpr         { Var $1                    }
-      | '*'           { Const Star                }
-      | 'BOX'         { Const Box                 }
-      | file          { importFile $1             }
-      | number        { Natural (fromIntegral $1) }
-      | '(' Expr0 ')' { $2                        }
+      : VExpr                    { Var $1                    }
+      | '*'                      { Const Star                }
+      | 'BOX'                    { Const Box                 }
+      | file                     { importFile $1             }
+      | number                   { Natural (fromIntegral $1) }
+      | '(' TupleValueFields ')' { TupleValue $2             }
+      | '{' TupleTypeFields  '}' { TupleType  $2             }
+      | '(' Expr0            ')' { $2                        }
 
 Args :: { [Arg IO] }
      : ArgsRev { reverse $1 }
@@ -144,6 +147,28 @@ LetsRev :: { [Let IO] }
 
 Lets :: { [Let IO] }
      : LetsRev { reverse $1 }
+
+TupleValueField :: { TupleValueField IO }
+TupleValueField : Expr1 ':' Expr0 { TupleValueField $1 $3 }
+
+TupleValueFieldsRev :: { [TupleValueField IO] }
+TupleValueFieldsRev : TupleValueFieldsRev ',' TupleValueField { $3 : $1 }
+                    | TupleValueField                         { [$1]    }
+                    |                                         { []      }
+
+TupleValueFields :: { [TupleValueField IO] }
+TupleValueFields : TupleValueFieldsRev { reverse $1 }
+
+TupleTypeFields :: { [TupleTypeField IO] }
+TupleTypeFields : TupleTypeFieldsRev { reverse $1 }
+
+TupleTypeFieldsRev :: { [TupleTypeField IO] }
+             : TupleTypeFieldsRev ',' TupleTypeField { $3 : $1 }
+             | TupleTypeField                        { [$1]    }
+             |                                       { []      }
+
+TupleTypeField :: { TupleTypeField IO }
+               : label ':' Expr0 { TupleTypeField $1 $3 }
 
 {
 -- | The specific parsing error

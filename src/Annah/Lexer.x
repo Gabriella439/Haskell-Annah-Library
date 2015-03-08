@@ -45,6 +45,7 @@ tokens :-
     ")"                             { \_    -> yield CloseParen                }
     "{"                             { \_    -> yield OpenBrace                 }
     "}"                             { \_    -> yield CloseBrace                }
+    ","                             { \_    -> yield Comma                     }
     ":"                             { \_    -> yield Colon                     }
     "#" $path+                      { \text -> yield (File (Text.drop 1 text)) }
     "@"                             { \_    -> yield At                        }
@@ -152,6 +153,7 @@ data Token
     | CloseParen
     | OpenBrace
     | CloseBrace
+    | Comma
     | Colon
     | At
     | Star
