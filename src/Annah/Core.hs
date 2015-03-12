@@ -257,10 +257,10 @@ desugarProductType args0 =
         n' = if x == "Product" then n + 1 else n
     go  []                          n = M.Var (M.V "Product" n)
 
-resugarProductType :: M.Expr -> Maybe (Expr m)
+resugarProductType :: M.Expr -> Maybe [ProductTypeField m]
 resugarProductType
     (M.Pi "Product" (M.Const M.Star) (M.Pi "MakeProduct" t0 "Product")) =
-    fmap ProductType (go t0 0)
+    go t0 0
   where
     go (M.Pi x _A e) n = fmap (ProductTypeField x (resugar _A):) (go e n')
       where
@@ -270,19 +270,39 @@ resugarProductType
 resugarProductType _ = empty
 
 desugarProductAccessor :: Int -> Int -> M.Expr
-desugarProductAccessor m n = go0 1
+desugarProductAccessor m n = go0 n
   where
-    go0 k | k <= n    = M.Lam (t k) (M.Const M.Star) (go0 $! k + 1)
+    go0 k | k > 0     = M.Lam "t" (M.Const M.Star) (go0 $! k - 1)
           | otherwise =
         M.Lam "x"
             (desugarProductType
-                [ProductTypeField "_" (Var (M.V (t i) 0)) | i <- [1..n]] )
-            (M.App (M.App "x" (M.Var (M.V (t m) 0))) (go1 1))
-    go1 k | k <= n    = M.Lam (f k) (M.Var (M.V (t k) 0)) (go1 $! k + 1)
-          | otherwise = M.Var (M.V (f m) 0)
+                [ProductTypeField "_" (Var (M.V "t" i)) | i <- [n-1,n-2..0]] )
+            (M.App (M.App "x" (M.Var (M.V "t" (n - m)))) (go1 (n - 1)))
 
-    f i = "f" <> toLazyText (decimal i)
-    t i = "t" <> toLazyText (decimal i)
+    go1 k | k >= 0    = M.Lam "f" (M.Var (M.V "t" k)) (go1 $! k - 1)
+          | otherwise = M.Var (M.V "f" (n - m))
+
+resugarProductAccessor :: M.Expr -> Maybe (Expr m)
+resugarProductAccessor e0 = go0 e0 0
+  where
+    go0 (M.Lam "t" (M.Const M.Star) e)                          n =
+        go0 e $! n + 1
+    go0 (M.Lam "x" t (M.App (M.App "x" (M.Var (M.V "t" i))) e)) n = do
+        let m = n - i
+        fs <- resugarProductType t
+        let checkField (ProductTypeField "_" (Var (M.V "t" k))) j = k == j
+            checkField  _                                       _ = False
+        guard (length fs == n && and (zipWith checkField fs [n-1,n-2..0]))
+        go1 m n e (n - 1)
+    go0  _                                                      _ =
+        empty
+
+    go1 m n (M.Lam "f" (M.Var (M.V "t" i)) e) k  | i == k     =
+        go1 m n e $! k - 1
+    go1 m n (M.Var (M.V "f" i))             (-1) | i == n - m =
+        pure (ProductAccessor m n)
+    go1 _ _  _                                _               =
+        empty
 
 -- | A type or data constructor
 data Cons = Cons
@@ -498,7 +518,8 @@ zippers (stmt:stmts') = z:go z
 resugar :: M.Expr -> Expr m
 resugar e | Just e' <- resugarNat        e
                    <|> resugarProductValue e
-                   <|> resugarProductType  e
+                   <|> fmap ProductType (resugarProductType  e)
+                   <|> resugarProductAccessor e
           = e'
 resugar (M.Const c    ) = Const c
 resugar (M.Var v      ) = Var v
@@ -585,7 +606,7 @@ buildExpr = go 0
                 "{"
             <>  mconcat (intersperse ", " (map buildProductTypeField args))
             <>  "}"
-        ProductAccessor m n -> decimal m <> "of" <> decimal n
+        ProductAccessor m n -> decimal m <> " of " <> decimal n
         Import m            -> go prec (runIdentity m)
       where
         quoteAbove :: Int -> Builder -> Builder
