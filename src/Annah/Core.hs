@@ -108,7 +108,7 @@ data Data m = Data
     , dataArgs :: [Arg m]
     }
 
---| Syntax tree for expressions
+-- | Syntax tree for expressions
 data Expr m
     -- | > Const c           ~  c
     = Const M.Const
