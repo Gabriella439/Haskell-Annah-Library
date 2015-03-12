@@ -542,7 +542,7 @@ buildProductTypeField (ProductTypeField x _A) =
     else fromLazyText x <> " : " <> buildExpr _A
 
 buildProductValueField :: ProductValueField Identity -> Builder
-buildProductValueField (ProductValueField a b) = buildExpr a <> ": " <> buildExpr b
+buildProductValueField (ProductValueField a b) = buildExpr a <> " : " <> buildExpr b
 
 buildFamily :: Family Identity -> Builder
 buildFamily (Family gs ts)
