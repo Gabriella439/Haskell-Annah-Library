@@ -170,7 +170,8 @@ ProductTypeFieldsRev :: { [ProductTypeField IO] }
                      |                                           { []      }
 
 ProductTypeField :: { ProductTypeField IO }
-                 : label ':' Expr0 { ProductTypeField $1 $3 }
+                 : label ':' Expr0 { ProductTypeField $1  $3 }
+                 | Expr0           { ProductTypeField "_" $1 }
 
 {
 -- | The specific parsing error

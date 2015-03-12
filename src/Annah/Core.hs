@@ -537,7 +537,9 @@ buildArg (Arg x _A) = "(" <> fromLazyText x <> " : " <> buildExpr _A <> ")"
 
 buildProductTypeField :: ProductTypeField Identity -> Builder
 buildProductTypeField (ProductTypeField x _A) =
-    fromLazyText x <> " : " <> buildExpr _A
+    if x == "_"
+    then buildExpr _A
+    else fromLazyText x <> " : " <> buildExpr _A
 
 buildProductValueField :: ProductValueField Identity -> Builder
 buildProductValueField (ProductValueField a b) = buildExpr a <> ": " <> buildExpr b
