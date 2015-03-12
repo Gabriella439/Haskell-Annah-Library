@@ -61,6 +61,7 @@ tokens :-
     "let"                           { \_    -> yield Let                       }
     "="                             { \_    -> yield Equals                    }
     "in"                            { \_    -> yield In                        }
+    "of"                            { \_    -> yield Of                        }
     $digit+                         { \text -> yield (Number (toInt text))     }
     $fst $label* | "(" $opchar+ ")" { \text -> yield (Label text)              }
 
@@ -168,6 +169,7 @@ data Token
     | Let
     | Equals
     | In
+    | Of
     | Label Text
     | Number Int
     | File Text

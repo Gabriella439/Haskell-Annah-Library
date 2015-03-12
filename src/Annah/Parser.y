@@ -61,6 +61,7 @@ import Annah.Lexer (Token, Position)
     'let'   { Lexer.Let        }
     '='     { Lexer.Equals     }
     'in'    { Lexer.In         }
+    'of'    { Lexer.Of         }
     label   { Lexer.Label $$   }
     number  { Lexer.Number $$  }
     file    { Lexer.File $$    }
@@ -88,14 +89,15 @@ Expr2 :: { Expr IO }
       | Expr3       { $1        }
 
 Expr3 :: { Expr IO }
-      : VExpr                    { Var $1                    }
-      | '*'                      { Const Star                }
-      | 'BOX'                    { Const Box                 }
-      | file                     { importFile $1             }
-      | number                   { Natural (fromIntegral $1) }
-      | '(' TupleValueFields ')' { TupleValue $2             }
-      | '{' TupleTypeFields  '}' { TupleType  $2             }
-      | '(' Expr0            ')' { $2                        }
+      : VExpr                      { Var $1                    }
+      | '*'                        { Const Star                }
+      | 'BOX'                      { Const Box                 }
+      | file                       { importFile $1             }
+      | number 'of' number         { ProductAccessor $1 $3     }
+      | number                     { Natural (fromIntegral $1) }
+      | '(' ProductValueFields ')' { ProductValue $2           }
+      | '{' ProductTypeFields  '}' { ProductType  $2           }
+      | '(' Expr0              ')' { $2                        }
 
 Args :: { [Arg IO] }
      : ArgsRev { reverse $1 }
@@ -148,27 +150,27 @@ LetsRev :: { [Let IO] }
 Lets :: { [Let IO] }
      : LetsRev { reverse $1 }
 
-TupleValueField :: { TupleValueField IO }
-TupleValueField : Expr1 ':' Expr0 { TupleValueField $1 $3 }
+ProductValueField :: { ProductValueField IO }
+ProductValueField : Expr1 ':' Expr0 { ProductValueField $1 $3 }
 
-TupleValueFieldsRev :: { [TupleValueField IO] }
-TupleValueFieldsRev : TupleValueFieldsRev ',' TupleValueField { $3 : $1 }
-                    | TupleValueField                         { [$1]    }
-                    |                                         { []      }
+ProductValueFieldsRev :: { [ProductValueField IO] }
+ProductValueFieldsRev : ProductValueFieldsRev ',' ProductValueField { $3 : $1 }
+                      | ProductValueField                           { [$1]    }
+                      |                                             { []      }
 
-TupleValueFields :: { [TupleValueField IO] }
-TupleValueFields : TupleValueFieldsRev { reverse $1 }
+ProductValueFields :: { [ProductValueField IO] }
+ProductValueFields : ProductValueFieldsRev { reverse $1 }
 
-TupleTypeFields :: { [TupleTypeField IO] }
-TupleTypeFields : TupleTypeFieldsRev { reverse $1 }
+ProductTypeFields :: { [ProductTypeField IO] }
+ProductTypeFields : ProductTypeFieldsRev { reverse $1 }
 
-TupleTypeFieldsRev :: { [TupleTypeField IO] }
-             : TupleTypeFieldsRev ',' TupleTypeField { $3 : $1 }
-             | TupleTypeField                        { [$1]    }
-             |                                       { []      }
+ProductTypeFieldsRev :: { [ProductTypeField IO] }
+                     : ProductTypeFieldsRev ',' ProductTypeField { $3 : $1 }
+                     | ProductTypeField                          { [$1]    }
+                     |                                           { []      }
 
-TupleTypeField :: { TupleTypeField IO }
-               : label ':' Expr0 { TupleTypeField $1 $3 }
+ProductTypeField :: { ProductTypeField IO }
+                 : label ':' Expr0 { ProductTypeField $1 $3 }
 
 {
 -- | The specific parsing error

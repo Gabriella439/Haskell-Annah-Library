@@ -33,8 +33,8 @@ module Annah.Core (
       M.Var(..)
     , M.Const(..)
     , Arg(..)
-    , TupleTypeField(..)
-    , TupleValueField(..)
+    , ProductTypeField(..)
+    , ProductValueField(..)
     , Data(..)
     , Type(..)
     , Family(..)
@@ -72,14 +72,14 @@ data Arg m = Arg
     , argType :: Expr m
     }
 
-data TupleTypeField m = TupleTypeField
-    { tupleTypeName :: Text
-    , tupleTypeType :: Expr m
+data ProductTypeField m = ProductTypeField
+    { productTypeName :: Text
+    , productTypeType :: Expr m
     }
 
-data TupleValueField m = TupleValueField
-    { tupleValueFieldExpr :: Expr m
-    , tupleValueFieldType :: Expr m
+data ProductValueField m = ProductValueField
+    { productValueFieldExpr :: Expr m
+    , productValueFieldType :: Expr m
     }
 
 {-|
@@ -131,8 +131,9 @@ data Expr m
     | Fam (Family m) (Expr m)
     -- | > Nat n             ~  n
     | Natural Integer
-    | TupleValue [TupleValueField m]
-    | TupleType [TupleTypeField m]
+    | ProductValue [ProductValueField m]
+    | ProductType [ProductTypeField m]
+    | ProductAccessor Int Int
     | Import (m (Expr m))
 
 instance IsString (Expr m) where
@@ -140,18 +141,19 @@ instance IsString (Expr m) where
 
 -- | Evaluate all `Import`s, leaving behind a pure expression
 loadExpr :: Expr IO -> IO (Expr m)
-loadExpr (Const c      ) = pure (Const c)
-loadExpr (Var v        ) = pure (Var v)
-loadExpr (Lam x _A  b  ) = Lam x <$> loadExpr _A <*> loadExpr  b
-loadExpr (Pi  x _A _B  ) = Pi  x <$> loadExpr _A <*> loadExpr _B
-loadExpr (App f a      ) = App <$> loadExpr f <*> loadExpr a
-loadExpr (Annot a _A   ) = Annot <$> loadExpr a <*> loadExpr _A
-loadExpr (Lets ls e    ) = Lets <$> mapM loadLet ls <*> loadExpr e
-loadExpr (Fam f e      ) = Fam <$> loadFamily f <*> loadExpr e
-loadExpr (Natural n    ) = pure (Natural n)
-loadExpr (TupleValue fs) = TupleValue <$> mapM loadTupleValueField fs
-loadExpr (TupleType  as) = TupleType <$> mapM loadTupleTypeField as
-loadExpr (Import io    ) = io >>= loadExpr
+loadExpr (Const c            ) = pure (Const c)
+loadExpr (Var v              ) = pure (Var v)
+loadExpr (Lam x _A  b        ) = Lam x <$> loadExpr _A <*> loadExpr  b
+loadExpr (Pi  x _A _B        ) = Pi  x <$> loadExpr _A <*> loadExpr _B
+loadExpr (App f a            ) = App <$> loadExpr f <*> loadExpr a
+loadExpr (Annot a _A         ) = Annot <$> loadExpr a <*> loadExpr _A
+loadExpr (Lets ls e          ) = Lets <$> mapM loadLet ls <*> loadExpr e
+loadExpr (Fam f e            ) = Fam <$> loadFamily f <*> loadExpr e
+loadExpr (Natural n          ) = pure (Natural n)
+loadExpr (ProductValue fs    ) = ProductValue <$> mapM loadProductValueField fs
+loadExpr (ProductType  as    ) = ProductType <$> mapM loadProductTypeField as
+loadExpr (ProductAccessor m n) = pure (ProductAccessor m n)
+loadExpr (Import io          ) = io >>= loadExpr
 
 loadFamily :: Family IO -> IO (Family m)
 loadFamily (Family as bs) = Family as <$> mapM loadType bs
@@ -169,30 +171,31 @@ loadLet (Let f args _B b) =
 loadArg :: Arg IO -> IO (Arg m)
 loadArg (Arg x _A) = Arg x <$> loadExpr _A
 
-loadTupleTypeField :: TupleTypeField IO -> IO (TupleTypeField m)
-loadTupleTypeField (TupleTypeField x _A) = TupleTypeField x <$> loadExpr _A
+loadProductTypeField :: ProductTypeField IO -> IO (ProductTypeField m)
+loadProductTypeField (ProductTypeField x _A) = ProductTypeField x <$> loadExpr _A
 
-loadTupleValueField :: TupleValueField IO -> IO (TupleValueField m)
-loadTupleValueField (TupleValueField f t) =
-    TupleValueField <$> loadExpr f <*> loadExpr t
+loadProductValueField :: ProductValueField IO -> IO (ProductValueField m)
+loadProductValueField (ProductValueField f t) =
+    ProductValueField <$> loadExpr f <*> loadExpr t
 
 {-| Convert an Annah expression to a Morte expression
 
 > resugar . desugar = id  -- But not the other way around!
 -}
 desugar :: Expr Identity -> M.Expr
-desugar (Const c      ) = M.Const c
-desugar (Var v        ) = M.Var   v
-desugar (Lam x _A  b  ) = M.Lam x (desugar _A) (desugar  b)
-desugar (Pi  x _A _B  ) = M.Pi  x (desugar _A) (desugar _B)
-desugar (App f a      ) = M.App (desugar f) (desugar a)
-desugar (Annot a _A   ) = desugar (Lets [Let "x" [] _A a] "x")
-desugar (Lets ls e    ) = desugarLets  ls               e
-desugar (Fam f e      ) = desugarLets (desugarFamily f) e
-desugar (Natural n    ) = desugarNat n
-desugar (TupleValue fs) = desugarTupleValue fs
-desugar (TupleType  as) = desugarTupleType as
-desugar (Import m     ) = desugar (runIdentity m)
+desugar (Const c            ) = M.Const c
+desugar (Var v              ) = M.Var   v
+desugar (Lam x _A  b        ) = M.Lam x (desugar _A) (desugar  b)
+desugar (Pi  x _A _B        ) = M.Pi  x (desugar _A) (desugar _B)
+desugar (App f a            ) = M.App (desugar f) (desugar a)
+desugar (Annot a _A         ) = desugar (Lets [Let "x" [] _A a] "x")
+desugar (Lets ls e          ) = desugarLets  ls               e
+desugar (Fam f e            ) = desugarLets (desugarFamily f) e
+desugar (Natural n          ) = desugarNat n
+desugar (ProductValue fs    ) = desugarProductValue fs
+desugar (ProductType  as    ) = desugarProductType as
+desugar (ProductAccessor m n) = desugarProductAccessor m n
+desugar (Import m           ) = desugar (runIdentity m)
 
 desugarNat :: Integer -> M.Expr
 desugarNat n0 =
@@ -216,54 +219,70 @@ resugarNat (
     go  _                               _ = empty
 resugarNat _ = empty
 
-desugarTupleValue :: [TupleValueField Identity] -> M.Expr
-desugarTupleValue fs0 =
-    M.Lam "Tuple" (M.Const M.Star)
-        (M.Lam "MakeTuple" (go0 fs0) (go1 (reverse fs0)))
+desugarProductValue :: [ProductValueField Identity] -> M.Expr
+desugarProductValue fs0 =
+    M.Lam "Product" (M.Const M.Star)
+        (M.Lam "MakeProduct" (go0 fs0) (go1 (reverse fs0)))
   where
-    go0 (TupleValueField _ t:fs) = M.Pi "_" (desugar t) (go0 fs)
-    go0  []                      = "Tuple"
+    go0 (ProductValueField _ t:fs) = M.Pi "_" (desugar t) (go0 fs)
+    go0  []                        = "Product"
 
-    go1 (TupleValueField f _:fs) = M.App (go1 fs) (desugar f)
-    go1  []                      = "MakeTuple"
--- TODO: Shift all occurrences of `Tuple` and `k` in `t` and `f`
+    go1 (ProductValueField f _:fs) = M.App (go1 fs) (desugar f)
+    go1  []                        = "MakeProduct"
+-- TODO: Shift all occurrences of `Product` and `k` in `t` and `f`
 
-resugarTupleValue :: M.Expr -> Maybe (Expr m)
-resugarTupleValue
-    (M.Lam "Tuple" (M.Const M.Star) (M.Lam "MakeTuple" t0 e0)) = do
+resugarProductValue :: M.Expr -> Maybe (Expr m)
+resugarProductValue
+    (M.Lam "Product" (M.Const M.Star) (M.Lam "MakeProduct" t0 e0)) = do
         es <- fmap reverse (go0 e0)
         ts <- go1 t0
         guard (length es == length ts)
-        return (TupleValue (zipWith TupleValueField es ts))
+        return (ProductValue (zipWith ProductValueField es ts))
   where
-    go0 (M.App e a)                 = fmap (resugar a:) (go0 e)
-    go0 (M.Var (M.V "MakeTuple" _)) = pure []
-    go0  _                          = empty
+    go0 (M.App e a)                   = fmap (resugar a:) (go0 e)
+    go0 (M.Var (M.V "MakeProduct" _)) = pure []
+    go0  _                            = empty
 
-    go1 (M.Pi "_" t e)          = fmap (resugar t:) (go1 e)
-    go1 (M.Var (M.V "Tuple" _)) = pure []
-    go1  _                      = empty
-resugarTupleValue _ = empty
+    go1 (M.Pi "_" t e)            = fmap (resugar t:) (go1 e)
+    go1 (M.Var (M.V "Product" _)) = pure []
+    go1  _                        = empty
+resugarProductValue _ = empty
 
-desugarTupleType :: [TupleTypeField Identity] -> M.Expr
-desugarTupleType args0 =
-    M.Pi "Tuple" (M.Const M.Star) (M.Pi "MakeTuple" (go args0 0) "Tuple")
+desugarProductType :: [ProductTypeField Identity] -> M.Expr
+desugarProductType args0 =
+    M.Pi "Product" (M.Const M.Star) (M.Pi "MakeProduct" (go args0 0) "Product")
   where
-    go (TupleTypeField x _A:args) n = M.Pi x (desugar _A) (go args $! n')
+    go (ProductTypeField x _A:args) n = M.Pi x (desugar _A) (go args $! n')
       where
-        n' = if x == "Tuple" then n + 1 else n
-    go  []             n = M.Var (M.V "Tuple" n)
+        n' = if x == "Product" then n + 1 else n
+    go  []                          n = M.Var (M.V "Product" n)
 
-resugarTupleType :: M.Expr -> Maybe (Expr m)
-resugarTupleType (M.Pi "Tuple" (M.Const M.Star) (M.Pi "MakeTuple" t0 "Tuple")) =
-    fmap TupleType (go t0 0)
+resugarProductType :: M.Expr -> Maybe (Expr m)
+resugarProductType
+    (M.Pi "Product" (M.Const M.Star) (M.Pi "MakeProduct" t0 "Product")) =
+    fmap ProductType (go t0 0)
   where
-    go (M.Pi x _A e) n = fmap (TupleTypeField x (resugar _A):) (go e n')
+    go (M.Pi x _A e) n = fmap (ProductTypeField x (resugar _A):) (go e n')
       where
-        n' = if x == "Tuple" then n + 1 else n
-    go (M.Var (M.V "Tuple" n')) n | (n == n') = pure []
-    go  _                       _             = empty
-resugarTupleType _ = empty
+        n' = if x == "Product" then n + 1 else n
+    go (M.Var (M.V "Product" n')) n | (n == n') = pure []
+    go  _                         _             = empty
+resugarProductType _ = empty
+
+desugarProductAccessor :: Int -> Int -> M.Expr
+desugarProductAccessor m n = go0 1
+  where
+    go0 k | k <= n    = M.Lam (t k) (M.Const M.Star) (go0 $! k + 1)
+          | otherwise =
+        M.Lam "x"
+            (desugarProductType
+                [ProductTypeField "_" (Var (M.V (t i) 0)) | i <- [1..n]] )
+            (M.App (M.App "x" (M.Var (M.V (t m) 0))) (go1 1))
+    go1 k | k <= n    = M.Lam (f k) (M.Var (M.V (t k) 0)) (go1 $! k + 1)
+          | otherwise = M.Var (M.V (f m) 0)
+
+    f i = "f" <> toLazyText (decimal i)
+    t i = "t" <> toLazyText (decimal i)
 
 -- | A type or data constructor
 data Cons = Cons
@@ -478,8 +497,8 @@ zippers (stmt:stmts') = z:go z
 -- | Convert a Morte expression to an Annah expression
 resugar :: M.Expr -> Expr m
 resugar e | Just e' <- resugarNat        e
-                   <|> resugarTupleValue e
-                   <|> resugarTupleType  e
+                   <|> resugarProductValue e
+                   <|> resugarProductType  e
           = e'
 resugar (M.Const c    ) = Const c
 resugar (M.Var v      ) = Var v
@@ -490,12 +509,12 @@ resugar (M.App f0 a0  ) = App (resugar f0) (resugar a0)
 buildArg :: Arg Identity -> Builder
 buildArg (Arg x _A) = "(" <> fromLazyText x <> " : " <> buildExpr _A <> ")"
 
-buildTupleTypeField :: TupleTypeField Identity -> Builder
-buildTupleTypeField (TupleTypeField x _A) =
+buildProductTypeField :: ProductTypeField Identity -> Builder
+buildProductTypeField (ProductTypeField x _A) =
     fromLazyText x <> " : " <> buildExpr _A
 
-buildTupleValueField :: TupleValueField Identity -> Builder
-buildTupleValueField (TupleValueField a b) = buildExpr a <> ": " <> buildExpr b
+buildProductValueField :: ProductValueField Identity -> Builder
+buildProductValueField (ProductValueField a b) = buildExpr a <> ": " <> buildExpr b
 
 buildFamily :: Family Identity -> Builder
 buildFamily (Family gs ts)
@@ -537,36 +556,37 @@ buildExpr = go 0
   where
     go :: Int -> Expr Identity -> Builder
     go prec e = case e of
-        Const c           -> M.buildConst c
-        Var x             -> M.buildVar x
-        Lam x _A b        -> quoteAbove 1 (
+        Const c             -> M.buildConst c
+        Var x               -> M.buildVar x
+        Lam x _A b          -> quoteAbove 1 (
                 "λ("
             <>  fromLazyText x
             <>  " : "
             <>  go 1 _A
             <>  ") → "
             <>  go 1 b )
-        Pi  x _A b        -> quoteAbove 1 (
+        Pi  x _A b          -> quoteAbove 1 (
                 (if M.used x (desugar b)
                  then "∀(" <> fromLazyText x <> " : " <> go 1 _A <> ")"
                  else go 2 _A )
             <>  " → "
             <>  go 1 b )
-        App f a           -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
-        Annot s t         -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
-        Lets ls e'        -> quoteAbove 1 (
+        App f a             -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
+        Annot s t           -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
+        Lets ls e'          -> quoteAbove 1 (
             mconcat (map buildLet ls) <> "in " <> go 1 e' )
-        Fam f e'          -> quoteAbove 1 (buildFamily f <> "in " <> go 1 e')
-        Natural n         -> decimal n
-        TupleValue fields ->
+        Fam f e'            -> quoteAbove 1 (buildFamily f <> "in " <> go 1 e')
+        Natural n           -> decimal n
+        ProductValue fields ->
                 "("
-            <>  mconcat (intersperse ", " (map buildTupleValueField fields))
+            <>  mconcat (intersperse ", " (map buildProductValueField fields))
             <>  ")"
-        TupleType args    ->
+        ProductType args    ->
                 "{"
-            <>  mconcat (intersperse ", " (map buildTupleTypeField args))
+            <>  mconcat (intersperse ", " (map buildProductTypeField args))
             <>  "}"
-        Import m          -> go prec (runIdentity m)
+        ProductAccessor m n -> decimal m <> "of" <> decimal n
+        Import m            -> go prec (runIdentity m)
       where
         quoteAbove :: Int -> Builder -> Builder
         quoteAbove n b = if prec > n then "(" <> b <> ")" else b
