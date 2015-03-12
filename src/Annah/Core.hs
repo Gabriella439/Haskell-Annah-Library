@@ -224,12 +224,14 @@ desugarProductValue fs0 =
     M.Lam "Product" (M.Const M.Star)
         (M.Lam "MakeProduct" (go0 fs0) (go1 (reverse fs0)))
   where
-    go0 (ProductValueField _ t:fs) = M.Pi "_" (desugar t) (go0 fs)
+    go0 (ProductValueField _ t:fs) = M.Pi "_" (shiftOne (desugar t)) (go0 fs)
     go0  []                        = "Product"
 
-    go1 (ProductValueField f _:fs) = M.App (go1 fs) (desugar f)
+    go1 (ProductValueField f _:fs) = M.App (go1 fs) (shiftBoth (desugar f))
     go1  []                        = "MakeProduct"
--- TODO: Shift all occurrences of `Product` and `k` in `t` and `f`
+
+    shiftOne  = M.shift 1 "Product"
+    shiftBoth = M.shift 1 "Product" . M.shift 1 "MakeProduct"
 
 resugarProductValue :: M.Expr -> Maybe (Expr m)
 resugarProductValue
@@ -239,13 +241,16 @@ resugarProductValue
         guard (length es == length ts)
         return (ProductValue (zipWith ProductValueField es ts))
   where
-    go0 (M.App e a)                   = fmap (resugar a:) (go0 e)
+    go0 (M.App e a)                   = fmap (resugar (shiftBoth a):) (go0 e)
     go0 (M.Var (M.V "MakeProduct" _)) = pure []
     go0  _                            = empty
 
-    go1 (M.Pi "_" t e)            = fmap (resugar t:) (go1 e)
+    go1 (M.Pi "_" t e)            = fmap (resugar (shiftOne t):) (go1 e)
     go1 (M.Var (M.V "Product" _)) = pure []
     go1  _                        = empty
+
+    shiftOne  = M.shift (-1) "Product"
+    shiftBoth = M.shift (-1) "Product" . M.shift (-1) "MakeProduct"
 resugarProductValue _ = empty
 
 desugarProductType :: [ProductTypeField Identity] -> M.Expr
