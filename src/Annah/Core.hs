@@ -108,10 +108,7 @@ data Data m = Data
     , dataArgs :: [Arg m]
     }
 
-{-| Syntax tree for expressions
-
-    Note that equality of @annah@ expressions is purely syntactic
--}
+--| Syntax tree for expressions
 data Expr m
     -- | > Const c           ~  c
     = Const M.Const
