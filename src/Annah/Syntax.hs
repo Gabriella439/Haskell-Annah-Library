@@ -82,30 +82,30 @@ data Data m = Data
 
 -- | Syntax tree for expressions
 data Expr m
-    -- | > Const c              ~  c
+    -- | > Const c                ~  c
     = Const M.Const
-    -- | > Var (V x 0)          ~  x
-    --   > Var (V x 0)          ~  x
+    -- | > Var (V x 0)            ~  x
+    --   > Var (V x 0)            ~  x
     | Var M.Var
-    -- | > Lam x     _A  b      ~  λ(x : _A) →  b
+    -- | > Lam x     _A  b        ~  λ(x : _A) →  b
     | Lam Text (Expr m) (Expr m)
-    -- | > Pi x      _A _B      ~  ∀(x : _A) → _B
-    --   > Pi unused _A _B      ~        _A  → _B
+    -- | > Pi x      _A _B        ~  ∀(x : _A) → _B
+    --   > Pi unused _A _B        ~        _A  → _B
     | Pi  Text (Expr m) (Expr m)
-    -- | > App f a              ~  f a
+    -- | > App f a                ~  f a
     | App (Expr m) (Expr m)
-    -- | > Annot a _A           ~  a : _A
+    -- | > Annot a _A             ~  a : _A
     | Annot (Expr m) (Expr m)
-    -- | Lets [l1, l2] e        ~ l1 l2 in e
+    -- | > Lets [l1, l2] e        ~ l1 l2 in e
     | Lets [Let m] (Expr m)
     | Fam (Family m) (Expr m)
-    -- | > Nat n                ~  n
+    -- | > Nat n                  ~  n
     | Natural Integer
-    -- | ProductValue [f1, f2]  ~  (f1, f2)
+    -- | > ProductValue [f1, f2]  ~  (f1, f2)
     | ProductValue [ProductValueField m]
-    -- | ProductType [f1, f2]   ~  {f1, f2}
+    -- | > ProductType [f1, f2]   ~  {f1, f2}
     | ProductType [ProductTypeField m]
-    -- | ProductAccessor m n    ~  mofn
+    -- | > ProductAccessor 1 2    ~  1of2
     | ProductAccessor Int Int
     | Import (m (Expr m))
 
