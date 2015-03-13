@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternGuards     #-}
 
 {-| This module contains all logic for desugaring Annah expressions to Morte and
     resugaring Morte expressions back to Annah.  I call this desugaring because
