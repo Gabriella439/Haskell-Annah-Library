@@ -56,85 +56,13 @@ import Control.Monad (guard)
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.List (intersperse)
 import Data.Monoid (Monoid(..), (<>))
-import Data.String (IsString(..))
 import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Builder.Int (decimal)
 import Data.Text.Lazy.Builder (Builder, toLazyText, fromLazyText)
 import qualified Morte.Core as M
 import Prelude hiding (const, pi)
 
-{-| Argument for function or constructor definitions
-
-> Arg x _A  ~  (x : _A)
--}
-data Arg m = Arg
-    { argName :: Text
-    , argType :: Expr m
-    }
-
-data ProductTypeField m = ProductTypeField
-    { productTypeName :: Text
-    , productTypeType :: Expr m
-    }
-
-data ProductValueField m = ProductValueField
-    { productValueFieldExpr :: Expr m
-    , productValueFieldType :: Expr m
-    }
-
-{-|
-> Let f [Arg x _A, Arg y _B] _C rhs  ~  let f (x : _A) (y : _B) : _C = rhs
--}
-data Let m = Let
-    { letName :: Text
-    , letArgs :: [Arg m]
-    , letType :: Expr m
-    , letRhs  :: Expr m
-    }
-
-data Family m = Family
-    { familyGivens :: [Text]
-    , familyTypes  :: [Type m]
-    }
-
-data Type m = Type
-    { typeName  :: Text
-    , typeFold  :: Text
-    , typeDatas :: [Data m]
-    }
-
-data Data m = Data
-    { dataName :: Text
-    , dataArgs :: [Arg m]
-    }
-
--- | Syntax tree for expressions
-data Expr m
-    -- | > Const c           ~  c
-    = Const M.Const
-    -- | > Var (V x 0)       ~  x
-    --   > Var (V x 0)       ~  x
-    | Var M.Var
-    -- | > Lam x     _A  b   ~  λ(x : _A) →  b
-    | Lam Text (Expr m) (Expr m)
-    -- | > Pi x      _A _B   ~  ∀(x : _A) → _B
-    --   > Pi unused _A _B   ~        _A  → _B
-    | Pi  Text (Expr m) (Expr m)
-    -- | > App f a           ~  f a
-    | App (Expr m) (Expr m)
-    -- | > Annot a _A        ~  a : _A
-    | Annot (Expr m) (Expr m)
-    | Lets [Let m] (Expr m)
-    | Fam (Family m) (Expr m)
-    -- | > Nat n             ~  n
-    | Natural Integer
-    | ProductValue [ProductValueField m]
-    | ProductType [ProductTypeField m]
-    | ProductAccessor Int Int
-    | Import (m (Expr m))
-
-instance IsString (Expr m) where
-    fromString str = Var (fromString str)
+import Annah.Syntax
 
 -- | Evaluate all `Import`s, leaving behind a pure expression
 loadExpr :: Expr IO -> IO (Expr m)

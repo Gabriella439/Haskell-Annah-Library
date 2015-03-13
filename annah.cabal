@@ -30,7 +30,8 @@ Library
     Exposed-Modules:
         Annah.Core,
         Annah.Lexer,
-        Annah.Parser
+        Annah.Parser,
+        Annah.Syntax
 --      Annah.Tutorial
     Build-Tools: alex, happy
     GHC-Options: -O2

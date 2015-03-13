@@ -29,9 +29,9 @@ import Lens.Family.Stock (_1, _2)
 import Lens.Family.State.Strict ((.=), use, zoom)
 import Pipes (Producer, hoist, lift, next)
 
-import Annah.Core
 import qualified Annah.Lexer as Lexer
 import Annah.Lexer (Token, Position)
+import Annah.Syntax
 
 }
 
