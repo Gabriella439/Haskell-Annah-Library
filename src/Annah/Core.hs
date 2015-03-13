@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 
 {-| This module contains the core machinery for the Annah language, which is a
     medium-level distributed language built on top of Morte.
