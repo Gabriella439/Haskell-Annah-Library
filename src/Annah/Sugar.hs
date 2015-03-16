@@ -139,7 +139,7 @@ resugarProductValue _ = empty
     Example:
 
 > (,1 : Nat,)
-> =>      \(t : *) -> \(t : *) -> \(f : t@1) -> \(f : t@2)
+> =>      \(t : *) -> \(t : *) -> \(f : t@1) -> \(f : t)
 >     ->  \(Product : *) -> \(MakeProduct : t@1 -> Nat -> t -> Product)
 >     ->  MakeProduct f@1 1 f
 -}
