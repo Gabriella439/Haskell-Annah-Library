@@ -104,7 +104,7 @@ buildExpr = go 0
         Natural n           -> decimal n
         ProductValue fields ->
                 "("
-            <>  mconcat (intersperse ", " (map buildProductValueField fields))
+            <>  mconcat (intersperse "," (map buildProductValueField fields))
             <>  ")"
         ProductType args    ->
                 "{"
