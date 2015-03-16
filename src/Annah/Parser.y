@@ -107,7 +107,8 @@ ArgsRev :: { [Arg IO] }
         |             { []      }
 
 Arg :: { Arg IO }
-    : '(' label ':' Expr0 ')' { Arg $2 $4 }
+    : '(' label ':' Expr3 ')' { Arg $2  $4 }
+    |               Expr3     { Arg "_" $1 }
 
 GivensRev :: { [Text] }
 GivensRev : GivensRev label { $2 : $1 }
