@@ -148,9 +148,13 @@ desugarProductValueSection ms0 = go0 ms0 id (n0 - 1)
   where
     n0 = length [ () | Nothing <- ms0 ]
 
+    shift = resugar . M.shift n0 "t" . M.shift n0 "f" . desugar
+
+    shiftPVF (ProductValueField e t) = ProductValueField (shift e) (shift t)
+
     go0 []           diff _ = go1 (desugarProductValue (diff [])) (n0 - 1)
-    go0 (Just f :ms) diff n = go0 ms (diff . (f:))    n
-    go0 (Nothing:ms) diff n = go0 ms (diff . (f:)) $! n - 1
+    go0 (Just f :ms) diff n = go0 ms (diff . (shiftPVF f:))    n
+    go0 (Nothing:ms) diff n = go0 ms (diff . (         f:)) $! n - 1
       where
         f = ProductValueField (Var (M.V "f" n)) (Var (M.V "t" n))
 
