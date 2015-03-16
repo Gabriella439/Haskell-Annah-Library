@@ -172,16 +172,21 @@ resugarProductValueSection e0 = go0 e0 0
     go1 (M.Lam "f" (M.Var (M.V "t" m')) e) n  m | m == m' = go1 e n $! m - 1
     go1                                 e  n (-1)         = do
         pvfs <- resugarProductValue e
-        go2 pvfs id n
+        go2 pvfs id n n
     go1                                 _  _ _            = empty
 
-    go2  []                                                          diff (-1) =
-        return (diff [])
-    go2 (ProductValueField (Var (M.V "f" i)) (Var (M.V "t" j)):pvfs) diff  n
-        | i == n && j == n = go2 pvfs (diff . (Nothing :)) $! n - 1
-    go2 (pvf                                                  :pvfs) diff  n
-                           = go2 pvfs (diff . (Just pvf:))    n
-    go2 _  _        _ = empty
+    go2  [] diff _ (-1) = return (diff [])
+    go2 (ProductValueField (Var (M.V "f" i)) (Var (M.V "t" j)):pvfs) diff n m
+        | i == m && j == m = go2 pvfs (diff . (Nothing            :)) n $! m - 1
+    go2 (pvf                                                  :pvfs) diff n m
+                           = go2 pvfs (diff . (Just (shiftPVF pvf):)) n    m
+      where
+        shift =
+            resugar . M.shift (negate n) "t" . M.shift (negate n) "f" . desugar
+
+        shiftPVF (ProductValueField e t) = ProductValueField (shift e) (shift t)
+
+    go2 _ _ _ _ = empty
 
 {-| Convert a product type to a Morte expression
 
