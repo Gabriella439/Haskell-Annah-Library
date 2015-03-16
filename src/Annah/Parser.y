@@ -129,7 +129,7 @@ Datas :: { [Data IO] }
 Datas : DatasRev { reverse $1 }
 
 Type :: { Type IO }
-Type : 'type' label 'fold' label Datas { Type $2 $4 $5 }
+Type : 'type' label Datas 'fold' label { Type $2 $5 $3 }
 
 TypesRev :: { [Type IO] }
 TypesRev : TypesRev Type { $2 : $1 }
