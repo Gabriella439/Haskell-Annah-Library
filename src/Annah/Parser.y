@@ -150,16 +150,17 @@ LetsRev :: { [Let IO] }
 Lets :: { [Let IO] }
      : LetsRev { reverse $1 }
 
-ProductValueField :: { ProductValueField IO }
-ProductValueField : Expr1 ':' Expr0 { ProductValueField $1 $3 }
+ProductValueField :: { Maybe (ProductValueField IO) }
+ProductValueField : Expr1 ':' Expr0 { Just (ProductValueField $1 $3) }
+                  |                 { Nothing                        }
 
-ProductValueFieldsRev :: { [ProductValueField IO] }
-ProductValueFieldsRev : ProductValueFieldsRev ',' ProductValueField { $3 : $1 }
-                      | ProductValueField                           { [$1]    }
-                      |                                             { []      }
+ProductValueFieldsRev :: { [Maybe (ProductValueField IO)] }
+ProductValueFieldsRev : ProductValueFieldsRev ',' ProductValueField { $3 : $1  }
+                      | ProductValueField     ',' ProductValueField { [$3, $1] }
 
-ProductValueFields :: { [ProductValueField IO] }
+ProductValueFields :: { [Maybe (ProductValueField IO)] }
 ProductValueFields : ProductValueFieldsRev { reverse $1 }
+                   |                       { []         }
 
 ProductTypeFields :: { [ProductTypeField IO] }
 ProductTypeFields : ProductTypeFieldsRev { reverse $1 }

@@ -45,6 +45,11 @@ loadProductTypeField :: ProductTypeField IO -> IO (ProductTypeField m)
 loadProductTypeField (ProductTypeField x _A) =
     ProductTypeField x <$> loadExpr _A
 
-loadProductValueField :: ProductValueField IO -> IO (ProductValueField m)
-loadProductValueField (ProductValueField f t) =
-    ProductValueField <$> loadExpr f <*> loadExpr t
+loadProductValueField
+    :: Maybe (ProductValueField IO) -> IO (Maybe (ProductValueField m))
+loadProductValueField (Just (ProductValueField f t)) =
+    makeField <$> loadExpr f <*> loadExpr t
+  where
+    makeField f' t' = Just (ProductValueField f' t')
+loadProductValueField  Nothing                       =
+    pure Nothing

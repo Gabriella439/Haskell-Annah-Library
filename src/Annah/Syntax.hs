@@ -102,7 +102,7 @@ data Expr m
     -- | > Nat n                  ~  n
     | Natural Integer
     -- | > ProductValue [f1, f2]  ~  (f1, f2)
-    | ProductValue [ProductValueField m]
+    | ProductValue [Maybe (ProductValueField m)]
     -- | > ProductType [f1, f2]   ~  {f1, f2}
     | ProductType [ProductTypeField m]
     -- | > ProductAccessor 1 2    ~  1of2

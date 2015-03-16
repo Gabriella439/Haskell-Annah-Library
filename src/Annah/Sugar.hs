@@ -32,7 +32,7 @@ desugar (Annot a _A         ) = desugar (Lets [Let "x" [] _A a] "x")
 desugar (Lets ls e          ) = desugarLets  ls               e
 desugar (Fam f e            ) = desugarLets (desugarFamily f) e
 desugar (Natural n          ) = desugarNat n
-desugar (ProductValue fs    ) = desugarProductValue fs
+desugar (ProductValue fs    ) = desugarProductValueSection fs
 desugar (ProductType  as    ) = desugarProductType as
 desugar (ProductAccessor m n) = desugarProductAccessor m n
 desugar (Import m           ) = desugar (runIdentity m)
@@ -119,7 +119,8 @@ resugarProductValue
         es <- fmap reverse (go0 e0)
         ts <- go1 t0
         guard (length es == length ts)
-        return (ProductValue (zipWith ProductValueField es ts))
+        let makeField e t = Just (ProductValueField e t)
+        return (ProductValue (zipWith makeField es ts))
   where
     go0 (M.App e a)                   = fmap (resugar (shiftBoth a):) (go0 e)
     go0 (M.Var (M.V "MakeProduct" _)) = pure []
@@ -132,6 +133,32 @@ resugarProductValue
     shiftOne  = M.shift (-1) "Product"
     shiftBoth = M.shift (-1) "Product" . M.shift (-1) "MakeProduct"
 resugarProductValue _ = empty
+
+{-| Convert product value sections to Morte expressions
+
+    Example:
+
+> (,1 : Nat,)
+> =>      \(t : *) -> \(t : *) -> \(f : t@1) -> \(f : t@2)
+>     ->  \(Product : *) -> \(MakeProduct : t@1 -> Nat -> t -> Product)
+>     ->  MakeProduct f@1 1 f
+-}
+desugarProductValueSection :: [Maybe (ProductValueField Identity)] -> M.Expr
+desugarProductValueSection ms0 = go0 ms0 id (n0 - 1)
+  where
+    n0 = length [ () | Nothing <- ms0 ]
+
+    go0 []           diff _ = go1 (desugarProductValue (diff [])) (n0 - 1)
+    go0 (Just f :ms) diff n = go0 ms (diff . (f:))    n
+    go0 (Nothing:ms) diff n = go0 ms (diff . (f:)) $! n - 1
+      where
+        f = ProductValueField (Var (M.V "f" n)) (Var (M.V "t" n))
+
+    go1 e n | n <  0    = go2 e (n0 - 1)
+            | otherwise = M.Lam "t" (M.Const Star) (go1 e $! n - 1)
+
+    go2 e n | n <  0     = e
+            | otherwise = M.Lam "f" (M.Var (M.V "t" n)) (go2 e $! n - 1)
 
 {-| Convert a product type to a Morte expression
 

@@ -10,7 +10,7 @@ module Annah.Pretty (
 
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.List (intersperse)
-import Data.Monoid ((<>), mconcat)
+import Data.Monoid ((<>), mempty, mconcat)
 import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Builder (Builder, fromLazyText, toLazyText)
 import Data.Text.Lazy.Builder.Int (decimal)
@@ -35,8 +35,11 @@ buildProductTypeField (ProductTypeField x _A) =
     then buildExpr _A
     else fromLazyText x <> " : " <> buildExpr _A
 
-buildProductValueField :: ProductValueField Identity -> Builder
-buildProductValueField (ProductValueField a b) = buildExpr a <> " : " <> buildExpr b
+buildProductValueField :: Maybe (ProductValueField Identity) -> Builder
+buildProductValueField (Just (ProductValueField a b)) =
+    buildExpr a <> " : " <> buildExpr b
+buildProductValueField Nothing                        =
+    mempty
 
 buildFamily :: Family Identity -> Builder
 buildFamily (Family gs ts)
