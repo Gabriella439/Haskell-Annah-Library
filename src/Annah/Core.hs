@@ -29,29 +29,22 @@
 
 module Annah.Core (
     -- * Syntax
-      M.Var(..)
-    , M.Const(..)
-    , Arg(..)
-    , ProductTypeField(..)
-    , ProductValueField(..)
-    , Data(..)
-    , Type(..)
-    , Family(..)
-    , Let(..)
-    , Expr(..)
+      module Annah.Syntax
 
     -- * Core functions
     , exprFromText
     , loadExpr
     , desugar
     , resugar
-
-    -- * Utilities
-    , buildExpr
     , prettyExpr
+
+    -- * Re-exports
+    , Identity
     ) where
 
 import qualified Morte.Core as M
+
+import Data.Functor.Identity (Identity)
 
 import Annah.Import
 import Annah.Parser
