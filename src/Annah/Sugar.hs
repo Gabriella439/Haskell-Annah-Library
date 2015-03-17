@@ -195,27 +195,27 @@ resugarProductValueSection e0 = go0 e0 0
       where
         shift = resugar . M.shift (negate m) "f" . M.shift (negate n) "t" . desugar
 
-        go2  [] [] 0 0 diff = pure (diff [])
+        go2  [] [] 0 0 diff_ = pure (diff_ [])
         go2 (ProductValueField (Var (M.V "f" i)) (Var (M.V "t" j)):pvfs)
             (EmptyValueField                                      :pvss)
-            m n diff
-            | i == m' && j == n' = go2 pvfs pvss m' n' diff'
+            m_ n_ diff_
+            | i == m_' && j == n_' = go2 pvfs pvss m_' n_' diff_'
           where
-            m' = m - 1
-            n' = n - 1
-            diff' = diff . (EmptyValueField:)
+            m_' = m_ - 1
+            n_' = n_ - 1
+            diff_' = diff_ . (EmptyValueField:)
         go2 (ProductValueField (Var (M.V "f" i))  t               :pvfs)
             (TypeValueField                       t'              :pvss)
-            m n diff
-            | i == m' && desugar t == desugar t' = go2 pvfs pvss m' n diff'
+            m_ n_ diff_
+            | i == m_' && desugar t == desugar t' = go2 pvfs pvss m_' n_ diff_'
           where
-            m' = m - 1
-            diff' = diff . (TypeValueField (resugar (desugar t')):)
-        go2 (pvf:pvfs) pvss m n diff = go2 pvfs pvss m n diff'
+            m_' = m_ - 1
+            diff_' = diff_ . (TypeValueField (resugar (desugar t')):)
+        go2 (pvf:pvfs) pvss m_ n_ diff_ = go2 pvfs pvss m_ n_ diff_'
           where
             ProductValueField e' t' = pvf
             pvf' = ProductValueField (shift e') (shift t')
-            diff' = diff . (ValueField pvf':)
+            diff_' = diff_ . (ValueField pvf':)
         go2 _ _ _ _ _ = empty
 
     go1                                _  _    _ _  _      = empty
