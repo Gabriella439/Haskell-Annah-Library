@@ -61,7 +61,7 @@ import Annah.Syntax
     'let'   { Lexer.Let        }
     '='     { Lexer.Equals     }
     'in'    { Lexer.In         }
-    'of'    { Lexer.Of         }
+    'of'    { Lexer.Of $$      }
     label   { Lexer.Label $$   }
     number  { Lexer.Number $$  }
     file    { Lexer.File $$    }
@@ -89,15 +89,15 @@ Expr2 :: { Expr IO }
       | Expr3       { $1        }
 
 Expr3 :: { Expr IO }
-      : VExpr                      { Var $1                    }
-      | '*'                        { Const Star                }
-      | 'BOX'                      { Const Box                 }
-      | file                       { importFile $1             }
-      | number 'of' number         { ProductAccessor $1 $3     }
-      | number                     { Natural (fromIntegral $1) }
-      | '(' ProductValueFields ')' { ProductValue $2           }
-      | '{' ProductTypeFields  '}' { ProductType  $2           }
-      | '(' Expr0              ')' { $2                        }
+      : VExpr                      { Var $1                     }
+      | '*'                        { Const Star                 }
+      | 'BOX'                      { Const Box                  }
+      | file                       { importFile $1              }
+      | 'of'                       { uncurry ProductAccessor $1 }
+      | number                     { Natural (fromIntegral $1)  }
+      | '(' ProductValueFields ')' { ProductValue $2            }
+      | '{' ProductTypeFields  '}' { ProductType  $2            }
+      | '(' Expr0              ')' { $2                         }
 
 Args :: { [Arg IO] }
      : ArgsRev { reverse $1 }
