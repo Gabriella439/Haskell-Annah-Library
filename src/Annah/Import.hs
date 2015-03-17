@@ -20,7 +20,7 @@ loadExpr (Annot a _A         ) = Annot <$> loadExpr a <*> loadExpr _A
 loadExpr (Lets ls e          ) = Lets <$> mapM loadLet ls <*> loadExpr e
 loadExpr (Fam f e            ) = Fam <$> loadFamily f <*> loadExpr e
 loadExpr (Natural n          ) = pure (Natural n)
-loadExpr (ProductValue fs    ) = ProductValue <$> mapM loadProductValueField fs
+loadExpr (ProductValue fs    ) = ProductValue <$> mapM loadProductValueSectionField fs
 loadExpr (ProductType  as    ) = ProductType <$> mapM loadProductTypeField as
 loadExpr (ProductAccessor m n) = pure (ProductAccessor m n)
 loadExpr (Import io          ) = io >>= loadExpr
@@ -45,11 +45,12 @@ loadProductTypeField :: ProductTypeField IO -> IO (ProductTypeField m)
 loadProductTypeField (ProductTypeField x _A) =
     ProductTypeField x <$> loadExpr _A
 
-loadProductValueField
-    :: Maybe (ProductValueField IO) -> IO (Maybe (ProductValueField m))
-loadProductValueField (Just (ProductValueField f t)) =
-    makeField <$> loadExpr f <*> loadExpr t
-  where
-    makeField f' t' = Just (ProductValueField f' t')
-loadProductValueField  Nothing                       =
-    pure Nothing
+loadProductValueField :: ProductValueField IO -> IO (ProductValueField m)
+loadProductValueField (ProductValueField a b) =
+    ProductValueField <$> loadExpr a <*> loadExpr b
+
+loadProductValueSectionField
+    :: ProductValueSectionField IO -> IO (ProductValueSectionField m)
+loadProductValueSectionField (ValueField     a) = ValueField <$> loadProductValueField a
+loadProductValueSectionField (TypeValueField a) = TypeValueField <$> loadExpr a
+loadProductValueSectionField  EmptyValueField   = pure EmptyValueField

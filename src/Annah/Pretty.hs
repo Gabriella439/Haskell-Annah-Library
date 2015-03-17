@@ -35,11 +35,14 @@ buildProductTypeField (ProductTypeField x _A) =
     then buildExpr _A
     else fromLazyText x <> " : " <> buildExpr _A
 
-buildProductValueField :: Maybe (ProductValueField Identity) -> Builder
-buildProductValueField (Just (ProductValueField a b)) =
+buildProductValueField :: ProductValueField Identity -> Builder
+buildProductValueField (ProductValueField a b) =
     buildExpr a <> " : " <> buildExpr b
-buildProductValueField Nothing                        =
-    mempty
+
+buildProductValueSectionField :: ProductValueSectionField Identity -> Builder
+buildProductValueSectionField (ValueField     a) = buildProductValueField a
+buildProductValueSectionField (TypeValueField t) = buildExpr t
+buildProductValueSectionField  EmptyValueField   = mempty
 
 buildFamily :: Family Identity -> Builder
 buildFamily (Family gs ts)
@@ -104,7 +107,7 @@ buildExpr = go 0
         Natural n           -> decimal n
         ProductValue fields ->
                 "("
-            <>  mconcat (intersperse "," (map buildProductValueField fields))
+            <>  mconcat (intersperse "," (map buildProductValueSectionField fields))
             <>  ")"
         ProductType args    ->
                 "{"

@@ -41,6 +41,7 @@ module Annah.Core (
     , Expr(..)
 
     -- * Core functions
+    , exprFromText
     , loadExpr
     , desugar
     , resugar
@@ -53,6 +54,7 @@ module Annah.Core (
 import qualified Morte.Core as M
 
 import Annah.Import
+import Annah.Parser
 import Annah.Pretty
 import Annah.Sugar
 import Annah.Syntax

@@ -137,56 +137,88 @@ resugarProductValue _ = empty
 
     Example:
 
-> (,1 : Nat,)
-> =>      \(t : *) -> \(t : *) -> \(f : t@1) -> \(f : t)
->     ->  \(Product : *) -> \(MakeProduct : t@1 -> Nat -> t -> Product)
+> (,1 : Nat,Bool)
+> =>      \(t : *) -> -> \(f : t) -> \(f : Bool)
+>     ->  \(Product : *) -> \(MakeProduct : t -> Nat -> Bool -> Product)
 >     ->  MakeProduct f@1 1 f
 -}
-desugarProductValueSection :: [Maybe (ProductValueField Identity)] -> M.Expr
-desugarProductValueSection ms0 = go0 ms0 id (n0 - 1)
+desugarProductValueSection :: [ProductValueSectionField Identity] -> M.Expr
+desugarProductValueSection fs0 = go fs0 id id id numBoth numEmpties
   where
-    n0 = length [ () | Nothing <- ms0 ]
+    numTypes   = length [ () | TypeValueField _ <- fs0 ]
+    numEmpties = length [ () | EmptyValueField  <- fs0 ]
+    numBoth    = numTypes + numEmpties
 
-    shift = resugar . M.shift n0 "t" . M.shift n0 "f" . desugar
+    shift = resugar . M.shift numBoth "f" . M.shift numEmpties "t" . desugar
 
-    shiftPVF (ProductValueField e t) = ProductValueField (shift e) (shift t)
-
-    go0 []           diff _ = go1 (desugarProductValue (diff [])) (n0 - 1)
-    go0 (Just f :ms) diff n = go0 ms (diff . (shiftPVF f:))    n
-    go0 (Nothing:ms) diff n = go0 ms (diff . (         f:)) $! n - 1
+    go  []                  diffFs diffL1 diffL2 _ _ =
+        diffL1 (diffL2 (desugarProductValue (diffFs [])))
+    go (ValueField    f:fs) diffFs diffL1 diffL2 m n =
+        go fs (diffFs . (f':)) diffL1 diffL2 m n
       where
-        f = ProductValueField (Var (M.V "f" n)) (Var (M.V "t" n))
+        ProductValueField e t = f
+        f' = ProductValueField (shift e) (shift t)
+    go (TypeValueField t:fs) diffFs diffL1 diffL2 m n = m' `seq`
+        go fs (diffFs . (f':)) diffL1 (diffL2 . l2) m' n
+      where
+        m' = m - 1
+        t' = shift t
+        f' = ProductValueField (Var (M.V "f" m')) t'
+        l2 = M.Lam "f" (desugar t')
+    go (EmptyValueField :fs) diffFs diffL1 diffL2 m n = m' `seq` n' `seq`
+        go fs (diffFs . (f':)) (diffL1 . l1) (diffL2 . l2) m' n'
+      where
+        m' = m - 1
+        n' = n - 1
+        f' = ProductValueField (Var (M.V "f" m')) (Var (M.V "t" n'))
+        l1 = M.Lam "t" (M.Const M.Star)
+        l2 = M.Lam "f" (M.Var (M.V "t" n'))
 
-    go1 e n | n <  0    = go2 e (n0 - 1)
-            | otherwise = M.Lam "t" (M.Const Star) (go1 e $! n - 1)
-
-    go2 e n | n <  0     = e
-            | otherwise = M.Lam "f" (M.Var (M.V "t" n)) (go2 e $! n - 1)
-
-resugarProductValueSection :: M.Expr -> Maybe [Maybe (ProductValueField m)]
+resugarProductValueSection :: M.Expr -> Maybe [ProductValueSectionField m]
 resugarProductValueSection e0 = go0 e0 0
   where
-    go0 (M.Lam "t" (M.Const Star) e) n = go0 e $! n + 1
-    go0                           e  n = go1 e (n - 1) (n - 1)
+    go0 (M.Lam "t" (M.Const Star) e) i = go0 e $! i + 1
+    go0                           e  i = go1 e id i i 0
 
-    go1 (M.Lam "f" (M.Var (M.V "t" m')) e) n  m | m == m' = go1 e n $! m - 1
-    go1                                 e  n (-1)         = do
-        pvfs <- resugarProductValue e
-        go2 pvfs id n n
-    go1                                 _  _ _            = empty
-
-    go2  [] diff _ (-1) = return (diff [])
-    go2 (ProductValueField (Var (M.V "f" i)) (Var (M.V "t" j)):pvfs) diff n m
-        | i == m && j == m = go2 pvfs (diff . (Nothing            :)) n $! m - 1
-    go2 (pvf                                                  :pvfs) diff n m
-                           = go2 pvfs (diff . (Just (shiftPVF pvf):)) n    m
+    go1 (M.Lam "f" (M.Var (M.V "t" j)) e) diff n i  m | i' == j = go1 e diff' n i' m'
       where
-        shift =
-            resugar . M.shift (negate n) "t" . M.shift (negate n) "f" . desugar
+        diff' = diff . (EmptyValueField:)
+        i' = i - 1
+        m' = m + 1
+    go1 (M.Lam "f"  t                  e) diff n i  m           = go1 e diff' n i  m'
+      where
+        diff' = diff . (TypeValueField (resugar t):)
+        m' = m + 1
+    go1                                e  diff n 0  m           = do
+        pvfs <- resugarProductValue e
+        go2 pvfs (diff []) m n id
+      where
+        shift = resugar . M.shift (negate m) "f" . M.shift (negate n) "t" . desugar
 
-        shiftPVF (ProductValueField e t) = ProductValueField (shift e) (shift t)
+        go2  [] [] 0 0 diff = pure (diff [])
+        go2 (ProductValueField (Var (M.V "f" i)) (Var (M.V "t" j)):pvfs)
+            (EmptyValueField                                      :pvss)
+            m n diff
+            | i == m' && j == n' = go2 pvfs pvss m' n' diff'
+          where
+            m' = m - 1
+            n' = n - 1
+            diff' = diff . (EmptyValueField:)
+        go2 (ProductValueField (Var (M.V "f" i))  t               :pvfs)
+            (TypeValueField                       t'              :pvss)
+            m n diff
+            | i == m' && desugar t == desugar t' = go2 pvfs pvss m' n diff'
+          where
+            m' = m - 1
+            diff' = diff . (TypeValueField (resugar (desugar t')):)
+        go2 (pvf:pvfs) pvss m n diff = go2 pvfs pvss m n diff'
+          where
+            ProductValueField e' t' = pvf
+            pvf' = ProductValueField (shift e') (shift t')
+            diff' = diff . (ValueField pvf':)
+        go2 _ _ _ _ _ = empty
 
-    go2 _ _ _ _ = empty
+    go1                                _  _    _ _  _      = empty
 
 {-| Convert a product type to a Morte expression
 

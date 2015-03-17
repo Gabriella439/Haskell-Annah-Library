@@ -7,6 +7,7 @@ module Annah.Syntax (
     , Arg(..)
     , ProductTypeField(..)
     , ProductValueField(..)
+    , ProductValueSectionField(..)
     , Data(..)
     , Type(..)
     , Family(..)
@@ -44,6 +45,12 @@ data ProductValueField m = ProductValueField
     { productValueFieldExpr :: Expr m
     , productValueFieldType :: Expr m
     }
+
+-- | Field of a product value section
+data ProductValueSectionField m
+    = EmptyValueField
+    | TypeValueField (Expr m)
+    | ValueField (ProductValueField m)
 
 {-|
 > Let f [a1, a2] _A rhs  ~  let f a1 a2 : _A = rhs
@@ -102,7 +109,7 @@ data Expr m
     -- | > Nat n                  ~  n
     | Natural Integer
     -- | > ProductValue [f1, f2]  ~  (f1, f2)
-    | ProductValue [Maybe (ProductValueField m)]
+    | ProductValue [ProductValueSectionField m]
     -- | > ProductType [f1, f2]   ~  {f1, f2}
     | ProductType [ProductTypeField m]
     -- | > ProductAccessor 1 2    ~  1of2
