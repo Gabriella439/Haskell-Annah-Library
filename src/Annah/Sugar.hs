@@ -174,6 +174,15 @@ desugarProductValueSection fs0 = go fs0 id id id numBoth numEmpties
         l1 = M.Lam "t" (M.Const M.Star)
         l2 = M.Lam "f" (M.Var (M.V "t" n'))
 
+{-| Convert Morte expressions back into product value sections
+
+    Example:
+
+>     \(t : *) -> -> \(f : t) -> \(f : Bool)
+> ->  \(Product : *) -> \(MakeProduct : t -> Nat -> Bool -> Product)
+> ->  MakeProduct f@1 1 f
+> =>  (,1 : Nat,Bool)
+-}
 resugarProductValueSection :: M.Expr -> Maybe [ProductValueSectionField m]
 resugarProductValueSection e0 = go0 e0 0
   where
@@ -257,11 +266,11 @@ resugarProductType
     go  _                         _             = empty
 resugarProductType _ = empty
 
-{-| Convert a product type to a Morte expression
+{-| Convert a product type section to a Morte expression
 
     Example:
 
-> {, Nat}  => forall (t : *) -> forall (Product : *) -> (t -> Nat -> Product) -> Product
+> {, Nat}  =>  forall (t : *) -> forall (Product : *) -> (t -> Nat -> Product) -> Product
 -}
 desugarProductTypeSection :: [ProductTypeSectionField Identity] -> M.Expr
 desugarProductTypeSection fs0 = go fs0 id numEmpty
@@ -281,6 +290,12 @@ desugarProductTypeSection fs0 = go fs0 id numEmpty
 
     shift = resugar . M.shift numEmpty "t" . desugar
 
+{-| Convert a Morte expression back into a product type section
+
+    Example:
+
+> forall (t : *) -> forall (Product : *) -> (t -> Nat -> Product) -> Product  =>  {, Nat}
+-}
 resugarProductTypeSection :: M.Expr -> Maybe [ProductTypeSectionField m]
 resugarProductTypeSection e0 = go0 e0 0
   where
