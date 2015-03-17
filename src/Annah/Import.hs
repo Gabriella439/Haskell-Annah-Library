@@ -21,7 +21,7 @@ loadExpr (Lets ls e          ) = Lets <$> mapM loadLet ls <*> loadExpr e
 loadExpr (Fam f e            ) = Fam <$> loadFamily f <*> loadExpr e
 loadExpr (Natural n          ) = pure (Natural n)
 loadExpr (ProductValue fs    ) = ProductValue <$> mapM loadProductValueSectionField fs
-loadExpr (ProductType  as    ) = ProductType <$> mapM loadProductTypeField as
+loadExpr (ProductType  as    ) = ProductType <$> mapM loadProductTypeSectionField as
 loadExpr (ProductAccessor m n) = pure (ProductAccessor m n)
 loadExpr (Import io          ) = io >>= loadExpr
 
@@ -44,6 +44,11 @@ loadArg (Arg x _A) = Arg x <$> loadExpr _A
 loadProductTypeField :: ProductTypeField IO -> IO (ProductTypeField m)
 loadProductTypeField (ProductTypeField x _A) =
     ProductTypeField x <$> loadExpr _A
+
+loadProductTypeSectionField
+    :: ProductTypeSectionField IO -> IO (ProductTypeSectionField m)
+loadProductTypeSectionField (TypeField a   ) = TypeField <$> loadProductTypeField a
+loadProductTypeSectionField  EmptyTypeField  = pure EmptyTypeField
 
 loadProductValueField :: ProductValueField IO -> IO (ProductValueField m)
 loadProductValueField (ProductValueField a b) =

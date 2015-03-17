@@ -35,6 +35,10 @@ buildProductTypeField (ProductTypeField x _A) =
     then buildExpr _A
     else fromLazyText x <> " : " <> buildExpr _A
 
+buildProductTypeSectionField :: ProductTypeSectionField Identity -> Builder
+buildProductTypeSectionField (TypeField a   ) = buildProductTypeField a
+buildProductTypeSectionField  EmptyTypeField  = mempty
+
 buildProductValueField :: ProductValueField Identity -> Builder
 buildProductValueField (ProductValueField a b) =
     buildExpr a <> " : " <> buildExpr b
@@ -111,7 +115,7 @@ buildExpr = go 0
             <>  ")"
         ProductType args    ->
                 "{"
-            <>  mconcat (intersperse ", " (map buildProductTypeField args))
+            <>  mconcat (intersperse "," (map buildProductTypeSectionField args))
             <>  "}"
         ProductAccessor m n -> quoteAbove 3 (decimal m <> "of" <> decimal n)
         Import m            -> go prec (runIdentity m)

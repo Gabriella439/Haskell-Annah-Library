@@ -33,7 +33,7 @@ desugar (Lets ls e          ) = desugarLets  ls               e
 desugar (Fam f e            ) = desugarLets (desugarFamily f) e
 desugar (Natural n          ) = desugarNat n
 desugar (ProductValue fs    ) = desugarProductValueSection fs
-desugar (ProductType  as    ) = desugarProductType as
+desugar (ProductType  as    ) = desugarProductTypeSection as
 desugar (ProductAccessor m n) = desugarProductAccessor m n
 desugar (Import m           ) = desugar (runIdentity m)
 
@@ -41,7 +41,7 @@ desugar (Import m           ) = desugar (runIdentity m)
 resugar :: M.Expr -> Expr m
 resugar e | Just e' <- resugarNat        e
                    <|> fmap ProductValue (resugarProductValueSection e)
-                   <|> fmap ProductType  (resugarProductType e)
+                   <|> fmap ProductType  (resugarProductTypeSection e)
                    <|> resugarProductAccessor e
           = e'
 resugar (M.Const c    ) = Const c
@@ -180,12 +180,14 @@ resugarProductValueSection e0 = go0 e0 0
     go0 (M.Lam "t" (M.Const Star) e) i = go0 e $! i + 1
     go0                           e  i = go1 e id i i 0
 
-    go1 (M.Lam "f" (M.Var (M.V "t" j)) e) diff n i  m | i' == j = go1 e diff' n i' m'
+    go1 (M.Lam "f" (M.Var (M.V "t" j)) e) diff n i  m | i' == j = m' `seq` i' `seq`
+        go1 e diff' n i' m'
       where
         diff' = diff . (EmptyValueField:)
         i' = i - 1
         m' = m + 1
-    go1 (M.Lam "f"  t                  e) diff n i  m           = go1 e diff' n i  m'
+    go1 (M.Lam "f"  t                  e) diff n i  m           = m' `seq`
+        go1 e diff' n i  m'
       where
         diff' = diff . (TypeValueField (resugar t):)
         m' = m + 1
@@ -199,7 +201,8 @@ resugarProductValueSection e0 = go0 e0 0
         go2 (ProductValueField (Var (M.V "f" i)) (Var (M.V "t" j)):pvfs)
             (EmptyValueField                                      :pvss)
             m_ n_ diff_
-            | i == m_' && j == n_' = go2 pvfs pvss m_' n_' diff_'
+            | i == m_' && j == n_' = m_' `seq` n_' `seq`
+                go2 pvfs pvss m_' n_' diff_'
           where
             m_' = m_ - 1
             n_' = n_ - 1
@@ -207,7 +210,8 @@ resugarProductValueSection e0 = go0 e0 0
         go2 (ProductValueField (Var (M.V "f" i))  t               :pvfs)
             (TypeValueField                       t'              :pvss)
             m_ n_ diff_
-            | i == m_' && desugar t == desugar t' = go2 pvfs pvss m_' n_ diff_'
+            | i == m_' && desugar t == desugar t' = m_' `seq`
+                go2 pvfs pvss m_' n_ diff_'
           where
             m_' = m_ - 1
             diff_' = diff_ . (TypeValueField (resugar (desugar t')):)
@@ -246,12 +250,58 @@ resugarProductType
     (M.Pi "Product" (M.Const M.Star) (M.Pi "MakeProduct" t0 "Product")) =
     go t0 0
   where
-    go (M.Pi x _A e) n = fmap (ProductTypeField x (resugar _A):) (go e n')
+    go (M.Pi x _A e) n = fmap (ProductTypeField x (resugar _A):) (go e $! n')
       where
         n' = if x == "Product" then n + 1 else n
     go (M.Var (M.V "Product" n')) n | (n == n') = pure []
     go  _                         _             = empty
 resugarProductType _ = empty
+
+{-| Convert a product type to a Morte expression
+
+    Example:
+
+> {, Nat}  => forall (t : *) -> forall (Product : *) -> (t -> Nat -> Product) -> Product
+-}
+desugarProductTypeSection :: [ProductTypeSectionField Identity] -> M.Expr
+desugarProductTypeSection fs0 = go fs0 id numEmpty
+  where
+    numEmpty = length [ () | EmptyTypeField <- fs0 ]
+
+    go [] diff _ = desugarProductType (diff [])
+    go (TypeField  ptf:fs) diff n = go fs (diff . (ptf':)) n
+      where
+        ProductTypeField x t = ptf
+        ptf' = ProductTypeField x (shift t)
+    go (EmptyTypeField:fs) diff n =
+        M.Lam "t" (M.Const M.Star) (go fs (diff . (ptf':)) $! n')
+      where
+        ptf' = ProductTypeField "_" (Var (M.V "t" n'))
+        n'   = n - 1
+
+    shift = resugar . M.shift numEmpty "t" . desugar
+
+resugarProductTypeSection :: M.Expr -> Maybe [ProductTypeSectionField m]
+resugarProductTypeSection e0 = go0 e0 0
+  where
+    go0 (M.Lam "t" (M.Const M.Star) e) n = go0 e $! n + 1
+    go0                             e  n = do
+        ptfs <- resugarProductType e
+        go1 ptfs id n
+      where
+        shift = resugar . M.shift (negate n) "t" . desugar
+
+        go1 [] diff 0 = pure (diff [])
+        go1 (ProductTypeField "_" (Var (M.V "t" i)):ptfs) diff n_ | n_' == i =
+            go1 ptfs diff' n_'
+          where
+            diff' = diff . (EmptyTypeField:)
+            n_' = n_ - 1
+        go1 (ProductTypeField  x   t              :ptfs) diff n_ = go1 ptfs diff' n_
+          where
+            ptf = ProductTypeField x (shift t)
+            diff' = diff . (TypeField ptf:)
+        go1  _                                           _    _ = empty
 
 {-| Convert a product accessor into a Morte expression
 

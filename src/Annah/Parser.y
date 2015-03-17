@@ -164,17 +164,18 @@ ProductValueFields :: { [ProductValueSectionField IO] }
 ProductValueFields : ProductValueFieldsRev { reverse $1 }
                    |                       { []         }
 
-ProductTypeFields :: { [ProductTypeField IO] }
+ProductTypeFields :: { [ProductTypeSectionField IO] }
 ProductTypeFields : ProductTypeFieldsRev { reverse $1 }
 
-ProductTypeFieldsRev :: { [ProductTypeField IO] }
+ProductTypeFieldsRev :: { [ProductTypeSectionField IO] }
                      : ProductTypeFieldsRev ',' ProductTypeField { $3 : $1 }
                      | ProductTypeField                          { [$1]    }
                      |                                           { []      }
 
-ProductTypeField :: { ProductTypeField IO }
-                 : label ':' Expr0 { ProductTypeField $1  $3 }
-                 | Expr0           { ProductTypeField "_" $1 }
+ProductTypeField :: { ProductTypeSectionField IO }
+                 : label ':' Expr0 { TypeField (ProductTypeField $1  $3) }
+                 | Expr0           { TypeField (ProductTypeField "_" $1) }
+                 |                 { EmptyTypeField                      }
 
 {
 -- | The specific parsing error

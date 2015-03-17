@@ -6,6 +6,7 @@ module Annah.Syntax (
     , M.Const(..)
     , Arg(..)
     , ProductTypeField(..)
+    , ProductTypeSectionField(..)
     , ProductValueField(..)
     , ProductValueSectionField(..)
     , Data(..)
@@ -36,6 +37,11 @@ data ProductTypeField m = ProductTypeField
     { productTypeName :: Text
     , productTypeType :: Expr m
     }
+
+-- | Field of a product type section
+data ProductTypeSectionField m
+    = EmptyTypeField
+    | TypeField (ProductTypeField m)
 
 {-| Field of a product value
 
@@ -111,7 +117,7 @@ data Expr m
     -- | > ProductValue [f1, f2]  ~  (f1, f2)
     | ProductValue [ProductValueSectionField m]
     -- | > ProductType [f1, f2]   ~  {f1, f2}
-    | ProductType [ProductTypeField m]
+    | ProductType [ProductTypeSectionField m]
     -- | > ProductAccessor 1 2    ~  1of2
     | ProductAccessor Int Int
     | Import (m (Expr m))
