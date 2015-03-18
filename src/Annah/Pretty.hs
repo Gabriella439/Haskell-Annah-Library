@@ -82,6 +82,14 @@ buildLet (Let n args t r)
     <>  buildExpr r
     <>  " "
 
+buildMultiLambda :: MultiLambda Identity -> Builder
+buildMultiLambda (MultiLambda args e)
+    =   "λ"
+    <>  mconcat (map (\arg -> buildArg arg <> " ") args)
+    <>  " → "
+    <> buildExpr e
+-- TODO: Fix this to use precedence correctly for unused case
+
 -- | Render a pretty-printed expression as a `Builder`
 buildExpr :: Expr Identity -> Builder
 buildExpr = go 0
@@ -105,6 +113,7 @@ buildExpr = go 0
             <>  go 1 b )
         App f a             -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
         Annot s t           -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
+        MultiLam m          -> quoteAbove 1 (buildMultiLambda m)
         Lets ls e'          -> quoteAbove 1 (
             mconcat (map buildLet ls) <> "in " <> go 1 e' )
         Fam f e'            -> quoteAbove 1 (buildFamily f <> "in " <> go 1 e')

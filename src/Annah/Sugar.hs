@@ -29,6 +29,7 @@ desugar (Lam x _A  b        ) = M.Lam x (desugar _A) (desugar  b)
 desugar (Pi  x _A _B        ) = M.Pi  x (desugar _A) (desugar _B)
 desugar (App f a            ) = M.App (desugar f) (desugar a)
 desugar (Annot a _A         ) = desugar (Lets [Let "x" [] _A a] "x")
+desugar (MultiLam m         ) = desugarMultiLambda m
 desugar (Lets ls e          ) = desugarLets  ls               e
 desugar (Fam f e            ) = desugarLets (desugarFamily f) e
 desugar (Natural n          ) = desugarNat n
@@ -42,6 +43,7 @@ resugar :: M.Expr -> Expr m
 resugar e | Just e' <- fmap Natural      (resugarNat                 e)
                    <|> fmap ProductValue (resugarProductValueSection e)
                    <|> fmap ProductType  (resugarProductTypeSection  e)
+                   <|> fmap MultiLam     (resugarMultiLambda         e)
                    <|> resugarProductAccessor e
           = e'
 resugar (M.Const c    ) = Const c
@@ -367,6 +369,80 @@ resugarProductAccessor e0 = go0 e0 0
     go1 _ _  _                                _               =
         empty
 
+{-| Convert a compressed lambda to a Morte expression
+
+> \a b c -> e  =>  \a -> \b -> \c -> e
+-}
+desugarMultiLambda :: MultiLambda Identity -> M.Expr
+desugarMultiLambda (MultiLambda args e) = desugar (lam args e)
+
+{-| Convert a Morte expression back into a compressed lambda
+
+> \a -> \b -> \c -> e  =>  \a b c -> e
+-}
+resugarMultiLambda :: M.Expr -> Maybe (MultiLambda m)
+resugarMultiLambda (M.Lam x0 _A0 e0) = do
+    -- Ensure that the resugared MultiLambda has at least one argument
+    MultiLambda args e' <- go e0
+    let arg = Arg x0 (resugar _A0)
+    return (MultiLambda (arg:args) e')
+  where
+    go (M.Lam x _A e) = do
+        MultiLambda args e' <- go e
+        let arg = Arg x (resugar _A)
+        return (MultiLambda (arg:args) e')
+    go             e  = pure (MultiLambda [] (resugar e))
+resugarMultiLambda             _  = empty
+
+{-| `desugarLets` converts this:
+
+> let f0 (x00 : _A00) ... (x0j : _A0j) _B0 = b0
+> ..
+> let fi (xi0 : _Ai0) ... (xij : _Aij) _Bi = bi
+> in  e
+
+... into this:
+
+> (   \(f0 : forall (x00 : _A00) -> ... -> forall (x0j : _A0j) -> _B0)
+> ->  ...
+> ->  \(fi : forall (xi0 : _Ai0) -> ... -> forall (xij : _Aij) -> _Bi)
+> ->  e
+> )
+>
+> (\(x00 : _A00) -> ... -> \(x0j : _A0j) -> b0)
+> ...
+> (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
+
+-}
+desugarLets :: [Let Identity] -> Expr Identity -> M.Expr
+desugarLets lets e = apps
+  where
+    -- > (   \(f0 : forall (x00 : _A00) -> ... -> forall (x0j : _A0j) -> _B0)
+    -- > ->  ...
+    -- > ->  \(fi : forall (xi0 : _Ai0) -> ... -> forall (xij : _Aij) -> _Bi)
+    -- > ->  e
+    -- > )
+    lams = foldr
+        (\(Let fn args _Bn _) rest ->
+            -- > forall (xn0 : _An0) -> ... -> forall (xnj : _Anj) -> _Bn
+            let rhsType = pi args _Bn
+
+            -- > \(fn : rhsType) -> rest
+            in  M.Lam fn (desugar rhsType) rest )
+        (desugar e)
+        lets
+
+    -- > lams
+    -- > (\(x00 : _A00) -> ... -> \(x0j : _A0j) -> b0)
+    -- > ...
+    -- > (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
+    apps = foldr
+        (\(Let _ args _ bn) rest ->
+            -- > rest (\(xn0 : _An0) -> ... -> \(xnj : _Anj) -> bn)
+            M.App rest (desugar (lam args bn)) )
+        lams
+        (reverse lets)
+
 -- | A type or data constructor
 data Cons = Cons
     { consName :: Text
@@ -509,55 +585,6 @@ pi args e = foldr (\(Arg x _A) -> Pi x _A) e args
 
 lam :: [Arg m] -> Expr m -> Expr m
 lam args e = foldr (\(Arg x _A) -> Lam x _A) e args
-
-{-| `desugarLets` converts this:
-
-> let f0 (x00 : _A00) ... (x0j : _A0j) _B0 = b0
-> ..
-> let fi (xi0 : _Ai0) ... (xij : _Aij) _Bi = bi
-> in  e
-
-... into this:
-
-> (   \(f0 : forall (x00 : _A00) -> ... -> forall (x0j : _A0j) -> _B0)
-> ->  ...
-> ->  \(fi : forall (xi0 : _Ai0) -> ... -> forall (xij : _Aij) -> _Bi)
-> ->  e
-> )
->
-> (\(x00 : _A00) -> ... -> \(x0j : _A0j) -> b0)
-> ...
-> (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
-
--}
-desugarLets :: [Let Identity] -> Expr Identity -> M.Expr
-desugarLets lets e = apps
-  where
-    -- > (   \(f0 : forall (x00 : _A00) -> ... -> forall (x0j : _A0j) -> _B0)
-    -- > ->  ...
-    -- > ->  \(fi : forall (xi0 : _Ai0) -> ... -> forall (xij : _Aij) -> _Bi)
-    -- > ->  e
-    -- > )
-    lams = foldr
-        (\(Let fn args _Bn _) rest ->
-            -- > forall (xn0 : _An0) -> ... -> forall (xnj : _Anj) -> _Bn
-            let rhsType = pi args _Bn
-
-            -- > \(fn : rhsType) -> rest
-            in  M.Lam fn (desugar rhsType) rest )
-        (desugar e)
-        lets
-
-    -- > lams
-    -- > (\(x00 : _A00) -> ... -> \(x0j : _A0j) -> b0)
-    -- > ...
-    -- > (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
-    apps = foldr
-        (\(Let _ args _ bn) rest ->
-            -- > rest (\(xn0 : _An0) -> ... -> \(xnj : _Anj) -> bn)
-            M.App rest (desugar (lam args bn)) )
-        lams
-        (reverse lets)
 
 -- | > zippers [1, 2, 3] = [([], 1, [2, 3]), ([1], 2, [3]), ([2, 1], 3, [])]
 zippers :: [a] -> [([a], a, [a])]

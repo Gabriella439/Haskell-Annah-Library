@@ -17,6 +17,7 @@ loadExpr (Lam x _A  b        ) = Lam x <$> loadExpr _A <*> loadExpr  b
 loadExpr (Pi  x _A _B        ) = Pi  x <$> loadExpr _A <*> loadExpr _B
 loadExpr (App f a            ) = App <$> loadExpr f <*> loadExpr a
 loadExpr (Annot a _A         ) = Annot <$> loadExpr a <*> loadExpr _A
+loadExpr (MultiLam m         ) = MultiLam <$> loadMultiLambda m
 loadExpr (Lets ls e          ) = Lets <$> mapM loadLet ls <*> loadExpr e
 loadExpr (Fam f e            ) = Fam <$> loadFamily f <*> loadExpr e
 loadExpr (Natural n          ) = pure (Natural n)
@@ -59,3 +60,6 @@ loadProductValueSectionField
 loadProductValueSectionField (ValueField     a) = ValueField <$> loadProductValueField a
 loadProductValueSectionField (TypeValueField a) = TypeValueField <$> loadExpr a
 loadProductValueSectionField  EmptyValueField   = pure EmptyValueField
+
+loadMultiLambda :: MultiLambda IO -> IO (MultiLambda m)
+loadMultiLambda (MultiLambda as b) = MultiLambda <$> mapM loadArg as <*> loadExpr b

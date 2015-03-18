@@ -9,10 +9,11 @@ module Annah.Syntax (
     , ProductTypeSectionField(..)
     , ProductValueField(..)
     , ProductValueSectionField(..)
+    , Let(..)
+    , MultiLambda(..)
     , Data(..)
     , Type(..)
     , Family(..)
-    , Let(..)
     , Expr(..)
     ) where
 
@@ -57,6 +58,15 @@ data ProductValueSectionField m
     = EmptyValueField
     | TypeValueField (Expr m)
     | ValueField (ProductValueField m)
+
+{-| Compressed nested lambdas
+
+> MultiLambda [a1, a2] e  ~  \a1 a2 -> e
+-}
+data MultiLambda m = MultiLambda
+    { multiLambdaArgs :: [Arg m]
+    , multiLambdaExpr :: Expr m
+    }
 
 {-|
 > Let f [a1, a2] _A rhs  ~  let f a1 a2 : _A = rhs
@@ -111,6 +121,7 @@ data Expr m
     | Annot (Expr m) (Expr m)
     -- | > Lets [l1, l2] e        ~ l1 l2 in e
     | Lets [Let m] (Expr m)
+    | MultiLam (MultiLambda m)
     | Fam (Family m) (Expr m)
     -- | > Nat n                  ~  n
     | Natural Integer
