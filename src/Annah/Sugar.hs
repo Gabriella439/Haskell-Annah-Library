@@ -39,9 +39,9 @@ desugar (Import m           ) = desugar (runIdentity m)
 
 -- | Convert a Morte expression to an Annah expression
 resugar :: M.Expr -> Expr m
-resugar e | Just e' <- resugarNat        e
+resugar e | Just e' <- fmap Natural      (resugarNat                 e)
                    <|> fmap ProductValue (resugarProductValueSection e)
-                   <|> fmap ProductType  (resugarProductTypeSection e)
+                   <|> fmap ProductType  (resugarProductTypeSection  e)
                    <|> resugarProductAccessor e
           = e'
 resugar (M.Const c    ) = Const c
@@ -71,7 +71,7 @@ desugarNat n0 =
 
 > \(Nat : *) -> \(Zero : Nat) -> \(Succ : Nat) -> Succ (Succ (Succ Zero))  =>  3
 -}
-resugarNat :: M.Expr -> Maybe (Expr m)
+resugarNat :: M.Expr -> Maybe Integer
 resugarNat (
     M.Lam "Nat" (M.Const M.Star) (
         M.Lam "Zero" (M.Var (M.V "Nat" 0)) (
@@ -79,7 +79,7 @@ resugarNat (
                   (M.Pi _ (M.Var (M.V "Nat" 0)) (M.Var (M.V "Nat" 0))) e0) ))
     = go e0 0
   where
-    go (M.Var (M.V "Zero" 0))           n = pure (Natural n)
+    go (M.Var (M.V "Zero" 0))           n = pure n
     go (M.App (M.Var (M.V "Succ" 0)) e) n = go e $! n + 1
     go  _                               _ = empty
 resugarNat _ = empty
