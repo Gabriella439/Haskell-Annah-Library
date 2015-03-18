@@ -129,8 +129,6 @@ data Expr m
     | ProductValue [ProductValueSectionField m]
     -- | > ProductType [f1, f2]   ~  {f1, f2}
     | ProductType [ProductTypeSectionField m]
-    -- | > ProductAccessor 1 2    ~  1of2
-    | ProductAccessor Int Int
     | Import (m (Expr m))
 
 instance IsString (Expr m) where

@@ -126,7 +126,6 @@ buildExpr = go 0
                 "{"
             <>  mconcat (intersperse "," (map buildProductTypeSectionField args))
             <>  "}"
-        ProductAccessor m n -> quoteAbove 3 (decimal m <> "of" <> decimal n)
         Import m            -> go prec (runIdentity m)
       where
         quoteAbove :: Int -> Builder -> Builder

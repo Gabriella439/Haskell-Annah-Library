@@ -35,7 +35,6 @@ desugar (Fam f e            ) = desugarLets (desugarFamily f) e
 desugar (Natural n          ) = desugarNat n
 desugar (ProductValue fs    ) = desugarProductValueSection fs
 desugar (ProductType  as    ) = desugarProductTypeSection as
-desugar (ProductAccessor m n) = desugarProductAccessor m n
 desugar (Import m           ) = desugar (runIdentity m)
 
 -- | Convert a Morte expression to an Annah expression
@@ -44,7 +43,6 @@ resugar e | Just e' <- fmap Natural      (resugarNat                 e)
                    <|> fmap ProductValue (resugarProductValueSection e)
                    <|> fmap ProductType  (resugarProductTypeSection  e)
                    <|> fmap MultiLam     (resugarMultiLambda         e)
-                   <|> resugarProductAccessor e
           = e'
 resugar (M.Const c    ) = Const c
 resugar (M.Var v      ) = Var v
@@ -319,55 +317,6 @@ resugarProductTypeSection e0 = go0 e0 0
             ptf = ProductTypeField x (shift t)
             diff' = diff . (TypeField ptf:)
         go1  _                                           _    _ = empty
-
-{-| Convert a product accessor into a Morte expression
-
-    Example:
-
-> 1of2
-> =>  \(t : *) -> \(t : *) -> \(x : {t@1, t}) -> x (\(f : t@1) -> \(f : t) -> f@1)
--}
-desugarProductAccessor :: Int -> Int -> M.Expr
-desugarProductAccessor m n = go0 n
-  where
-    go0 k | k > 0     = M.Lam "t" (M.Const M.Star) (go0 $! k - 1)
-          | otherwise =
-        M.Lam "x"
-            (desugarProductType
-                [ProductTypeField "_" (Var (M.V "t" i)) | i <- [n-1,n-2..0]] )
-            (M.App (M.App "x" (M.Var (M.V "t" (n - m)))) (go1 (n - 1)))
-
-    go1 k | k >= 0    = M.Lam "f" (M.Var (M.V "t" k)) (go1 $! k - 1)
-          | otherwise = M.Var (M.V "f" (n - m))
-
-{-| Convert a Morte expression back into a product accessor
-
-    Example:
-
-> \(t : *) -> \(t : *) -> \(x : {t@1, t}) -> x (\(f : t@1) -> \(f : t) -> f@1)
-> =>  1of2
--}
-resugarProductAccessor :: M.Expr -> Maybe (Expr m)
-resugarProductAccessor e0 = go0 e0 0
-  where
-    go0 (M.Lam "t" (M.Const M.Star) e)                          n =
-        go0 e $! n + 1
-    go0 (M.Lam "x" t (M.App (M.App "x" (M.Var (M.V "t" i))) e)) n = do
-        let m = n - i
-        fs <- resugarProductType t
-        let checkField (ProductTypeField "_" (Var (M.V "t" k))) j = k == j
-            checkField  _                                       _ = False
-        guard (length fs == n && and (zipWith checkField fs [n-1,n-2..0]))
-        go1 m n e (n - 1)
-    go0  _                                                      _ =
-        empty
-
-    go1 m n (M.Lam "f" (M.Var (M.V "t" i)) e) k  | i == k     =
-        go1 m n e $! k - 1
-    go1 m n (M.Var (M.V "f" i))             (-1) | i == n - m =
-        pure (ProductAccessor m n)
-    go1 _ _  _                                _               =
-        empty
 
 {-| Convert a compressed lambda to a Morte expression
 

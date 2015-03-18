@@ -23,7 +23,6 @@ loadExpr (Fam f e            ) = Fam <$> loadFamily f <*> loadExpr e
 loadExpr (Natural n          ) = pure (Natural n)
 loadExpr (ProductValue fs    ) = ProductValue <$> mapM loadProductValueSectionField fs
 loadExpr (ProductType  as    ) = ProductType <$> mapM loadProductTypeSectionField as
-loadExpr (ProductAccessor m n) = pure (ProductAccessor m n)
 loadExpr (Import io          ) = io >>= loadExpr
 
 loadFamily :: Family IO -> IO (Family m)

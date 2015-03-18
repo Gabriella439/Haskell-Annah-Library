@@ -62,18 +62,11 @@ tokens :-
     "="                             { \_    -> yield Equals                    }
     "in"                            { \_    -> yield In                        }
     $digit+                         { \text -> yield (Number (toInt text))     }
-    $digit+ "of" $digit+            { \text -> yield (parseOf text)            }
     $fst $label* | "(" $opchar+ ")" { \text -> yield (Label text)              }
 
 {
 toInt :: Text -> Int
 toInt = Text.foldl' (\x c -> 10 * x + digitToInt c) 0
-
-parseOf :: Text -> Token
-parseOf txt =
-    let (prefix, txt'  ) = Text.span  isDigit txt
-        ("of"  , suffix) = Text.break isDigit txt'
-    in Of (toInt prefix, toInt suffix)
 
 -- This was lifted almost intact from the @alex@ source code
 encode :: Char -> (Word8, [Word8])
@@ -175,7 +168,6 @@ data Token
     | Let
     | Equals
     | In
-    | Of (Int, Int)
     | Label Text
     | Number Int
     | File Text
