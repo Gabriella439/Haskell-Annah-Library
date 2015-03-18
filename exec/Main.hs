@@ -26,7 +26,7 @@ main = do
 
     inText <- Text.getContents
     ae     <- throws (Annah.exprFromText inText)
-    ae'    <- Annah.loadExpr ae
+    ae'    <- Annah.load ae
     let me = Annah.desugar ae'
     mt     <- throws (Morte.typeOf me)
     let at   = Annah.resugar (Morte.normalize mt)

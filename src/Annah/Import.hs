@@ -1,16 +1,30 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 -- | Importing external expressions
 
 module Annah.Import (
     -- * Import
-      loadExpr
+      load
+    , Load(..)
     ) where
 
-import Control.Applicative (pure, (<$>), (<*>))
+import Control.Applicative (Applicative(pure, (<*>)), (<$>))
+import Control.Monad.Trans.State.Strict (StateT, evalStateT)
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
+import Data.Text.Lazy (Text)
 
 import Annah.Syntax
 
+-- | Extend `IO` with `StateT` to cache previously imported expressions
+newtype Load a = Load { unLoad :: StateT (HashMap Text (Expr Load)) IO a }
+    deriving (Functor, Applicative, Monad)
+
 -- | Evaluate all `Import`s, leaving behind a pure expression
-loadExpr :: Expr IO -> IO (Expr m)
+load :: Expr Load -> IO (Expr m)
+load e = evalStateT (unLoad (loadExpr e)) HashMap.empty
+
+loadExpr :: Expr Load -> Load (Expr m)
 loadExpr (Const c            ) = pure (Const c)
 loadExpr (Var v              ) = pure (Var v)
 loadExpr (Lam x _A  b        ) = Lam x <$> loadExpr _A <*> loadExpr  b
@@ -25,40 +39,40 @@ loadExpr (ProductValue fs    ) = ProductValue <$> mapM loadProductValueSectionFi
 loadExpr (ProductType  as    ) = ProductType <$> mapM loadProductTypeSectionField as
 loadExpr (Import io          ) = io >>= loadExpr
 
-loadFamily :: Family IO -> IO (Family m)
+loadFamily :: Family Load -> Load (Family m)
 loadFamily (Family as bs) = Family as <$> mapM loadType bs
 
-loadType :: Type IO -> IO (Type m)
+loadType :: Type Load -> Load (Type m)
 loadType (Type a b cs) = Type a b <$> mapM loadData cs
 
-loadData :: Data IO -> IO (Data m)
+loadData :: Data Load -> Load (Data m)
 loadData (Data a bs) = Data a <$> mapM loadArg bs
 
-loadLet :: Let IO -> IO (Let m)
+loadLet :: Let Load -> Load (Let m)
 loadLet (Let f args _B b) =
     Let f <$> mapM loadArg args <*> loadExpr _B <*> loadExpr b
 
-loadArg :: Arg IO -> IO (Arg m)
+loadArg :: Arg Load -> Load (Arg m)
 loadArg (Arg x _A) = Arg x <$> loadExpr _A
 
-loadProductTypeField :: ProductTypeField IO -> IO (ProductTypeField m)
+loadProductTypeField :: ProductTypeField Load -> Load (ProductTypeField m)
 loadProductTypeField (ProductTypeField x _A) =
     ProductTypeField x <$> loadExpr _A
 
 loadProductTypeSectionField
-    :: ProductTypeSectionField IO -> IO (ProductTypeSectionField m)
+    :: ProductTypeSectionField Load -> Load (ProductTypeSectionField m)
 loadProductTypeSectionField (TypeField a   ) = TypeField <$> loadProductTypeField a
 loadProductTypeSectionField  EmptyTypeField  = pure EmptyTypeField
 
-loadProductValueField :: ProductValueField IO -> IO (ProductValueField m)
+loadProductValueField :: ProductValueField Load -> Load (ProductValueField m)
 loadProductValueField (ProductValueField a b) =
     ProductValueField <$> loadExpr a <*> loadExpr b
 
 loadProductValueSectionField
-    :: ProductValueSectionField IO -> IO (ProductValueSectionField m)
+    :: ProductValueSectionField Load -> Load (ProductValueSectionField m)
 loadProductValueSectionField (ValueField     a) = ValueField <$> loadProductValueField a
 loadProductValueSectionField (TypeValueField a) = TypeValueField <$> loadExpr a
 loadProductValueSectionField  EmptyValueField   = pure EmptyValueField
 
-loadMultiLambda :: MultiLambda IO -> IO (MultiLambda m)
+loadMultiLambda :: MultiLambda Load -> Load (MultiLambda m)
 loadMultiLambda (MultiLambda as b) = MultiLambda <$> mapM loadArg as <*> loadExpr b

@@ -15,9 +15,11 @@ module Annah.Parser (
     ) where
 
 import Control.Exception (Exception, throwIO)
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Error (ErrorT, Error(..), throwError, runErrorT)
-import Control.Monad.Trans.State.Strict (State, runState)
+import Control.Monad.Trans.State.Strict (State, runState, get, put)
 import Data.Functor.Identity (Identity, runIdentity)
+import qualified Data.HashMap.Strict as HashMap
 import Data.Monoid (mempty, (<>))
 import Data.Text.Lazy (Text, unpack)
 import qualified Data.Text.Lazy as Text
@@ -30,6 +32,7 @@ import Lens.Family.State.Strict ((.=), use, zoom)
 import Pipes (Producer, hoist, lift, next)
 
 import qualified Annah.Lexer as Lexer
+import Annah.Import (Load(..))
 import Annah.Lexer (Token, Position)
 import Annah.Syntax
 
@@ -67,11 +70,11 @@ import Annah.Syntax
 
 %%
 
-Expr0 :: { Expr IO }
+Expr0 :: { Expr Load }
       : Expr1 ':' Expr0 { Annot $1 $3 }
       | Expr1           { $1          }
 
-Expr1 :: { Expr IO }
+Expr1 :: { Expr Load }
       : '\\'  Args                    '->' Expr1      { MultiLam (MultiLambda $2 $4) }
       | '|~|' '(' label ':' Expr1 ')' '->' Expr1      { Pi  $3  $5 $8                }
       | Expr2 '->' Expr1                              { Pi  "_" $1 $3                }
@@ -83,11 +86,11 @@ VExpr  :: { Var }
        : label '@' number { V $1 $3 }
        | label            { V $1 0  }
 
-Expr2 :: { Expr IO }
+Expr2 :: { Expr Load }
       : Expr2 Expr3 { App $1 $2 }
       | Expr3       { $1        }
 
-Expr3 :: { Expr IO }
+Expr3 :: { Expr Load }
       : VExpr                      { Var $1                     }
       | '*'                        { Const Star                 }
       | 'BOX'                      { Const Box                  }
@@ -97,14 +100,14 @@ Expr3 :: { Expr IO }
       | '{' ProductTypeFields  '}' { ProductType  $2            }
       | '(' Expr0              ')' { $2                         }
 
-Args :: { [Arg IO] }
+Args :: { [Arg Load] }
      : ArgsRev { reverse $1 }
 
-ArgsRev :: { [Arg IO] }
+ArgsRev :: { [Arg Load] }
         : ArgsRev Arg { $2 : $1 }
         |             { []      }
 
-Arg :: { Arg IO }
+Arg :: { Arg Load }
     : '(' label ':' Expr1 ')' { Arg $2  $4 }
     |               Expr3     { Arg "_" $1 }
 
@@ -116,62 +119,62 @@ Givens :: { [Text] }
 Givens : 'given' GivensRev { reverse $2 }
        |                   { []         }
 
-Data :: { Data IO }
+Data :: { Data Load }
      : 'data' label Args { Data $2 $3 }
 
-DatasRev :: { [Data IO] }
+DatasRev :: { [Data Load] }
          : DatasRev Data { $2 : $1 }
          |               { []      }
 
-Datas :: { [Data IO] }
+Datas :: { [Data Load] }
 Datas : DatasRev { reverse $1 }
 
-Type :: { Type IO }
+Type :: { Type Load }
 Type : 'type' label Datas 'fold' label { Type $2 $5 $3 }
 
-TypesRev :: { [Type IO] }
+TypesRev :: { [Type Load] }
 TypesRev : TypesRev Type { $2 : $1 }
          |               { []      }
 
-Types :: { [Type IO] }
+Types :: { [Type Load] }
       : TypesRev { reverse $1 }
 
 Family :: { Family m }
 Family : Givens Types { Family $1 $2 }
 
-Let :: { Let IO }
+Let :: { Let Load }
     : 'let'  label Args ':' Expr0 '=' Expr1 { Let $2 $3 $5 $7 }
 
-LetsRev :: { [Let IO] }
+LetsRev :: { [Let Load] }
         : LetsRev Let { $2 : $1 }
         | Let         { [$1]    }
 
-Lets :: { [Let IO] }
+Lets :: { [Let Load] }
      : LetsRev { reverse $1 }
 
-ProductValueField :: { ProductValueSectionField IO }
+ProductValueField :: { ProductValueSectionField Load }
 ProductValueField : Expr1 ':' Expr0 { ValueField (ProductValueField $1 $3) }
                   | Expr0           { TypeValueField $1                    }
                   |                 { EmptyValueField                      }
 
-ProductValueFieldsRev :: { [ProductValueSectionField IO] }
+ProductValueFieldsRev :: { [ProductValueSectionField Load] }
 ProductValueFieldsRev : ProductValueFieldsRev ',' ProductValueField { $3 : $1  }
                       | ProductValueField     ',' ProductValueField { [$3, $1] }
 
-ProductValueFields :: { [ProductValueSectionField IO] }
+ProductValueFields :: { [ProductValueSectionField Load] }
 ProductValueFields : ProductValueFieldsRev { reverse $1 }
                    |                       { []         }
 
-ProductTypeField :: { ProductTypeSectionField IO }
+ProductTypeField :: { ProductTypeSectionField Load }
                  : label ':' Expr0 { TypeField (ProductTypeField $1  $3) }
                  | Expr0           { TypeField (ProductTypeField "_" $1) }
                  |                 { EmptyTypeField                      }
 
-ProductTypeFieldsRev :: { [ProductTypeSectionField IO] }
+ProductTypeFieldsRev :: { [ProductTypeSectionField Load] }
                      : ProductTypeFieldsRev ',' ProductTypeField { $3 : $1  }
                      | ProductTypeField     ',' ProductTypeField { [$3, $1] }
 
-ProductTypeFields :: { [ProductTypeSectionField IO] }
+ProductTypeFields :: { [ProductTypeSectionField Load] }
 ProductTypeFields : ProductTypeFieldsRev { reverse $1 }
                   |                      { []         }
 
@@ -216,7 +219,7 @@ parseError :: Token -> Lex a
 parseError token = throwError (Parsing token)
 
 -- | Parse an `Expr` from `Text` or return a `ParseError` if parsing fails
-exprFromText :: Text -> Either ParseError (Expr IO)
+exprFromText :: Text -> Either ParseError (Expr Load)
 exprFromText text = case runState (runErrorT parseExpr) initialStatus of
     (x, (position, _)) -> case x of
         Left  e    -> Left (ParseError position e)
@@ -255,10 +258,16 @@ prettyParseError (ParseError (Lexer.P l c) e) = Builder.toLazyText (
             <>  "\n"
             <>  "Error: Parsing failed\n" )
 
-importFile :: Text -> Expr IO
-importFile path = Import (do
-    txt <- Text.readFile (unpack path)
-    case exprFromText txt of
-        Left pe    -> throwIO pe
-        Right expr -> return expr )
+importFile :: Text -> Expr Load
+importFile path = Import (Load (do
+    m <- get
+    case HashMap.lookup path m of
+        Just expr -> return expr
+        Nothing   -> do
+            txt <- liftIO (Text.readFile (unpack path))
+            case exprFromText txt of
+                Left pe    -> liftIO (throwIO pe)
+                Right expr -> do
+                    put (HashMap.insert path expr m)
+                    return expr ))
 }

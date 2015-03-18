@@ -86,7 +86,7 @@ buildMultiLambda :: MultiLambda Identity -> Builder
 buildMultiLambda (MultiLambda args e)
     =   "λ"
     <>  mconcat (map (\arg -> buildArg arg <> " ") args)
-    <>  " → "
+    <>  "→ "
     <> buildExpr e
 -- TODO: Fix this to use precedence correctly for unused case
 
