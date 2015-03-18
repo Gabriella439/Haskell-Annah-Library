@@ -73,12 +73,13 @@ Expr0 :: { Expr IO }
       | Expr1           { $1          }
 
 Expr1 :: { Expr IO }
-      : '\\'  '(' label ':' Expr1 ')' '->' Expr1      { Lam $3 $5 $8 }
-      | '|~|' '(' label ':' Expr1 ')' '->' Expr1      { Pi  $3 $5 $8 }
-      | Expr2 '->' Expr1                              { Pi "_" $1 $3 }
-      | Family 'in' Expr1                             { Fam  $1 $3   }
-      | Lets   'in' Expr1                             { Lets $1 $3   }
-      | Expr2                                         { $1           }
+      : '\\'  '(' label ':' Expr1 ')' '->' Expr1      { Lam $3  $5 $8 }
+      | '\\'                Expr3     '->' Expr1      { Lam "_" $2 $4 }
+      | '|~|' '(' label ':' Expr1 ')' '->' Expr1      { Pi  $3  $5 $8 }
+      | Expr2 '->' Expr1                              { Pi  "_" $1 $3 }
+      | Family 'in' Expr1                             { Fam  $1 $3    }
+      | Lets   'in' Expr1                             { Lets $1 $3    }
+      | Expr2                                         { $1            }
 
 VExpr  :: { Var }
        : label '@' number { V $1 $3 }
