@@ -1,0 +1,1 @@
+λ(n1 : ∀(Nat : *) → Nat → (Nat → Nat) → Nat) (n2 : ∀(Nat : *) → Nat → (Nat → Nat) → Nat) (Nat : *) (Zero : Nat) (Succ : Nat → Nat) → n1 Nat Zero (λ(m : Nat) → n2 Nat m Succ)

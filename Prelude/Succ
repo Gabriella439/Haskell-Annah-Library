@@ -1,0 +1,1 @@
+λ(pred : ∀(Nat : *) → Nat → (Nat → Nat) → Nat) → λ(Nat : *) → λ(Zero : Nat) → λ(Succ : Nat → Nat) → Succ (pred Nat Zero Succ)
