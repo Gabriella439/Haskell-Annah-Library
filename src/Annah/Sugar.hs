@@ -14,8 +14,10 @@ module Annah.Sugar (
 
 import Control.Applicative (pure, empty, (<|>))
 import Control.Monad (guard)
+import Data.Char (chr, ord)
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy as Text
 import qualified Morte.Core as M
 import Prelude hiding (pi)
 
@@ -33,6 +35,7 @@ desugar (MultiLam m         ) = desugarMultiLambda m
 desugar (Lets ls e          ) = desugarLets  ls               e
 desugar (Fam f e            ) = desugarLets (desugarFamily f) e
 desugar (Natural n          ) = desugarNat n
+desugar (ASCII txt          ) = desugarASCII txt
 desugar (ProductValue fs    ) = desugarProductValueSection fs
 desugar (ProductType  as    ) = desugarProductTypeSection as
 desugar (Import m           ) = desugar (runIdentity m)
@@ -42,6 +45,7 @@ resugar :: M.Expr -> Expr m
 resugar e | Just e' <- fmap Natural      (resugarNat                 e)
                    <|> fmap ProductValue (resugarProductValueSection e)
                    <|> fmap ProductType  (resugarProductTypeSection  e)
+                   <|> fmap ASCII        (resugarASCII               e)
                    <|> fmap MultiLam     (resugarMultiLambda         e)
           = e'
 resugar (M.Const c    ) = Const c
@@ -83,6 +87,30 @@ resugarNat (
     go (M.App (M.Var (M.V "Succ" 0)) e) n = go e $! n + 1
     go  _                               _ = empty
 resugarNat _ = empty
+
+-- | Convert an ASCII literal to a Morte expression
+desugarASCII :: Text -> M.Expr
+desugarASCII txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
+  where
+    go n | n < 128   = M.Lam "C" (M.Pi "_" "S" "S") (go $! n + 1)
+         | otherwise = Text.foldr cons nil txt
+
+    cons c t = M.App (M.Var (M.V "C" (ord c))) t
+    nil      = "N"
+
+-- | Convert a Morte expression back into an ASCII literal
+resugarASCII :: M.Expr -> Maybe Text
+resugarASCII (M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" e0)) =
+    fmap Text.pack (go0 e0 (0 :: Int))
+  where
+    go0 (M.Lam "C" (M.Pi "_" "S" "S") e) n | n < 128 = go0 e $! n + 1
+    go0 e 128                                        = go1 e
+    go0 _ _                                          = empty
+
+    go1 (M.App (M.Var (M.V "C" n)) e) = fmap (chr n:) (go1 e)
+    go1 (M.Var (M.V "N" 0))           = pure []
+    go1  _                            = empty
+resugarASCII _ = empty
 
 {-| Convert product values to Morte expressions
 

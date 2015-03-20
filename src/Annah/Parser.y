@@ -66,6 +66,7 @@ import Annah.Syntax
     'in'    { Lexer.In         }
     label   { Lexer.Label $$   }
     number  { Lexer.Number $$  }
+    ascii   { Lexer.ASCII $$   }
     file    { Lexer.File $$    }
 
 %%
@@ -96,6 +97,7 @@ Expr3 :: { Expr Load }
       | 'BOX'                      { Const Box                  }
       | file                       { importFile $1              }
       | number                     { Natural (fromIntegral $1)  }
+      | ascii                      { ASCII $1                   }
       | '(' ProductValueFields ')' { ProductValue $2            }
       | '{' ProductTypeFields  '}' { ProductType  $2            }
       | '(' Expr0              ')' { $2                         }

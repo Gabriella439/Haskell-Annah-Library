@@ -29,6 +29,7 @@ $opchar = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~]
 
 $fst   = [A-Za-z_]
 $label = [A-Za-z0-9_]
+$ascii = [\x00-\x7f] # [\x22]
 
 $whiteNoNewline = $white # \n
 
@@ -45,6 +46,7 @@ tokens :-
     ")"                             { \_    -> yield CloseParen                }
     "{"                             { \_    -> yield OpenBrace                 }
     "}"                             { \_    -> yield CloseBrace                }
+    \" $ascii* \"                   { \text -> yield (ASCII (trim text))       }
     ","                             { \_    -> yield Comma                     }
     ":"                             { \_    -> yield Colon                     }
     "#" $path+                      { \text -> yield (File (Text.drop 1 text)) }
@@ -67,6 +69,9 @@ tokens :-
 {
 toInt :: Text -> Int
 toInt = Text.foldl' (\x c -> 10 * x + digitToInt c) 0
+
+trim :: Text -> Text
+trim = Text.init . Text.tail
 
 -- This was lifted almost intact from the @alex@ source code
 encode :: Char -> (Word8, [Word8])
@@ -153,6 +158,7 @@ data Token
     | CloseParen
     | OpenBrace
     | CloseBrace
+    | ASCII Text
     | Comma
     | Colon
     | At

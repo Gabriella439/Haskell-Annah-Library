@@ -35,6 +35,7 @@ loadExpr (MultiLam m         ) = MultiLam <$> loadMultiLambda m
 loadExpr (Lets ls e          ) = Lets <$> mapM loadLet ls <*> loadExpr e
 loadExpr (Fam f e            ) = Fam <$> loadFamily f <*> loadExpr e
 loadExpr (Natural n          ) = pure (Natural n)
+loadExpr (ASCII txt          ) = pure (ASCII txt)
 loadExpr (ProductValue fs    ) = ProductValue <$> mapM loadProductValueSectionField fs
 loadExpr (ProductType  as    ) = ProductType <$> mapM loadProductTypeSectionField as
 loadExpr (Import io          ) = io >>= loadExpr

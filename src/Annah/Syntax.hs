@@ -125,6 +125,8 @@ data Expr m
     | Fam (Family m) (Expr m)
     -- | > Nat n                  ~  n
     | Natural Integer
+    -- | > ASCII str              ~  str
+    | ASCII Text
     -- | > ProductValue [f1, f2]  ~  (f1, f2)
     | ProductValue [ProductValueSectionField m]
     -- | > ProductType [f1, f2]   ~  {f1, f2}

@@ -118,6 +118,7 @@ buildExpr = go 0
             mconcat (map buildLet ls) <> "in " <> go 1 e' )
         Fam f e'            -> quoteAbove 1 (buildFamily f <> "in " <> go 1 e')
         Natural n           -> decimal n
+        ASCII   txt         -> "\"" <> fromLazyText txt <> "\""
         ProductValue fields ->
                 "("
             <>  mconcat (intersperse "," (map buildProductValueSectionField fields))
