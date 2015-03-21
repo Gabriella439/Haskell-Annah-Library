@@ -37,6 +37,7 @@ desugar (Fam f e            ) = desugarLets (desugarFamily f) e
 desugar (Natural n          ) = desugarNat n
 desugar (ASCII txt          ) = desugarASCII txt
 desugar (SumConstructor m n ) = desugarSumConstructor m n
+desugar (SumType ts         ) = desugarSumType ts
 desugar (ProductValue fs    ) = desugarProductValueSection fs
 desugar (ProductType  as    ) = desugarProductTypeSection as
 desugar (Import m           ) = desugar (runIdentity m)
@@ -147,6 +148,13 @@ resugarSumConstructor e0 = go0 e0 0
             | j == n0 - m0 = pure (m0, n0)
         go1 _ _ = empty
     go0 _ _ = empty
+
+-- | Convert a sum type to a Morte expression
+desugarSumType :: [Expr Identity] -> M.Expr
+desugarSumType ts0 = M.Pi "Sum" (M.Const M.Star) (go ts0)
+  where
+    go (t:ts) = M.Pi "MkSum" (M.Pi "x" (desugar t) "Sum") (go ts)
+    go  []    = "Sum"
 
 {-| Convert product values to Morte expressions
 

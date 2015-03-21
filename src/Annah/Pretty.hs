@@ -121,14 +121,18 @@ instance Builds Expr where
             Natural n           -> decimal n
             ASCII   txt         -> "\"" <> fromLazyText txt <> "\""
             SumConstructor m n  -> decimal m <> "to" <> decimal n
+            SumType ts          ->
+                    "{0"
+                <>  mconcat (map (\t -> "| " <> build t) ts)
+                <>  "}"
             ProductValue fields ->
-                    "<"
-                <>  mconcat (map (\field -> build field <> ", ") fields)
-                <>  "1>"
+                    "<1"
+                <>  mconcat (map (\field -> ", " <> build field) fields)
+                <>  ">"
             ProductType args    ->
-                    "{"
-                <>  mconcat (map (\arg -> build arg <> ", ") args)
-                <>  "1}"
+                    "{1"
+                <>  mconcat (map (\arg -> ", " <> build arg) args)
+                <>  "}"
             Import m            -> go prec (runIdentity m)
           where
             quoteAbove :: Int -> Builder -> Builder

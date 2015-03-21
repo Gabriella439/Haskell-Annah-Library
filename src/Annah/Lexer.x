@@ -44,12 +44,14 @@ tokens :-
     "--".*                          ;
     "("                             { \_    -> yield OpenParen                 }
     ")"                             { \_    -> yield CloseParen                }
-    "{"                             { \_    -> yield OpenBrace                 }
-    "1}"                            { \_    -> yield CloseProductType          }
-    "<"                             { \_    -> yield OpenAngle                 }
-    "1>"                            { \_    -> yield CloseProductValue         }
+    "{1"                            { \_    -> yield OpenProductType           }
+    "{0"                            { \_    -> yield OpenSumType               }
+    "}"                             { \_    -> yield CloseBrace                }
+    "<1"                            { \_    -> yield OpenProductValue          }
+    ">"                             { \_    -> yield CloseAngle                }
     \" $ascii* \"                   { \text -> yield (ASCII (trim text))       }
     ","                             { \_    -> yield Comma                     }
+    "|"                             { \_    -> yield Bar                       }
     ":"                             { \_    -> yield Colon                     }
     "#" $path+                      { \text -> yield (File (Text.drop 1 text)) }
     "@"                             { \_    -> yield At                        }
@@ -165,12 +167,14 @@ lexExpr text = go (AlexInput '\n' [] text)
 data Token
     = OpenParen
     | CloseParen
-    | OpenBrace
-    | CloseProductType
-    | OpenAngle
-    | CloseProductValue
+    | OpenProductType
+    | OpenSumType
+    | CloseBrace
+    | OpenProductValue
+    | CloseAngle
     | ASCII Text
     | Comma
+    | Bar
     | Colon
     | At
     | Star

@@ -47,11 +47,13 @@ import Annah.Syntax
 %token
     '('     { Lexer.OpenParen         }
     ')'     { Lexer.CloseParen        }
-    '{'     { Lexer.OpenBrace         }
-    '1}'    { Lexer.CloseProductType  }
-    '<'     { Lexer.OpenAngle         }
-    '1>'    { Lexer.CloseProductValue }
+    '{1'    { Lexer.OpenProductType   }
+    '{0'    { Lexer.OpenSumType       }
+    '}'     { Lexer.CloseBrace        }
+    '<1'    { Lexer.OpenProductValue  }
+    '>'     { Lexer.CloseAngle        }
     ','     { Lexer.Comma             }
+    '|'     { Lexer.Bar               }
     ':'     { Lexer.Colon             }
     '@'     { Lexer.At                }
     '*'     { Lexer.Star              }
@@ -102,8 +104,9 @@ Expr3 :: { Expr Load }
       | of                          { uncurry SumConstructor $1 }
       | number                      { Natural (fromIntegral $1) }
       | ascii                       { ASCII $1                  }
-      | '<' ProductValueFields '1>' { ProductValue $2           }
-      | '{' ProductTypeFields  '1}' { ProductType  $2           }
+      | '<1' ProductValueFields '>' { ProductValue $2           }
+      | '{1' ProductTypeFields  '}' { ProductType  $2           }
+      | '{0' SumTypeFields      '}' { SumType      $2           }
       | '(' Expr0               ')' { $2                        }
 
 Args :: { [Arg Load] }
@@ -118,11 +121,11 @@ Arg :: { Arg Load }
     |               Expr3     { Arg "_" $1 }
 
 GivensRev :: { [Arg Load] }
-GivensRev : GivensRev 'given' label ':' Expr0 { Arg $3 $5 : $1 }
+          : GivensRev 'given' label ':' Expr0 { Arg $3 $5 : $1 }
           |                                   { []             }
 
 Givens :: { [Arg Load] }
-Givens : GivensRev { reverse $1 }
+       : GivensRev { reverse $1 }
 
 Data :: { Data Load }
      : 'data' label Args { Data $2 $3 }
@@ -132,20 +135,20 @@ DatasRev :: { [Data Load] }
          |               { []      }
 
 Datas :: { [Data Load] }
-Datas : DatasRev { reverse $1 }
+      : DatasRev { reverse $1 }
 
 Type :: { Type Load }
-Type : 'type' label Datas 'fold' label { Type $2 $5 $3 }
+     : 'type' label Datas 'fold' label { Type $2 $5 $3 }
 
 TypesRev :: { [Type Load] }
-TypesRev : TypesRev Type { $2 : $1 }
+         : TypesRev Type { $2 : $1 }
          |               { []      }
 
 Types :: { [Type Load] }
       : TypesRev { reverse $1 }
 
 Family :: { Family m }
-Family : Givens Types { Family $1 $2 }
+       : Givens Types { Family $1 $2 }
 
 Let :: { Let Load }
     : 'let'  label Args ':' Expr0 '=' Expr1 { Let $2 $3 $5 $7 }
@@ -158,16 +161,16 @@ Lets :: { [Let Load] }
      : LetsRev { reverse $1 }
 
 ProductValueField :: { ProductValueSectionField Load }
-ProductValueField : Expr1 ':' Expr0 { ValueField (ProductValueField $1 $3) }
+                  : Expr1 ':' Expr0 { ValueField (ProductValueField $1 $3) }
                   | Expr0           { TypeValueField $1                    }
                   |                 { EmptyValueField                      }
 
 ProductValueFieldsRev :: { [ProductValueSectionField Load] }
-ProductValueFieldsRev : ProductValueFieldsRev ProductValueField ',' { $2 : $1  }
+                      : ProductValueFieldsRev ',' ProductValueField { $3 : $1  }
                       |                                             { []       }
 
 ProductValueFields :: { [ProductValueSectionField Load] }
-ProductValueFields : ProductValueFieldsRev { reverse $1 }
+                   : ProductValueFieldsRev { reverse $1 }
 
 ProductTypeField :: { ProductTypeSectionField Load }
                  : label ':' Expr0 { TypeField (ProductTypeField $1  $3) }
@@ -175,11 +178,18 @@ ProductTypeField :: { ProductTypeSectionField Load }
                  |                 { EmptyTypeField                      }
 
 ProductTypeFieldsRev :: { [ProductTypeSectionField Load] }
-                     : ProductTypeFieldsRev ProductTypeField ',' { $2 : $1  }
+                     : ProductTypeFieldsRev ',' ProductTypeField { $3 : $1  }
                      |                                           { []       }
 
 ProductTypeFields :: { [ProductTypeSectionField Load] }
-ProductTypeFields : ProductTypeFieldsRev { reverse $1 }
+                  : ProductTypeFieldsRev { reverse $1 }
+
+SumTypeFieldsRev :: { [Expr Load] }
+                 : SumTypeFieldsRev '|' Expr0 { $3 : $1 }
+                 |                            { []      }
+
+SumTypeFields :: { [Expr Load] }
+              : SumTypeFieldsRev { reverse $1 }
 
 {
 -- | The specific parsing error

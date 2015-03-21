@@ -40,6 +40,7 @@ instance Loads Expr where
     load (Natural n          ) = pure (Natural n)
     load (ASCII txt          ) = pure (ASCII txt)
     load (SumConstructor m n ) = pure (SumConstructor m n)
+    load (SumType ts         ) = SumType <$> mapM load ts
     load (ProductValue fs    ) = ProductValue <$> mapM load fs
     load (ProductType  as    ) = ProductType <$> mapM load as
     load (Import io          ) = io >>= load

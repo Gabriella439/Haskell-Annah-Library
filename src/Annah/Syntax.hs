@@ -127,12 +127,14 @@ data Expr m
     | Natural Integer
     -- | > ASCII str              ~  str
     | ASCII Text
-    -- | > ProductValue [f1, f2]  ~  (f1, f2)
+    -- | > ProductValue [f1, f2]  ~  <f1, f2, 1>
     | ProductValue [ProductValueSectionField m]
-    -- | > ProductType [f1, f2]   ~  {f1, f2}
+    -- | > ProductType [f1, f2]   ~  {f1, f2, 1}
     | ProductType [ProductTypeSectionField m]
     -- | > SumConstructor i j     ~  itoj
     | SumConstructor Int Int
+    -- | > SumType [t1, t2]       ~  {t1| t2| 0}
+    | SumType [Expr m]
     | Import (m (Expr m))
 
 instance IsString (Expr m) where
