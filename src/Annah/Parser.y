@@ -49,6 +49,8 @@ import Annah.Syntax
     ')'     { Lexer.CloseParen }
     '{'     { Lexer.OpenBrace  }
     '}'     { Lexer.CloseBrace }
+    '<'     { Lexer.OpenAngle  }
+    '>'     { Lexer.CloseAngle }
     ','     { Lexer.Comma      }
     ':'     { Lexer.Colon      }
     '@'     { Lexer.At         }
@@ -98,7 +100,7 @@ Expr3 :: { Expr Load }
       | file                       { importFile $1              }
       | number                     { Natural (fromIntegral $1)  }
       | ascii                      { ASCII $1                   }
-      | '(' ProductValueFields ')' { ProductValue $2            }
+      | '<' ProductValueFields '>' { ProductValue $2            }
       | '{' ProductTypeFields  '}' { ProductType  $2            }
       | '(' Expr0              ')' { $2                         }
 
@@ -159,12 +161,11 @@ ProductValueField : Expr1 ':' Expr0 { ValueField (ProductValueField $1 $3) }
                   |                 { EmptyValueField                      }
 
 ProductValueFieldsRev :: { [ProductValueSectionField Load] }
-ProductValueFieldsRev : ProductValueFieldsRev ',' ProductValueField { $3 : $1  }
-                      | ProductValueField     ',' ProductValueField { [$3, $1] }
+ProductValueFieldsRev : ProductValueFieldsRev ProductValueField ',' { $2 : $1  }
+                      |                                             { []       }
 
 ProductValueFields :: { [ProductValueSectionField Load] }
 ProductValueFields : ProductValueFieldsRev { reverse $1 }
-                   |                       { []         }
 
 ProductTypeField :: { ProductTypeSectionField Load }
                  : label ':' Expr0 { TypeField (ProductTypeField $1  $3) }
@@ -172,12 +173,11 @@ ProductTypeField :: { ProductTypeSectionField Load }
                  |                 { EmptyTypeField                      }
 
 ProductTypeFieldsRev :: { [ProductTypeSectionField Load] }
-                     : ProductTypeFieldsRev ',' ProductTypeField { $3 : $1  }
-                     | ProductTypeField     ',' ProductTypeField { [$3, $1] }
+                     : ProductTypeFieldsRev ProductTypeField ',' { $2 : $1  }
+                     |                                           { []       }
 
 ProductTypeFields :: { [ProductTypeSectionField Load] }
 ProductTypeFields : ProductTypeFieldsRev { reverse $1 }
-                  |                      { []         }
 
 {
 -- | The specific parsing error

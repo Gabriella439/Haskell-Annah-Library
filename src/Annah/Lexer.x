@@ -46,6 +46,8 @@ tokens :-
     ")"                             { \_    -> yield CloseParen                }
     "{"                             { \_    -> yield OpenBrace                 }
     "}"                             { \_    -> yield CloseBrace                }
+    "<"                             { \_    -> yield OpenAngle                 }
+    ">"                             { \_    -> yield CloseAngle                }
     \" $ascii* \"                   { \text -> yield (ASCII (trim text))       }
     ","                             { \_    -> yield Comma                     }
     ":"                             { \_    -> yield Colon                     }
@@ -158,6 +160,8 @@ data Token
     | CloseParen
     | OpenBrace
     | CloseBrace
+    | OpenAngle
+    | CloseAngle
     | ASCII Text
     | Comma
     | Colon

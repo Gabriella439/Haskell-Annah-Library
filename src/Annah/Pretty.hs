@@ -9,7 +9,6 @@ module Annah.Pretty (
     ) where
 
 import Data.Functor.Identity (Identity, runIdentity)
-import Data.List (intersperse)
 import Data.Monoid ((<>), mempty, mconcat)
 import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Builder (Builder, fromLazyText, toLazyText)
@@ -122,12 +121,12 @@ instance Builds Expr where
             Natural n           -> decimal n
             ASCII   txt         -> "\"" <> fromLazyText txt <> "\""
             ProductValue fields ->
-                    "("
-                <>  mconcat (intersperse "," (map build fields))
-                <>  ")"
+                    "<"
+                <>  mconcat (map (\field -> build field <> ",") fields)
+                <>  ">"
             ProductType args    ->
                     "{"
-                <>  mconcat (intersperse "," (map build args))
+                <>  mconcat (map (\arg -> build arg <> ",") args)
                 <>  "}"
             Import m            -> go prec (runIdentity m)
           where
