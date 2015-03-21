@@ -47,8 +47,11 @@ resugar e | Just e' <- fmap Natural      (resugarNat                 e)
                    <|> fmap ProductValue (resugarProductValueSection e)
                    <|> fmap ProductType  (resugarProductTypeSection  e)
                    <|> fmap ASCII        (resugarASCII               e)
+                   <|> fmap sc           (resugarSumConstructor      e)
                    <|> fmap MultiLam     (resugarMultiLambda         e)
           = e'
+  where
+    sc = uncurry SumConstructor
 resugar (M.Const c    ) = Const c
 resugar (M.Var v      ) = Var v
 resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
@@ -99,6 +102,20 @@ desugarASCII txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
     cons c t = M.App (M.Var (M.V "C" (ord c))) t
     nil      = "N"
 
+-- | Convert a Morte expression back into an ASCII literal
+resugarASCII :: M.Expr -> Maybe Text
+resugarASCII (M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" e0)) =
+    fmap Text.pack (go0 e0 (0 :: Int))
+  where
+    go0 (M.Lam "C" (M.Pi "_" "S" "S") e) n | n < 128 = go0 e $! n + 1
+    go0 e 128                                        = go1 e
+    go0 _ _                                          = empty
+
+    go1 (M.App (M.Var (M.V "C" n)) e) = fmap (chr n:) (go1 e)
+    go1 (M.Var (M.V "N" 0))           = pure []
+    go1  _                            = empty
+resugarASCII _ = empty
+
 -- | Convert a sum constructor to a Morte expression
 desugarSumConstructor :: Int -> Int -> M.Expr
 desugarSumConstructor m0 n0 = go0 1
@@ -114,19 +131,22 @@ desugarSumConstructor m0 n0 = go0 1
                 (go1 $! n + 1)
         | otherwise = M.App (M.Var (M.V "MkSum" (n0 - m0))) "x"
 
--- | Convert a Morte expression back into an ASCII literal
-resugarASCII :: M.Expr -> Maybe Text
-resugarASCII (M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" e0)) =
-    fmap Text.pack (go0 e0 (0 :: Int))
+-- | Convert a Morte expression back into a sum constructor
+resugarSumConstructor :: M.Expr -> Maybe (Int, Int)
+resugarSumConstructor e0 = go0 e0 0
   where
-    go0 (M.Lam "C" (M.Pi "_" "S" "S") e) n | n < 128 = go0 e $! n + 1
-    go0 e 128                                        = go1 e
-    go0 _ _                                          = empty
+    go0 (M.Lam "t" (M.Const M.Star) e) n = go0 e $! n + 1
+    go0 (M.Lam "x" (M.Var (M.V "t" i))
+            (M.Lam "Sum" (M.Const M.Star) e)) n0 = go1 e 1
+      where
+        m0 = n0 - i
 
-    go1 (M.App (M.Var (M.V "C" n)) e) = fmap (chr n:) (go1 e)
-    go1 (M.Var (M.V "N" 0))           = pure []
-    go1  _                            = empty
-resugarASCII _ = empty
+        go1 (M.Lam "MkSum" (M.Pi "x" (M.Var (M.V "t" j)) "Sum") e') n
+            | j == n0 - n  = go1 e' $! n + 1
+        go1 (M.App (M.Var (M.V "MkSum" j)) (M.Var (M.V "x" 0))) _
+            | j == n0 - m0 = pure (m0, n0)
+        go1 _ _ = empty
+    go0 _ _ = empty
 
 {-| Convert product values to Morte expressions
 
