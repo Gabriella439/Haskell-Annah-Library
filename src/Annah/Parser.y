@@ -45,31 +45,31 @@ import Annah.Syntax
 %error { parseError }
 
 %token
-    '('     { Lexer.OpenParen  }
-    ')'     { Lexer.CloseParen }
-    '{'     { Lexer.OpenBrace  }
-    '}'     { Lexer.CloseBrace }
-    '<'     { Lexer.OpenAngle  }
-    '>'     { Lexer.CloseAngle }
-    ','     { Lexer.Comma      }
-    ':'     { Lexer.Colon      }
-    '@'     { Lexer.At         }
-    '*'     { Lexer.Star       }
-    'BOX'   { Lexer.Box        }
-    '->'    { Lexer.Arrow      }
-    '\\'    { Lexer.Lambda     }
-    '|~|'   { Lexer.Pi         }
-    'given' { Lexer.Given      }
-    'type'  { Lexer.Type       }
-    'fold'  { Lexer.Fold       }
-    'data'  { Lexer.Data       }
-    'let'   { Lexer.Let        }
-    '='     { Lexer.Equals     }
-    'in'    { Lexer.In         }
-    label   { Lexer.Label $$   }
-    number  { Lexer.Number $$  }
-    ascii   { Lexer.ASCII $$   }
-    file    { Lexer.File $$    }
+    '('     { Lexer.OpenParen         }
+    ')'     { Lexer.CloseParen        }
+    '{'     { Lexer.OpenBrace         }
+    '1}'    { Lexer.CloseProductType  }
+    '<'     { Lexer.OpenAngle         }
+    '1>'    { Lexer.CloseProductValue }
+    ','     { Lexer.Comma             }
+    ':'     { Lexer.Colon             }
+    '@'     { Lexer.At                }
+    '*'     { Lexer.Star              }
+    'BOX'   { Lexer.Box               }
+    '->'    { Lexer.Arrow             }
+    '\\'    { Lexer.Lambda            }
+    '|~|'   { Lexer.Pi                }
+    'given' { Lexer.Given             }
+    'type'  { Lexer.Type              }
+    'fold'  { Lexer.Fold              }
+    'data'  { Lexer.Data              }
+    'let'   { Lexer.Let               }
+    '='     { Lexer.Equals            }
+    'in'    { Lexer.In                }
+    label   { Lexer.Label $$          }
+    number  { Lexer.Number $$         }
+    ascii   { Lexer.ASCII $$          }
+    file    { Lexer.File $$           }
 
 %%
 
@@ -94,15 +94,15 @@ Expr2 :: { Expr Load }
       | Expr3       { $1        }
 
 Expr3 :: { Expr Load }
-      : VExpr                      { Var $1                     }
-      | '*'                        { Const Star                 }
-      | 'BOX'                      { Const Box                  }
-      | file                       { importFile $1              }
-      | number                     { Natural (fromIntegral $1)  }
-      | ascii                      { ASCII $1                   }
-      | '<' ProductValueFields '>' { ProductValue $2            }
-      | '{' ProductTypeFields  '}' { ProductType  $2            }
-      | '(' Expr0              ')' { $2                         }
+      : VExpr                       { Var $1                    }
+      | '*'                         { Const Star                }
+      | 'BOX'                       { Const Box                 }
+      | file                        { importFile $1             }
+      | number                      { Natural (fromIntegral $1) }
+      | ascii                       { ASCII $1                  }
+      | '<' ProductValueFields '1>' { ProductValue $2           }
+      | '{' ProductTypeFields  '1}' { ProductType  $2           }
+      | '(' Expr0               ')' { $2                        }
 
 Args :: { [Arg Load] }
      : ArgsRev { reverse $1 }

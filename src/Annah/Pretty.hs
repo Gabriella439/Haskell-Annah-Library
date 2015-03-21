@@ -123,11 +123,11 @@ instance Builds Expr where
             ProductValue fields ->
                     "<"
                 <>  mconcat (map (\field -> build field <> ",") fields)
-                <>  ">"
+                <>  "1>"
             ProductType args    ->
                     "{"
                 <>  mconcat (map (\arg -> build arg <> ",") args)
-                <>  "}"
+                <>  "1}"
             Import m            -> go prec (runIdentity m)
           where
             quoteAbove :: Int -> Builder -> Builder

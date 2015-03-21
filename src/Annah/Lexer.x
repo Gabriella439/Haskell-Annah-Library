@@ -45,9 +45,9 @@ tokens :-
     "("                             { \_    -> yield OpenParen                 }
     ")"                             { \_    -> yield CloseParen                }
     "{"                             { \_    -> yield OpenBrace                 }
-    "}"                             { \_    -> yield CloseBrace                }
+    "1}"                            { \_    -> yield CloseProductType          }
     "<"                             { \_    -> yield OpenAngle                 }
-    ">"                             { \_    -> yield CloseAngle                }
+    "1>"                            { \_    -> yield CloseProductValue         }
     \" $ascii* \"                   { \text -> yield (ASCII (trim text))       }
     ","                             { \_    -> yield Comma                     }
     ":"                             { \_    -> yield Colon                     }
@@ -159,9 +159,9 @@ data Token
     = OpenParen
     | CloseParen
     | OpenBrace
-    | CloseBrace
+    | CloseProductType
     | OpenAngle
-    | CloseAngle
+    | CloseProductValue
     | ASCII Text
     | Comma
     | Colon
