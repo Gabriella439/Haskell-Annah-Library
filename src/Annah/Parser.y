@@ -259,6 +259,8 @@ prettyParseError (ParseError (Lexer.P l c) e) = Builder.toLazyText (
             <>  "\n"
             <>  "Error: Parsing failed\n" )
 
+-- TODO: Check for normalized or serialized alternatives when importing
+--       expressions
 importFile :: Text -> Expr Load
 importFile path = Import (Load (do
     m <- get
