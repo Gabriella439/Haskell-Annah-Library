@@ -123,11 +123,11 @@ instance Builds Expr where
             SumConstructor m n  -> decimal m <> "to" <> decimal n
             ProductValue fields ->
                     "<"
-                <>  mconcat (map (\field -> build field <> ",") fields)
+                <>  mconcat (map (\field -> build field <> ", ") fields)
                 <>  "1>"
             ProductType args    ->
                     "{"
-                <>  mconcat (map (\arg -> build arg <> ",") args)
+                <>  mconcat (map (\arg -> build arg <> ", ") args)
                 <>  "1}"
             Import m            -> go prec (runIdentity m)
           where
