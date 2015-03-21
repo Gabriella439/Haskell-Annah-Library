@@ -131,6 +131,8 @@ data Expr m
     | ProductValue [ProductValueSectionField m]
     -- | > ProductType [f1, f2]   ~  {f1, f2}
     | ProductType [ProductTypeSectionField m]
+    -- | > SumConstructor i j     ~  itoj
+    | SumConstructor Int Int
     | Import (m (Expr m))
 
 instance IsString (Expr m) where

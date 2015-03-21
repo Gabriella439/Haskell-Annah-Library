@@ -120,6 +120,7 @@ instance Builds Expr where
             Fam f e'            -> quoteAbove 1 (build f <> "in " <> go 1 e')
             Natural n           -> decimal n
             ASCII   txt         -> "\"" <> fromLazyText txt <> "\""
+            SumConstructor m n  -> decimal m <> "to" <> decimal n
             ProductValue fields ->
                     "<"
                 <>  mconcat (map (\field -> build field <> ",") fields)

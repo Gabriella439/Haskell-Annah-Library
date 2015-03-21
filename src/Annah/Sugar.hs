@@ -36,6 +36,7 @@ desugar (Lets ls e          ) = desugarLets  ls               e
 desugar (Fam f e            ) = desugarLets (desugarFamily f) e
 desugar (Natural n          ) = desugarNat n
 desugar (ASCII txt          ) = desugarASCII txt
+desugar (SumConstructor m n ) = desugarSumConstructor m n
 desugar (ProductValue fs    ) = desugarProductValueSection fs
 desugar (ProductType  as    ) = desugarProductTypeSection as
 desugar (Import m           ) = desugar (runIdentity m)
@@ -97,6 +98,21 @@ desugarASCII txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
 
     cons c t = M.App (M.Var (M.V "C" (ord c))) t
     nil      = "N"
+
+-- | Convert a sum constructor to a Morte expression
+desugarSumConstructor :: Int -> Int -> M.Expr
+desugarSumConstructor m0 n0 = go0 1
+  where
+    go0 n | n <= n0   = M.Lam "t" (M.Const M.Star) (go0 $! n + 1)
+          | otherwise =
+              M.Lam "x" (M.Var (M.V "t" (n0 - m0)))
+                  (M.Lam "Sum" (M.Const M.Star) (go1 1))
+
+    go1 n
+        | n <= n0   =
+            M.Lam "MkSum" (M.Pi "x" (M.Var (M.V "t" (n0 - n))) "Sum")
+                (go1 $! n + 1)
+        | otherwise = M.App (M.Var (M.V "MkSum" (n0 - m0))) "x"
 
 -- | Convert a Morte expression back into an ASCII literal
 resugarASCII :: M.Expr -> Maybe Text

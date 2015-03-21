@@ -66,6 +66,7 @@ import Annah.Syntax
     'let'   { Lexer.Let               }
     '='     { Lexer.Equals            }
     'in'    { Lexer.In                }
+    of      { Lexer.Of $$             }
     label   { Lexer.Label $$          }
     number  { Lexer.Number $$         }
     ascii   { Lexer.ASCII $$          }
@@ -98,6 +99,7 @@ Expr3 :: { Expr Load }
       | '*'                         { Const Star                }
       | 'BOX'                       { Const Box                 }
       | file                        { importFile $1             }
+      | of                          { uncurry SumConstructor $1 }
       | number                      { Natural (fromIntegral $1) }
       | ascii                       { ASCII $1                  }
       | '<' ProductValueFields '1>' { ProductValue $2           }
