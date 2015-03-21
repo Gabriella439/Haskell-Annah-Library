@@ -1,1 +1,5 @@
-λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False
+type Bool
+data True
+data False
+fold if
+in   False

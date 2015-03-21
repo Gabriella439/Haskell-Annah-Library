@@ -1,1 +1,5 @@
-0
+type Nat
+data Zero
+data Succ (pred : Nat)
+fold foldNat
+in   Zero

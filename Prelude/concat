@@ -1,5 +1,6 @@
-let concat (n1 : #ASCIIString) (n2 : #ASCIIString) : #ASCIIString =
-    \(S : *)
+    \(n1 : #ASCIIString)
+->  \(n2 : #ASCIIString)
+->  \(S : *)
 ->  \(N : S)
 ->  \(C : S -> S)
 ->  \(C : S -> S)
@@ -389,4 +390,3 @@ let concat (n1 : #ASCIIString) (n2 : #ASCIIString) : #ASCIIString =
     C@002
     C@001
     C@000
-in concat

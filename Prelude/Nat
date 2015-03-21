@@ -1,1 +1,5 @@
-∀(Nat : *) → Nat → (Nat → Nat) → Nat
+type Nat
+data Zero
+data Succ (pred : Nat)
+fold foldNat
+in   Nat
