@@ -51,7 +51,7 @@ buildProductValueSectionField  EmptyValueField   = mempty
 buildFamily :: Family Identity -> Builder
 buildFamily (Family gs ts)
     =   "given "
-    <>  mconcat (map (\g -> fromLazyText g <> " ") gs)
+    <>  mconcat (map (\g -> buildArg g <> " ") gs)
     <>  mconcat (map buildType ts)
 
 buildType :: Type Identity -> Builder

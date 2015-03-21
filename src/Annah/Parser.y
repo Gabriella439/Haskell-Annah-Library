@@ -113,13 +113,12 @@ Arg :: { Arg Load }
     : '(' label ':' Expr1 ')' { Arg $2  $4 }
     |               Expr3     { Arg "_" $1 }
 
-GivensRev :: { [Text] }
-GivensRev : GivensRev label { $2 : $1 }
-          |                 { []      }
+GivensRev :: { [Arg Load] }
+GivensRev : GivensRev 'given' label ':' Expr0 { Arg $3 $5 : $1 }
+          |                                   { []             }
 
-Givens :: { [Text] }
-Givens : 'given' GivensRev { reverse $2 }
-       |                   { []         }
+Givens :: { [Arg Load] }
+Givens : GivensRev { reverse $1 }
 
 Data :: { Data Load }
      : 'data' label Args { Data $2 $3 }

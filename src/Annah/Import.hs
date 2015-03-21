@@ -41,7 +41,7 @@ loadExpr (ProductType  as    ) = ProductType <$> mapM loadProductTypeSectionFiel
 loadExpr (Import io          ) = io >>= loadExpr
 
 loadFamily :: Family Load -> Load (Family m)
-loadFamily (Family as bs) = Family as <$> mapM loadType bs
+loadFamily (Family as bs) = Family <$> mapM loadArg as <*> mapM loadType bs
 
 loadType :: Type Load -> Load (Type m)
 loadType (Type a b cs) = Type a b <$> mapM loadData cs

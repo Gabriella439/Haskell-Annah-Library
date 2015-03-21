@@ -459,14 +459,12 @@ desugarFamily :: Family Identity -> [Let Identity]
 desugarFamily fam = typeLets ++ dataLets ++ foldLets
   where
     universalArgs :: [Arg Identity]
-    universalArgs = do
-        given <- familyGivens fam
-        return (Arg given (Const M.Star))
+    universalArgs = familyGivens fam
 
     universalVars :: [Expr Identity]
     universalVars = do
-        given <- familyGivens fam
-        return (Var (M.V given 0))
+        Arg x _ <- familyGivens fam
+        return (Var (M.V x 0))
         -- TODO: Fix this to avoid name collisions with universal variables
 
     typeConstructors :: [Cons]

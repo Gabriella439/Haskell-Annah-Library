@@ -82,7 +82,7 @@ data Let m = Let
 > Family [g1, g2] ts = given g1 g2 ts
 -}
 data Family m = Family
-    { familyGivens :: [Text]
+    { familyGivens :: [Arg m]
     , familyTypes  :: [Type m]
     }
 
