@@ -4,7 +4,7 @@
 
 module Annah.Import (
     -- * Import
-      load
+      loadExpr
     , Load(..)
     ) where
 
@@ -20,60 +20,58 @@ import Annah.Syntax
 newtype Load a = Load { unLoad :: StateT (HashMap Text (Expr Load)) IO a }
     deriving (Functor, Applicative, Monad)
 
--- | Evaluate all `Import`s, leaving behind a pure expression
-load :: Expr Load -> IO (Expr m)
-load e = evalStateT (unLoad (loadExpr e)) HashMap.empty
+loadExpr :: Expr Load -> IO (Expr m)
+loadExpr e = evalStateT (unLoad (load e)) HashMap.empty
 
-loadExpr :: Expr Load -> Load (Expr m)
-loadExpr (Const c            ) = pure (Const c)
-loadExpr (Var v              ) = pure (Var v)
-loadExpr (Lam x _A  b        ) = Lam x <$> loadExpr _A <*> loadExpr  b
-loadExpr (Pi  x _A _B        ) = Pi  x <$> loadExpr _A <*> loadExpr _B
-loadExpr (App f a            ) = App <$> loadExpr f <*> loadExpr a
-loadExpr (Annot a _A         ) = Annot <$> loadExpr a <*> loadExpr _A
-loadExpr (MultiLam m         ) = MultiLam <$> loadMultiLambda m
-loadExpr (Lets ls e          ) = Lets <$> mapM loadLet ls <*> loadExpr e
-loadExpr (Fam f e            ) = Fam <$> loadFamily f <*> loadExpr e
-loadExpr (Natural n          ) = pure (Natural n)
-loadExpr (ASCII txt          ) = pure (ASCII txt)
-loadExpr (ProductValue fs    ) = ProductValue <$> mapM loadProductValueSectionField fs
-loadExpr (ProductType  as    ) = ProductType <$> mapM loadProductTypeSectionField as
-loadExpr (Import io          ) = io >>= loadExpr
+-- | `load` evaluates all `Import`s, leaving behind a pure expression
+class Loads f where
+    load :: f Load -> Load (f m)
 
-loadFamily :: Family Load -> Load (Family m)
-loadFamily (Family as bs) = Family <$> mapM loadArg as <*> mapM loadType bs
+instance Loads Expr where
+    load (Const c            ) = pure (Const c)
+    load (Var v              ) = pure (Var v)
+    load (Lam x _A  b        ) = Lam x <$> load _A <*> load  b
+    load (Pi  x _A _B        ) = Pi  x <$> load _A <*> load _B
+    load (App f a            ) = App <$> load f <*> load a
+    load (Annot a _A         ) = Annot <$> load a <*> load _A
+    load (MultiLam m         ) = MultiLam <$> load m
+    load (Lets ls e          ) = Lets <$> mapM load ls <*> load e
+    load (Fam f e            ) = Fam <$> load f <*> load e
+    load (Natural n          ) = pure (Natural n)
+    load (ASCII txt          ) = pure (ASCII txt)
+    load (ProductValue fs    ) = ProductValue <$> mapM load fs
+    load (ProductType  as    ) = ProductType <$> mapM load as
+    load (Import io          ) = io >>= load
 
-loadType :: Type Load -> Load (Type m)
-loadType (Type a b cs) = Type a b <$> mapM loadData cs
+instance Loads Family where
+    load (Family as bs) = Family <$> mapM load as <*> mapM load bs
 
-loadData :: Data Load -> Load (Data m)
-loadData (Data a bs) = Data a <$> mapM loadArg bs
+instance Loads Type where
+    load (Type a b cs) = Type a b <$> mapM load cs
 
-loadLet :: Let Load -> Load (Let m)
-loadLet (Let f args _B b) =
-    Let f <$> mapM loadArg args <*> loadExpr _B <*> loadExpr b
+instance Loads Data where
+    load (Data a bs) = Data a <$> mapM load bs
 
-loadArg :: Arg Load -> Load (Arg m)
-loadArg (Arg x _A) = Arg x <$> loadExpr _A
+instance Loads Let where
+    load (Let f args _B b) = Let f <$> mapM load args <*> load _B <*> load b
 
-loadProductTypeField :: ProductTypeField Load -> Load (ProductTypeField m)
-loadProductTypeField (ProductTypeField x _A) =
-    ProductTypeField x <$> loadExpr _A
+instance Loads Arg where
+    load (Arg x _A) = Arg x <$> load _A
 
-loadProductTypeSectionField
-    :: ProductTypeSectionField Load -> Load (ProductTypeSectionField m)
-loadProductTypeSectionField (TypeField a   ) = TypeField <$> loadProductTypeField a
-loadProductTypeSectionField  EmptyTypeField  = pure EmptyTypeField
+instance Loads ProductTypeField where
+    load (ProductTypeField x _A) = ProductTypeField x <$> load _A
 
-loadProductValueField :: ProductValueField Load -> Load (ProductValueField m)
-loadProductValueField (ProductValueField a b) =
-    ProductValueField <$> loadExpr a <*> loadExpr b
+instance Loads ProductTypeSectionField where
+    load (TypeField a   ) = TypeField <$> load a
+    load  EmptyTypeField  = pure EmptyTypeField
 
-loadProductValueSectionField
-    :: ProductValueSectionField Load -> Load (ProductValueSectionField m)
-loadProductValueSectionField (ValueField     a) = ValueField <$> loadProductValueField a
-loadProductValueSectionField (TypeValueField a) = TypeValueField <$> loadExpr a
-loadProductValueSectionField  EmptyValueField   = pure EmptyValueField
+instance Loads ProductValueField where
+    load (ProductValueField a b) = ProductValueField <$> load a <*> load b
 
-loadMultiLambda :: MultiLambda Load -> Load (MultiLambda m)
-loadMultiLambda (MultiLambda as b) = MultiLambda <$> mapM loadArg as <*> loadExpr b
+instance Loads ProductValueSectionField where
+    load (ValueField     a) = ValueField <$> load a
+    load (TypeValueField a) = TypeValueField <$> load a
+    load  EmptyValueField   = pure EmptyValueField
+
+instance Loads MultiLambda where
+    load (MultiLambda as b) = MultiLambda <$> mapM load as <*> load b

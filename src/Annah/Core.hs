@@ -33,7 +33,7 @@ module Annah.Core (
 
     -- * Core functions
     , exprFromText
-    , load
+    , loadExpr
     , desugar
     , resugar
     , prettyExpr

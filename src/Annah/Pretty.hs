@@ -5,7 +5,7 @@
 module Annah.Pretty (
     -- * Pretty printing
       prettyExpr
-    , buildExpr
+    , Builds(..)
     ) where
 
 import Data.Functor.Identity (Identity, runIdentity)
@@ -24,110 +24,112 @@ import Annah.Syntax
     The result is a syntactically valid Annah program
 -}
 prettyExpr :: Expr Identity -> Text
-prettyExpr = toLazyText . buildExpr
+prettyExpr = toLazyText . build
 
-buildArg :: Arg Identity -> Builder
-buildArg (Arg x _A) = "(" <> fromLazyText x <> " : " <> buildExpr _A <> ")"
+-- | Pretty-print a value as a `Builder`
+class Builds f where
+    build :: f Identity -> Builder
 
-buildProductTypeField :: ProductTypeField Identity -> Builder
-buildProductTypeField (ProductTypeField x _A) =
-    if x == "_"
-    then buildExpr _A
-    else fromLazyText x <> " : " <> buildExpr _A
+instance Builds Arg where
+    build (Arg x _A) = "(" <> fromLazyText x <> " : " <> build _A <> ")"
 
-buildProductTypeSectionField :: ProductTypeSectionField Identity -> Builder
-buildProductTypeSectionField (TypeField a   ) = buildProductTypeField a
-buildProductTypeSectionField  EmptyTypeField  = mempty
+instance Builds ProductTypeField where
+    build (ProductTypeField x _A) =
+        if x == "_"
+        then build _A
+        else fromLazyText x <> " : " <> build _A
 
-buildProductValueField :: ProductValueField Identity -> Builder
-buildProductValueField (ProductValueField a b) =
-    buildExpr a <> " : " <> buildExpr b
+instance Builds ProductTypeSectionField where
+    build (TypeField a   ) = build a
+    build  EmptyTypeField  = mempty
 
-buildProductValueSectionField :: ProductValueSectionField Identity -> Builder
-buildProductValueSectionField (ValueField     a) = buildProductValueField a
-buildProductValueSectionField (TypeValueField t) = buildExpr t
-buildProductValueSectionField  EmptyValueField   = mempty
+instance Builds ProductValueField where
+    build (ProductValueField a b) = build a <> " : " <> build b
 
-buildFamily :: Family Identity -> Builder
-buildFamily (Family gs ts)
-    =   "given "
-    <>  mconcat (map (\g -> buildArg g <> " ") gs)
-    <>  mconcat (map buildType ts)
+instance Builds ProductValueSectionField where
+    build (ValueField     a) = build a
+    build (TypeValueField t) = build t
+    build  EmptyValueField   = mempty
 
-buildType :: Type Identity -> Builder
-buildType (Type t f ds)
-    =   "type "
-    <>  fromLazyText t
-    <>  " fold "
-    <>  fromLazyText f
-    <>  " "
-    <>  mconcat (map buildData ds)
+instance Builds Family where
+    build (Family gs ts)
+        =   "given "
+        <>  mconcat (map (\g -> build g <> " ") gs)
+        <>  mconcat (map build ts)
 
-buildData :: Data Identity -> Builder
-buildData (Data d args)
-    =   "data "
-    <>  fromLazyText d
-    <>  " "
-    <>  mconcat (map (\arg -> buildArg arg <> " ") args)
+instance Builds Type where
+    build (Type t f ds)
+        =   "type "
+        <>  fromLazyText t
+        <>  " fold "
+        <>  fromLazyText f
+        <>  " "
+        <>  mconcat (map build ds)
 
-buildLet :: Let Identity -> Builder
-buildLet (Let n args t r)
-    =   "let "
-    <>  fromLazyText n
-    <>  " "
-    <>  mconcat (map (\arg -> buildArg arg <> " ") args)
-    <>  ": "
-    <>  buildExpr t
-    <>  " = "
-    <>  buildExpr r
-    <>  " "
+instance Builds Data where
+    build (Data d args)
+        =   "data "
+        <>  fromLazyText d
+        <>  " "
+        <>  mconcat (map (\arg -> build arg <> " ") args)
 
-buildMultiLambda :: MultiLambda Identity -> Builder
-buildMultiLambda (MultiLambda args e)
-    =   "λ"
-    <>  mconcat (map (\arg -> buildArg arg <> " ") args)
-    <>  "→ "
-    <> buildExpr e
--- TODO: Fix this to use precedence correctly for unused case
+instance Builds Let where
+    build (Let n args t r)
+        =   "let "
+        <>  fromLazyText n
+        <>  " "
+        <>  mconcat (map (\arg -> build arg <> " ") args)
+        <>  ": "
+        <>  build t
+        <>  " = "
+        <>  build r
+        <>  " "
 
--- | Render a pretty-printed expression as a `Builder`
-buildExpr :: Expr Identity -> Builder
-buildExpr = go 0
-  where
-    go :: Int -> Expr Identity -> Builder
-    go prec e = case e of
-        Const c             -> M.buildConst c
-        Var x               -> M.buildVar x
-        Lam x _A b          -> quoteAbove 1 (
-                "λ"
-            <>  (if M.used x (desugar b)
-                 then "(" <> fromLazyText x <> " : " <>  go 1 _A <>  ")"
-                 else go 3 _A)
-            <>  " → "
-            <>  go 1 b )
-        Pi  x _A b          -> quoteAbove 1 (
-                (if M.used x (desugar b)
-                 then "∀(" <> fromLazyText x <> " : " <> go 1 _A <> ")"
-                 else go 2 _A )
-            <>  " → "
-            <>  go 1 b )
-        App f a             -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
-        Annot s t           -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
-        MultiLam m          -> quoteAbove 1 (buildMultiLambda m)
-        Lets ls e'          -> quoteAbove 1 (
-            mconcat (map buildLet ls) <> "in " <> go 1 e' )
-        Fam f e'            -> quoteAbove 1 (buildFamily f <> "in " <> go 1 e')
-        Natural n           -> decimal n
-        ASCII   txt         -> "\"" <> fromLazyText txt <> "\""
-        ProductValue fields ->
-                "("
-            <>  mconcat (intersperse "," (map buildProductValueSectionField fields))
-            <>  ")"
-        ProductType args    ->
-                "{"
-            <>  mconcat (intersperse "," (map buildProductTypeSectionField args))
-            <>  "}"
-        Import m            -> go prec (runIdentity m)
+instance Builds MultiLambda where
+    build (MultiLambda args e)
+        =   "λ"
+        <>  mconcat (map (\arg -> build arg <> " ") args)
+        <>  "→ "
+        <> build e
+    -- TODO: Fix this to use precedence correctly for unused case
+
+instance Builds Expr where
+    build = go 0
       where
-        quoteAbove :: Int -> Builder -> Builder
-        quoteAbove n b = if prec > n then "(" <> b <> ")" else b
+        go :: Int -> Expr Identity -> Builder
+        go prec e = case e of
+            Const c             -> M.buildConst c
+            Var x               -> M.buildVar x
+            Lam x _A b          -> quoteAbove 1 (
+                    "λ"
+                <>  (if M.used x (desugar b)
+                     then "(" <> fromLazyText x <> " : " <>  go 1 _A <>  ")"
+                     else go 3 _A)
+                <>  " → "
+                <>  go 1 b )
+            Pi  x _A b          -> quoteAbove 1 (
+                    (if M.used x (desugar b)
+                     then "∀(" <> fromLazyText x <> " : " <> go 1 _A <> ")"
+                     else go 2 _A )
+                <>  " → "
+                <>  go 1 b )
+            App f a             -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
+            Annot s t           -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
+            MultiLam m          -> quoteAbove 1 (build m)
+            Lets ls e'          -> quoteAbove 1 (
+                mconcat (map build ls) <> "in " <> go 1 e' )
+            Fam f e'            -> quoteAbove 1 (build f <> "in " <> go 1 e')
+            Natural n           -> decimal n
+            ASCII   txt         -> "\"" <> fromLazyText txt <> "\""
+            ProductValue fields ->
+                    "("
+                <>  mconcat (intersperse "," (map build fields))
+                <>  ")"
+            ProductType args    ->
+                    "{"
+                <>  mconcat (intersperse "," (map build args))
+                <>  "}"
+            Import m            -> go prec (runIdentity m)
+          where
+            quoteAbove :: Int -> Builder -> Builder
+            quoteAbove n b = if prec > n then "(" <> b <> ")" else b
