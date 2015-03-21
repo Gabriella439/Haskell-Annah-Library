@@ -49,6 +49,7 @@ resugar e | Just e' <- fmap Natural      (resugarNat                 e)
                    <|> fmap ProductType  (resugarProductTypeSection  e)
                    <|> fmap ASCII        (resugarASCII               e)
                    <|> fmap sc           (resugarSumConstructor      e)
+                   <|> fmap SumType      (resugarSumType             e)
                    <|> fmap MultiLam     (resugarMultiLambda         e)
           = e'
   where
@@ -155,6 +156,15 @@ desugarSumType ts0 = M.Pi "Sum" (M.Const M.Star) (go ts0)
   where
     go (t:ts) = M.Pi "MkSum" (M.Pi "x" (desugar t) "Sum") (go ts)
     go  []    = "Sum"
+
+-- | Convert a Morte expression back into a sum type
+resugarSumType :: M.Expr -> Maybe [Expr m]
+resugarSumType (M.Pi "Sum" (M.Const M.Star) e0) = go id e0
+  where
+    go diff (M.Pi "MkSum" (M.Pi "x" t "Sum") e) = go (diff . (resugar t:)) e
+    go diff (M.Var (M.V "Sum" 0))               = pure (diff [])
+    go _ _ = empty
+resugarSumType _ = empty
 
 {-| Convert product values to Morte expressions
 
