@@ -507,24 +507,30 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
                ) )
 
     -- TODO: Enforce that argument types are `Var`s?
-    desugarType :: Expr Identity -> Maybe (Expr Identity)
-    desugarType (Var (M.V x0 n0)) = go0 dataConstructors x0 n0
+    desugarType
+        :: Expr Identity -> Maybe ([Arg Identity], Expr Identity, Expr Identity)
+    desugarType (Pi x _A e      )   = do
+        ~(args, f, f') <- desugarType e
+        return (Arg x _A:args, f, f')
+    desugarType f@(Var (M.V x0 n0)) = do
+        f' <- go0 dataConstructors x0 n0
+        return ([], f, f')
       where
         go0 (d:ds) x n | consName d == x =
             if n > 0 then go0 ds x $! n - 1 else empty
                        | otherwise       = go0 ds x n
-        go0  []    x n                   = go1 typeLets x n
+        go0  []    x n                   = go1 (reverse typeLets) x n
 
         go1 (t:ts) x n | letName  t == x =
             if n > 0 then go1 ts x $! n - 1 else pure (letRhs t)
                        | otherwise       = go1 ts x n
         go1  []    _ _                   = empty
-    desugarType  _        = empty
+    desugarType _ = empty
 
-    consVars :: [Expr Identity]
-    consVars = do
+    consVars :: [Text] -> [Expr Identity]
+    consVars argNames = do
         (_, name, namesAfter) <- zippers (map consName constructors)
-        return (name `isShadowedBy` namesAfter)
+        return (name `isShadowedBy` (argNames ++ namesAfter))
 
     dataLets :: [Let Identity]
     dataLets = do
@@ -534,15 +540,28 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
                 (_, arg, argsAfter) <- zippers (consArgs d)
                 let names1 = map argName  argsAfter
                 let names2 = map consName constructors
-                let argVar = argName arg `isShadowedBy` (names1 ++ names2)
                 return (case desugarType (argType arg) of
-                    Nothing ->       argVar
-                    _       -> apply argVar consVars )
+                    Nothing           -> argVar
+                      where
+                        names = names1 ++ names2
+                        argVar = argName arg `isShadowedBy` names
+                    Just (args, _, _) ->
+                        lam args (apply argVar (argExprs ++ consVars names3))
+                      where
+                        names3 = map argName args
+                        names = names1 ++ names2 ++ names3
+                        argVar = argName arg `isShadowedBy` names
+                        argExprs = do
+                            (_, name, namesAfter) <- zippers names3
+                            return (name `isShadowedBy` namesAfter) )
         let (lhsArgs, rhsArgs) = unzip (do
-                Arg x _A <- consArgs d
+                arg@(Arg x _A) <- consArgs d
                 return (case desugarType _A of
-                    Just _A' -> (Arg x (apply _A universalVars), Arg x _A')
-                    Nothing  -> (Arg x        _A               , Arg x _A ) ) )
+                    Just (args, _B, _B') -> (lhsArg, rhsArg)
+                      where
+                        lhsArg = Arg x (pi args (apply _B universalVars))
+                        rhsArg = Arg x (pi args        _B'             )
+                    Nothing              -> (   arg,    arg) ) )
         let letType' = pi  lhsArgs (apply (consType d) universalVars)
         let letRhs'  = lam rhsArgs (makeRhs Lam (apply conVar conArgs))
         return (Let (consName d) universalArgs letType' letRhs')
