@@ -152,18 +152,22 @@ resugarSumConstructor e0 = go0 e0 0
 
 -- | Convert a sum type to a Morte expression
 desugarSumType :: [Expr Identity] -> M.Expr
-desugarSumType ts0 = M.Pi "Sum" (M.Const M.Star) (go ts0)
+desugarSumType ts0 = M.Pi "Sum" (M.Const M.Star) (go ts0 0)
   where
-    go (t:ts) = M.Pi "MkSum" (M.Pi "x" (desugar t) "Sum") (go ts)
-    go  []    = "Sum"
+    go (t:ts) n = M.Pi "MkSum" (M.Pi "x" t' "Sum") (go ts $! n + 1)
+      where
+        t' = (M.shift 1 "Sum" . M.shift n "MkSum" . desugar) t
+    go  []    _ = "Sum"
 
 -- | Convert a Morte expression back into a sum type
 resugarSumType :: M.Expr -> Maybe [Expr m]
-resugarSumType (M.Pi "Sum" (M.Const M.Star) e0) = go id e0
+resugarSumType (M.Pi "Sum" (M.Const M.Star) e0) = go id e0 0
   where
-    go diff (M.Pi "MkSum" (M.Pi "x" t "Sum") e) = go (diff . (resugar t:)) e
-    go diff (M.Var (M.V "Sum" 0))               = pure (diff [])
-    go _ _ = empty
+    go diff (M.Pi "MkSum" (M.Pi "x" t "Sum") e) n = go (diff . (t':)) e $! n + 1
+      where
+        t' = (resugar . M.shift (-1) "Sum" . M.shift (negate n) "MkSum") t
+    go diff (M.Var (M.V "Sum" 0))               _ = pure (diff [])
+    go _ _ _ = empty
 resugarSumType _ = empty
 
 {-| Convert product values to Morte expressions
