@@ -1,5 +1,33 @@
-type Nat
-data Zero
-data Succ (pred : Nat)
-fold foldNat
-in   Succ
+let Succ (bin : #Bin) : #Bin = bin
+    #Bin
+    (#One #Nil_)
+    (\(bin_ : #Bin_) ->
+        let x : {1, #Bool, #Bin_} = bin_
+            {1, #Bool, #Bin_}
+            <1, #True : #Bool, #Nil_ : #Bin_>
+            (\(t : {1, #Bool, #Bin_}) -> t
+                {1, #Bool, #Bin_}
+                (\(b : #Bool) (bin_ : #Bin_) -> b
+                    {1, #Bool, #Bin_}
+                    <1, #False : #Bool, #One_  bin_ : #Bin_>
+                    <1, #False : #Bool, #Zero_ bin_ : #Bin_>
+                )
+            )
+            (\(t : {1, #Bool, #Bin_}) -> t
+                {1, #Bool, #Bin_}
+                (\(b : #Bool) (bin_ : #Bin_) -> b
+                    {1, #Bool, #Bin_}
+                    <1, #True  : #Bool, #Zero_ bin_ : #Bin_>
+                    <1, #False : #Bool, #One_  bin_ : #Bin_>
+                )
+            )
+        in  x
+            #Bin
+            (\(b : #Bool) (bin_ : #Bin_) -> b
+                #Bin
+                (#One (#Zero_ bin_))
+                (      #One   bin_ )
+            )
+    )
+
+in Succ

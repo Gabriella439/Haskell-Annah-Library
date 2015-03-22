@@ -60,38 +60,90 @@ resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
 resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
 resugar (M.App f0 a0  ) = App (resugar f0) (resugar a0)
 
-{-| Convert a numeric literal to a Morte expression
+toBin :: Integer -> [Bool]
+toBin n0 = reverse (go n0)
+  where
+    go n | n <= 0    = []
+         | m == 0    = False:go d
+         | otherwise = True :go d
+      where
+        (d, m) = n `quotRem` 2
 
-    Example:
+fromBin :: [Bool] -> Integer
+fromBin bs0 = go (reverse bs0) 0 1
+  where
+    go  []        m _ =  m
+    go (False:bs) m n =  go bs    m      $! 2 * n
+    go (True :bs) m n = (go bs $! m + n) $! 2 * n
 
-> 3  =>  \(Nat : *) -> \(Zero : Nat) -> \(Succ : Nat) -> Succ (Succ (Succ Zero))
--}
+-- | Convert a numeric literal to a Morte expression
 desugarNat :: Integer -> M.Expr
 desugarNat n0 =
-    M.Lam "Nat" (M.Const M.Star) (
-        M.Lam "Zero" "Nat" (
-            M.Lam "Succ" (M.Pi "pred" "Nat" "Nat") (go n0) ) )
+    M.Lam "Bin" (M.Const M.Star)
+        (M.Lam "Zero" "Bin"
+            (M.Lam "One" (M.Pi "_" bin_ "Bin") (go0 (toBin n0)) ) )
   where
-    go n | n <= 0    = "Zero"
-         | otherwise = M.App "Succ" (go $! n - 1)
+    bin_ =
+        M.Pi "Bin_" (M.Const M.Star)
+            (M.Pi "Nil_" "Bin_"
+                (M.Pi "Zero_" (M.Pi "_" "Bin_" "Bin_")
+                    (M.Pi "One_" (M.Pi "_" "Bin_" "Bin_")
+                        "Bin_" ) ) )
 
-{-| Convert a Morte expression back into a numeric literal
+    go0  []    = "Zero"
+    go0 (_:bs) =
+        M.App "One"
+            (M.Lam "Bin_" (M.Const M.Star)
+                (M.Lam "Nil_" "Bin_"
+                    (M.Lam "Zero_" (M.Pi "_" "Bin_" "Bin_")
+                        (M.Lam "One_" (M.Pi "_" "Bin_" "Bin_")
+                            (go1 bs) ) ) ) )
 
-    Example:
+    go1  []        = "Nil_"
+    go1 (False:bs) = M.App "Zero_" (go1 bs)
+    go1 (True :bs) = M.App "One_"  (go1 bs)
 
-> \(Nat : *) -> \(Zero : Nat) -> \(Succ : Nat) -> Succ (Succ (Succ Zero))  =>  3
--}
+-- | Convert a Morte expression back into a numeric literal
 resugarNat :: M.Expr -> Maybe Integer
-resugarNat (
-    M.Lam "Nat" (M.Const M.Star) (
-        M.Lam "Zero" (M.Var (M.V "Nat" 0)) (
-            M.Lam "Succ"
-                  (M.Pi _ (M.Var (M.V "Nat" 0)) (M.Var (M.V "Nat" 0))) e0) ))
-    = go e0 0
+resugarNat
+    (M.Lam "Bin" (M.Const M.Star)
+        (M.Lam "Zero" (M.Var (M.V "Bin" 0))
+            (M.Lam "One"
+                (M.Pi "_"
+                    (M.Pi "Bin_" (M.Const M.Star)
+                        (M.Pi "Nil_" (M.Var (M.V "Bin_" 0))
+                            (M.Pi "Zero_"
+                                (M.Pi "_"
+                                    (M.Var (M.V "Bin_" 0))
+                                    (M.Var (M.V "Bin_" 0))
+                                )
+                                (M.Pi "One_"
+                                    (M.Pi "_"
+                                        (M.Var (M.V "Bin_" 0))
+                                        (M.Var (M.V "Bin_" 0))
+                                    )
+                                    (M.Var (M.V "Bin_" 0)) ) ) ) )
+                    (M.Var (M.V "Bin" 0)) )
+                e0 ) ) ) = do
+    bs <- go0 e0
+    return (fromBin bs)
   where
-    go (M.Var (M.V "Zero" 0))           n = pure n
-    go (M.App (M.Var (M.V "Succ" 0)) e) n = go e $! n + 1
-    go  _                               _ = empty
+    go0 (M.Var (M.V "Zero" 0))          = pure []
+    go0 (M.App (M.Var (M.V "One" 0))
+            (M.Lam "Bin_" (M.Const M.Star)
+                (M.Lam "Nil_" (M.Var (M.V "Bin_" 0))
+                    (M.Lam "Zero_"
+                        (M.Pi "_" (M.Var (M.V "Bin_" 0)) (M.Var (M.V "Bin_" 0)))
+                        (M.Lam "One_"
+                            (M.Pi "_" (M.Var (M.V "Bin_" 0))
+                                (M.Var (M.V "Bin_" 0)) )
+                            e ) ) ) ) ) = fmap (True:) (go1 e)
+    go0 _ = empty
+
+    go1 (M.Var (M.V "Nil_" 0))            = pure []
+    go1 (M.App (M.Var (M.V "Zero_" 0)) e) = fmap (False:) (go1 e)
+    go1 (M.App (M.Var (M.V "One_"  0)) e) = fmap (True :) (go1 e)
+    go1 _ = empty
 resugarNat _ = empty
 
 -- | Convert an ASCII literal to a Morte expression

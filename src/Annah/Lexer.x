@@ -33,7 +33,7 @@ $ascii = [\x00-\x7f] # [\x22]
 
 $whiteNoNewline = $white # \n
 
-$path = [$label \\\/]
+$path = [$label \\\/\.]
 
 tokens :-
 

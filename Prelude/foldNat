@@ -1,5 +1,24 @@
-type Nat
-data Zero
-data Succ (pred : Nat)
-fold foldNat
-in   foldNat
+let foldNat (bin : #Bin) (Nat : *) (Zero : Nat) (Succ : Nat -> Nat) : Nat = bin
+    Nat
+    Zero
+    (\(bin_ : #Bin_) ->
+        let x : {1, Nat -> Nat, Nat} = bin_
+            {1, Nat -> Nat, Nat}
+            <1, Succ : Nat -> Nat, Zero : Nat>
+            (\(t : {1, Nat -> Nat, Nat}) -> t
+                {1, Nat -> Nat, Nat}
+                (\(f : Nat -> Nat) (accum : Nat) ->
+                    <1, \(n : Nat) -> f (f n) : Nat -> Nat, accum : Nat>
+                )
+            )
+            (\(t : {1, Nat -> Nat, Nat}) -> t
+                {1, Nat -> Nat, Nat}
+                (\(f : Nat -> Nat) (accum : Nat) ->
+                    <1, \(n : Nat) -> f (f n) : Nat -> Nat, f accum : Nat>
+                )
+            )
+        in  x
+            Nat
+            (\(f : Nat -> Nat) (accum : Nat) -> f accum)
+    )
+in  foldNat

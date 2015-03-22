@@ -1,8 +1,0 @@
--- This is equivalent to:
---
---     \(n1 : #Nat) (n2 : #Nat) -> #foldNat n1 #Nat #Zero (#plus n2)
---
--- ... but this version is more efficient to optimize at compile time
-\(n1 : #Nat) (n2 : #Nat) ->
-    \(Nat : *) (Zero : Nat) (Succ : Nat → Nat) ->
-        n1 Nat Zero (\(m : Nat) -> n2 Nat m Succ)
