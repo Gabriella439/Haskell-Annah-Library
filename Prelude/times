@@ -1,0 +1,36 @@
+let shiftL (places : #Bin) (bin : #Bin) : #Bin = bin
+    #Bin
+    #Zero
+    (\(bin_ : #Bin_) ->
+        #One (bin_ #Bin_ (#foldNat places #Bin_ #Nil_ #Zero_) #Zero_ #One_)
+    )
+in
+
+let times (bin1 : #Bin) (bin2 : #Bin) : #Bin = bin1
+    #Bin
+    #Zero
+    (\(bin_ : #Bin_) ->
+        let x : {1, #Bin, #Bin} = bin_
+            {1, #Bin, #Bin}
+            <1, #Zero : #Bin, #Zero : #Bin>
+            (\(t : {1, #Bin, #Bin}) -> t
+                {1, #Bin, #Bin}
+                (\(place : #Bin) (accum : #Bin) ->
+                    <1, #Succ place : #Bin, accum : #Bin>
+                )
+            )
+            (\(t : {1, #Bin, #Bin}) -> t
+                {1, #Bin, #Bin}
+                (\(place : #Bin) (accum : #Bin) ->
+                    <1
+                    , #Succ place : #Bin
+                    , #plus (shiftL place bin2) accum : #Bin
+                    >
+                )
+            )
+        in  x
+            #Bin
+            (\(place : #Bin) (accum : #Bin) -> #plus (shiftL place bin2) accum)
+    )
+
+in times
