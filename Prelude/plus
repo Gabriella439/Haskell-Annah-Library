@@ -1,124 +1,125 @@
--- The result of `succ` is intentionally missing the first `One` bit.  The
--- reason why is that a `Bin` greater than 0 is isomorphic to `Bin_` if you omit
--- the initial `One`.  There is a step in the implementation of `plus` that
--- requires proving that the result of `succ` is greater than `0` but if you
--- include the initial `One` that information is lost.
-let succ (bin : #Bin) : #Bin_ = bin
-    #Bin_
-    #Nil_
-    (\(bin_ : #Bin_) ->
-        let x : {1, #Bool, #Bin_} = bin_
-            {1, #Bool, #Bin_}
-            <1, #True : #Bool, #Nil_ : #Bin_>
-            (\(t : {1, #Bool, #Bin_}) -> t
-                {1, #Bool, #Bin_}
-                (\(b : #Bool) (bin_ : #Bin_) -> b
-                    {1, #Bool, #Bin_}
-                    <1, #False : #Bool, #One_  bin_ : #Bin_>
-                    <1, #False : #Bool, #Zero_ bin_ : #Bin_>
-                )
-            )
-            (\(t : {1, #Bool, #Bin_}) -> t
-                {1, #Bool, #Bin_}
-                (\(b : #Bool) (bin_ : #Bin_) -> b
-                    {1, #Bool, #Bin_}
-                    <1, #True  : #Bool, #Zero_ bin_ : #Bin_>
-                    <1, #False : #Bool, #One_  bin_ : #Bin_>
-                )
-            )
-        in  x
-            #Bin_
-            (\(b : #Bool) (bin_ : #Bin_) -> b
-                #Bin_
-                (#Zero_ bin_)
-                bin_
-            )
-    )
-
--- Split off the last bit of a `Bin`, returning a `Nothing` if the `Bin` is
--- `Zero`
-let unsnoc (bin : #Bin) : #Maybe {1, #Bin, #Bool} = bin
-    (#Maybe   {1, #Bin, #Bool})
-    (#Nothing {1, #Bin, #Bool})
-    (\(n : #Bin_) ->
-        let x : #Maybe {1, #Bin_, #Bool} = n
-            (#Maybe   {1, #Bin_, #Bool})
-            (#Nothing {1, #Bin_, #Bool})
-            (\(m : #Maybe {1, #Bin_, #Bool}) -> m
-                (#Maybe {1, #Bin_, #Bool})
-                (#Just {1, #Bin_, #Bool} <1, #Nil_ : #Bin_, #False : #Bool>)
-                (\(t : {1, #Bin_, #Bool}) -> t
-                    (#Maybe {1, #Bin_, #Bool})
-                    (\(n : #Bin_) (b : #Bool) ->
-                        #Just {1, #Bin_, #Bool} <1, #Zero_ n : #Bin_, b : #Bool>
-                    )
-                )
-            )
-            (\(m : #Maybe {1, #Bin_, #Bool}) -> m
-                (#Maybe {1, #Bin_, #Bool})
-                (#Just {1, #Bin_, #Bool} <1, #Nil_ : #Bin_, #True : #Bool>)
-                (\(t : {1, #Bin_, #Bool}) -> t
-                    (#Maybe {1, #Bin_, #Bool})
-                    (\(n : #Bin_) (b : #Bool) ->
-                        #Just {1, #Bin_, #Bool} <1, #One_ n : #Bin_, b : #Bool>
-                    )
-                )
-            )
-        in  x
-            (#Maybe {1, #Bin, #Bool})
-            (#Just  {1, #Bin, #Bool} <1, #Zero : #Bin, #True : #Bool>)
-            (\(t : {1, #Bin_, #Bool}) -> t
-                (#Maybe {1, #Bin, #Bool})
-                (\(n : #Bin_) (b : #Bool) ->
-                    #Just {1, #Bin, #Bool} <1, #One n : #Bin, b : #Bool>
-                )
-            )
-    )
-
-in  \(b1 : #Bin)
-->  \(b2 : #Bin)
-->  b1
-    #Bin
-    b2
-    (\(n : #Bin_) ->
-        let x : {1, #Bin, #Bin_} = n
-            {1, #Bin, #Bin_}
-            <1, b2 : #Bin, #Nil_ : #Bin_>
-            -- Add `Zero` with the last bit of `carry`
-            (\(t : {1, #Bin, #Bin_}) -> t
-                {1, #Bin, #Bin_}
-                (\(carry : #Bin) (accum: #Bin_) -> unsnoc carry
-                    {1, #Bin, #Bin_}
-                    <1, #Zero : #Bin, #Zero_ accum : #Bin_>
-                    (\(t : {1, #Bin, #Bool}) -> t
-                        {1, #Bin, #Bin_}
-                        (\(bin : #Bin) (b : #Bool) -> b
-                            {1, #Bin, #Bin_}
-                            <1, bin : #Bin, #One_  accum : #Bin_>
-                            <1, bin : #Bin, #Zero_ accum : #Bin_>
-                        )
-                    )
-                )
-            )
-            -- Add `One` with the last bit of `carry`
-            (\(t : {1, #Bin, #Bin_}) -> t
-                {1, #Bin, #Bin_}
-                (\(carry : #Bin) (accum: #Bin_) -> unsnoc carry
-                    {1, #Bin, #Bin_}
-                    <1, #Zero : #Bin, #One_  accum : #Bin_>
-                    (\(t : {1, #Bin, #Bool}) -> t
-                        {1, #Bin, #Bin_}
-                        (\(bin : #Bin) (b : #Bool) -> b
-                            {1, #Bin, #Bin_}
-                            <1, #One (succ bin) : #Bin, #Zero_ accum : #Bin_>
-                            <1,             bin : #Bin, #One_  accum : #Bin_>
-                        )
-                    )
-                )
-            )
-        in  x
-            #Bin
-            (\(carry : #Bin) (accum : #Bin_) ->
-                #One (succ carry #Bin_ accum #Zero_ #One_)
-            )
-    )
+-- -- The result of `succ` is intentionally missing the first `One` bit.  The
+-- -- reason why is that a `Bin` greater than 0 is isomorphic to `Bin_` if you omit
+-- -- the initial `One`.  There is a step in the implementation of `plus` that
+-- -- requires proving that the result of `succ` is greater than `0` but if you
+-- -- include the initial `One` that information is lost.
+-- let succ (bin : #Bin) : #Bin_ = bin
+--     #Bin_
+--     #Nil_
+--     (\(bin_ : #Bin_) ->
+--         let x : {1, #Bool, #Bin_} = bin_
+--             {1, #Bool, #Bin_}
+--             <1, #True : #Bool, #Nil_ : #Bin_>
+--             (\(t : {1, #Bool, #Bin_}) -> t
+--                 {1, #Bool, #Bin_}
+--                 (\(b : #Bool) (bin_ : #Bin_) -> b
+--                     {1, #Bool, #Bin_}
+--                     <1, #False : #Bool, #One_  bin_ : #Bin_>
+--                     <1, #False : #Bool, #Zero_ bin_ : #Bin_>
+--                 )
+--             )
+--             (\(t : {1, #Bool, #Bin_}) -> t
+--                 {1, #Bool, #Bin_}
+--                 (\(b : #Bool) (bin_ : #Bin_) -> b
+--                     {1, #Bool, #Bin_}
+--                     <1, #True  : #Bool, #Zero_ bin_ : #Bin_>
+--                     <1, #False : #Bool, #One_  bin_ : #Bin_>
+--                 )
+--             )
+--         in  x
+--             #Bin_
+--             (\(b : #Bool) (bin_ : #Bin_) -> b
+--                 #Bin_
+--                 (#Zero_ bin_)
+--                 bin_
+--             )
+--     )
+-- 
+-- -- Split off the last bit of a `Bin`, returning a `Nothing` if the `Bin` is
+-- -- `Zero`
+-- let unsnoc (bin : #Bin) : #Maybe {1, #Bin, #Bool} = bin
+--     (#Maybe   {1, #Bin, #Bool})
+--     (#Nothing {1, #Bin, #Bool})
+--     (\(n : #Bin_) ->
+--         let x : #Maybe {1, #Bin_, #Bool} = n
+--             (#Maybe   {1, #Bin_, #Bool})
+--             (#Nothing {1, #Bin_, #Bool})
+--             (\(m : #Maybe {1, #Bin_, #Bool}) -> m
+--                 (#Maybe {1, #Bin_, #Bool})
+--                 (#Just {1, #Bin_, #Bool} <1, #Nil_ : #Bin_, #False : #Bool>)
+--                 (\(t : {1, #Bin_, #Bool}) -> t
+--                     (#Maybe {1, #Bin_, #Bool})
+--                     (\(n : #Bin_) (b : #Bool) ->
+--                         #Just {1, #Bin_, #Bool} <1, #Zero_ n : #Bin_, b : #Bool>
+--                     )
+--                 )
+--             )
+--             (\(m : #Maybe {1, #Bin_, #Bool}) -> m
+--                 (#Maybe {1, #Bin_, #Bool})
+--                 (#Just {1, #Bin_, #Bool} <1, #Nil_ : #Bin_, #True : #Bool>)
+--                 (\(t : {1, #Bin_, #Bool}) -> t
+--                     (#Maybe {1, #Bin_, #Bool})
+--                     (\(n : #Bin_) (b : #Bool) ->
+--                         #Just {1, #Bin_, #Bool} <1, #One_ n : #Bin_, b : #Bool>
+--                     )
+--                 )
+--             )
+--         in  x
+--             (#Maybe {1, #Bin, #Bool})
+--             (#Just  {1, #Bin, #Bool} <1, #Zero : #Bin, #True : #Bool>)
+--             (\(t : {1, #Bin_, #Bool}) -> t
+--                 (#Maybe {1, #Bin, #Bool})
+--                 (\(n : #Bin_) (b : #Bool) ->
+--                     #Just {1, #Bin, #Bool} <1, #One n : #Bin, b : #Bool>
+--                 )
+--             )
+--     )
+-- 
+-- in  \(b1 : #Bin)
+-- ->  \(b2 : #Bin)
+-- ->  b1
+--     #Bin
+--     b2
+--     (\(n : #Bin_) ->
+--         let x : {1, #Bin, #Bin_} = n
+--             {1, #Bin, #Bin_}
+--             <1, b2 : #Bin, #Nil_ : #Bin_>
+--             -- Add `Zero` with the last bit of `carry`
+--             (\(t : {1, #Bin, #Bin_}) -> t
+--                 {1, #Bin, #Bin_}
+--                 (\(carry : #Bin) (accum: #Bin_) -> unsnoc carry
+--                     {1, #Bin, #Bin_}
+--                     <1, #Zero : #Bin, #Zero_ accum : #Bin_>
+--                     (\(t : {1, #Bin, #Bool}) -> t
+--                         {1, #Bin, #Bin_}
+--                         (\(bin : #Bin) (b : #Bool) -> b
+--                             {1, #Bin, #Bin_}
+--                             <1, bin : #Bin, #One_  accum : #Bin_>
+--                             <1, bin : #Bin, #Zero_ accum : #Bin_>
+--                         )
+--                     )
+--                 )
+--             )
+--             -- Add `One` with the last bit of `carry`
+--             (\(t : {1, #Bin, #Bin_}) -> t
+--                 {1, #Bin, #Bin_}
+--                 (\(carry : #Bin) (accum: #Bin_) -> unsnoc carry
+--                     {1, #Bin, #Bin_}
+--                     <1, #Zero : #Bin, #One_  accum : #Bin_>
+--                     (\(t : {1, #Bin, #Bool}) -> t
+--                         {1, #Bin, #Bin_}
+--                         (\(bin : #Bin) (b : #Bool) -> b
+--                             {1, #Bin, #Bin_}
+--                             <1, #One (succ bin) : #Bin, #Zero_ accum : #Bin_>
+--                             <1,             bin : #Bin, #One_  accum : #Bin_>
+--                         )
+--                     )
+--                 )
+--             )
+--         in  x
+--             #Bin
+--             (\(carry : #Bin) (accum : #Bin_) ->
+--                 #One (succ carry #Bin_ accum #Zero_ #One_)
+--             )
+--     )
+λ(b1 : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) (b2 : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) → b1 (∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) b2 (λ(n : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → n {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, b2 : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Nil_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> (λ(t : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_}) → t {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} (λ(carry : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) (accum : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → carry (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Nothing) (λ(n : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → n (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Nothing) (λ(m : ∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) → m (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Nil_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, λ(Bool : *) (True : Bool) (False : Bool) → False : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>) (λ(t : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool}) → t (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(n : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (n Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>))) (λ(m : ∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) → m (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Nil_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, λ(Bool : *) (True : Bool) (False : Bool) → True : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>) (λ(t : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool}) → t (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(n : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (n Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>))) (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, 0 : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, λ(Bool : *) (True : Bool) (False : Bool) → True : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>) (λ(t : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool}) → t (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(n : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, λ(Bin : *) (Zero : Bin) (One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → One n : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>))) {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, 0 : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (accum Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> (λ(t : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool}) → t {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} (λ(bin : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) (b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → b {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, bin : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (accum Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> <1, bin : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (accum Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_>)))) (λ(t : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_}) → t {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} (λ(carry : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) (accum : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → carry (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Nothing) (λ(n : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → n (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Nothing) (λ(m : ∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) → m (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Nil_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, λ(Bool : *) (True : Bool) (False : Bool) → False : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>) (λ(t : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool}) → t (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(n : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (n Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>))) (λ(m : ∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) → m (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Nil_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, λ(Bool : *) (True : Bool) (False : Bool) → True : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>) (λ(t : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool}) → t (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(n : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (n Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>))) (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, 0 : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, λ(Bool : *) (True : Bool) (False : Bool) → True : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>) (λ(t : {1, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool}) → t (∀(Maybe : *) → ∀(Nothing : Maybe) → ∀(Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Maybe) (λ(n : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (Maybe : *) (Nothing : Maybe) (Just : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool} → Maybe) → Just <1, λ(Bin : *) (Zero : Bin) (One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → One n : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool>))) {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, 0 : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (accum Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> (λ(t : {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool}) → t {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} (λ(bin : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) (b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → b {1, ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, λ(Bin : *) (Zero : Bin) (One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → One (bin (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Nil_) (λ(bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → bin_ {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, λ(Bool : *) (True : Bool) (False : Bool) → True : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Nil_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> (λ(t : {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_}) → t {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} (λ(b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → b {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, λ(Bool : *) (True : Bool) (False : Bool) → False : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> <1, λ(Bool : *) (True : Bool) (False : Bool) → False : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_>)) (λ(t : {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_}) → t {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} (λ(b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → b {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, λ(Bool : *) (True : Bool) (False : Bool) → True : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> <1, λ(Bool : *) (True : Bool) (False : Bool) → False : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_>)) (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (λ(b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → b (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (bin_ Bin_ Nil_ Zero_ One_)) bin_))) : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (accum Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> <1, bin : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (accum Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_>)))) (∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) (λ(carry : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) (accum : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (Bin : *) (Zero : Bin) (One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → One (carry (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Nil_) (λ(bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → bin_ {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, λ(Bool : *) (True : Bool) (False : Bool) → True : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Nil_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> (λ(t : {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_}) → t {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} (λ(b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → b {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, λ(Bool : *) (True : Bool) (False : Bool) → False : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> <1, λ(Bool : *) (True : Bool) (False : Bool) → False : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_>)) (λ(t : {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_}) → t {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} (λ(b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → b {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, λ(Bool : *) (True : Bool) (False : Bool) → True : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> <1, λ(Bool : *) (True : Bool) (False : Bool) → False : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_>)) (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (λ(b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → b (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (bin_ Bin_ Nil_ Zero_ One_)) bin_)) (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) accum (λ(_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (_ Bin_ Nil_ Zero_ One_)) (λ(_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (_ Bin_ Nil_ Zero_ One_)))))

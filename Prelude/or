@@ -1,1 +1,2 @@
-\(b1 : #Bool) (b2 : #Bool) -> #if b1 #Bool #True b2
+-- \(b1 : #Bool) (b2 : #Bool) -> #if b1 #Bool #True b2
+λ(b1 : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → b1 (∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (λ(Bool : *) (True : Bool) (False : Bool) → True)

@@ -1,14 +1,15 @@
-type Bin_
-data Nil_
-data Zero_ Bin_
-data One_  Bin_
-fold foldBin_
-in
-
-type Bin
-data Zero
-data One Bin_
-fold foldBin
-in
-
-Bin
+-- type Bin_
+-- data Nil_
+-- data Zero_ Bin_
+-- data One_  Bin_
+-- fold foldBin_
+-- in
+-- 
+-- type Bin
+-- data Zero
+-- data One Bin_
+-- fold foldBin
+-- in
+-- 
+-- Bin
+∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin

@@ -1,6 +1,7 @@
-given a : *
-type Maybe
-data Nothing
-data Just a
-fold foldMaybe
-in Nothing
+-- given a : *
+-- type Maybe
+-- data Nothing
+-- data Just a
+-- fold foldMaybe
+-- in Nothing
+λ(a : *) (Maybe : *) (Nothing : Maybe) (Just : a → Maybe) → Nothing
