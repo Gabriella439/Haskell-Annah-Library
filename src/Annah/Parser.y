@@ -77,119 +77,123 @@ import Annah.Syntax
 %%
 
 Expr0 :: { Expr Load }
-      : Expr1 ':' Expr0 { Annot $1 $3 }
-      | Expr1           { $1          }
+    : Expr1 ':' Expr0 { Annot $1 $3 }
+    | Expr1           { $1          }
 
 Expr1 :: { Expr Load }
-      : '\\'  Args                    '->' Expr1      { MultiLam (MultiLambda $2 $4) }
-      | '|~|' '(' label ':' Expr1 ')' '->' Expr1      { Pi  $3  $5 $8                }
-      | Expr2 '->' Expr1                              { Pi  "_" $1 $3                }
-      | Family 'in' Expr1                             { Fam  $1 $3                   }
-      | Lets   'in' Expr1                             { Lets $1 $3                   }
-      | Expr2                                         { $1                           }
+    : '\\'  Args                    '->' Expr1 { MultiLam (MultiLambda $2 $4) }
+    | '|~|' '(' label ':' Expr1 ')' '->' Expr1 { Pi  $3  $5 $8                }
+    | Expr2 '->' Expr1                         { Pi  "_" $1 $3                }
+    | Family 'in' Expr1                        { Fam  $1 $3                   }
+    | Lets   'in' Expr1                        { Lets $1 $3                   }
+    | Expr2                                    { $1                           }
 
 VExpr  :: { Var }
-       : label '@' number { V $1 $3 }
-       | label            { V $1 0  }
+    : label '@' number { V $1 $3 }
+    | label            { V $1 0  }
 
 Expr2 :: { Expr Load }
-      : Expr2 Expr3 { App $1 $2 }
-      | Expr3       { $1        }
+    : Expr2 Expr3 { App $1 $2 }
+    | Expr3       { $1        }
 
 Expr3 :: { Expr Load }
-      : VExpr                       { Var $1                    }
-      | '*'                         { Const Star                }
-      | 'BOX'                       { Const Box                 }
-      | file                        { importFile $1             }
-      | of                          { uncurry SumConstructor $1 }
-      | number                      { Natural (fromIntegral $1) }
-      | ascii                       { ASCII $1                  }
-      | '<1' ProductValueFields '>' { ProductValue $2           }
-      | '{1' ProductTypeFields  '}' { ProductType  $2           }
-      | '{0' SumTypeFields      '}' { SumType      $2           }
-      | '(' Expr0               ')' { $2                        }
+    : VExpr                       { Var $1                    }
+    | '*'                         { Const Star                }
+    | 'BOX'                       { Const Box                 }
+    | file                        { importFile $1             }
+    | of                          { uncurry SumConstructor $1 }
+    | number                      { Natural (fromIntegral $1) }
+    | ascii                       { ASCII $1                  }
+    | '<1' ProductValueFields '>' { ProductValue $2           }
+    | '{1' ProductTypeFields  '}' { ProductType  $2           }
+    | '{0' SumTypeFields      '}' { SumType      $2           }
+    | '(' Expr0               ')' { $2                        }
 
 Args :: { [Arg Load] }
      : ArgsRev { reverse $1 }
 
 ArgsRev :: { [Arg Load] }
-        : ArgsRev Arg { $2 : $1 }
-        |             { []      }
+    : ArgsRev Arg { $2 : $1 }
+    |             { []      }
 
 Arg :: { Arg Load }
     : '(' label ':' Expr1 ')' { Arg $2  $4 }
     |               Expr3     { Arg "_" $1 }
 
 GivensRev :: { [Arg Load] }
-          : GivensRev 'given' label ':' Expr0 { Arg $3 $5 : $1 }
-          |                                   { []             }
+    : GivensRev 'given' label ':' Expr0 { Arg $3 $5 : $1 }
+    |                                   { []             }
 
 Givens :: { [Arg Load] }
-       : GivensRev { reverse $1 }
+    : GivensRev { reverse $1 }
 
 Data :: { Data Load }
-     : 'data' label Args { Data $2 $3 }
+    : 'data' label Args { Data $2 $3 }
 
 DatasRev :: { [Data Load] }
-         : DatasRev Data { $2 : $1 }
-         |               { []      }
+    : DatasRev Data { $2 : $1 }
+    |               { []      }
 
 Datas :: { [Data Load] }
-      : DatasRev { reverse $1 }
+    : DatasRev { reverse $1 }
 
 Type :: { Type Load }
-     : 'type' label Datas 'fold' label { Type $2 $5 $3 }
+    : 'type' label Datas 'fold' label { Type $2 $5 $3 }
 
 TypesRev :: { [Type Load] }
-         : TypesRev Type { $2 : $1 }
-         |               { []      }
+    : TypesRev Type { $2 : $1 }
+    |               { []      }
 
 Types :: { [Type Load] }
-      : TypesRev { reverse $1 }
+    : TypesRev { reverse $1 }
 
 Family :: { Family m }
-       : Givens Types { Family $1 $2 }
+    : Givens Types { Family $1 $2 }
 
 Let :: { Let Load }
     : 'let'  label Args ':' Expr0 '=' Expr1 { Let $2 $3 $5 $7 }
 
 LetsRev :: { [Let Load] }
-        : LetsRev Let { $2 : $1 }
-        | Let         { [$1]    }
+    : LetsRev Let { $2 : $1 }
+    | Let         { [$1]    }
 
 Lets :: { [Let Load] }
-     : LetsRev { reverse $1 }
+    : LetsRev { reverse $1 }
 
 ProductValueField :: { ProductValueSectionField Load }
-                  : Expr1 ':' Expr0 { ValueField (ProductValueField $1 $3) }
-                  | Expr0           { TypeValueField $1                    }
-                  |                 { EmptyValueField                      }
+    : Expr1 ':' Expr0 { ValueField (ProductValueField $1 $3) }
+    | Expr0           { TypeValueField $1                    }
+    |                 { EmptyValueField                      }
 
 ProductValueFieldsRev :: { [ProductValueSectionField Load] }
-                      : ProductValueFieldsRev ',' ProductValueField { $3 : $1  }
-                      |                                             { []       }
+    : ProductValueFieldsRev ',' ProductValueField { $3 : $1  }
+    |                                             { []       }
 
 ProductValueFields :: { [ProductValueSectionField Load] }
-                   : ProductValueFieldsRev { reverse $1 }
+    : ProductValueFieldsRev { reverse $1 }
 
 ProductTypeField :: { ProductTypeSectionField Load }
-                 : label ':' Expr0 { TypeField (ProductTypeField $1  $3) }
-                 | Expr0           { TypeField (ProductTypeField "_" $1) }
-                 |                 { EmptyTypeField                      }
+    : label ':' Expr0 { TypeField (ProductTypeField $1  $3) }
+    | Expr0           { TypeField (ProductTypeField "_" $1) }
+    |                 { EmptyTypeField                      }
 
 ProductTypeFieldsRev :: { [ProductTypeSectionField Load] }
-                     : ProductTypeFieldsRev ',' ProductTypeField { $3 : $1  }
-                     |                                           { []       }
+    : ProductTypeFieldsRev ',' ProductTypeField { $3 : $1  }
+    |                                           { []       }
 
 ProductTypeFields :: { [ProductTypeSectionField Load] }
-                  : ProductTypeFieldsRev { reverse $1 }
+    : ProductTypeFieldsRev { reverse $1 }
 
-SumTypeFieldsRev :: { [Expr Load] }
-                 : SumTypeFieldsRev '|' Expr0 { $3 : $1 }
-                 |                            { []      }
+SumTypeFieldsRev :: { [SumTypeSectionField Load] }
+    : SumTypeFieldsRev '|' SumTypeSectionField { $3 : $1 }
+    |                                          { []      }
 
-SumTypeFields :: { [Expr Load] }
-              : SumTypeFieldsRev { reverse $1 }
+SumTypeFields :: { [SumTypeSectionField Load] }
+    : SumTypeFieldsRev { reverse $1 }
+
+SumTypeSectionField :: { SumTypeSectionField Load }
+    : Expr0 { SumTypeField $1   }
+    |       { EmptySumTypeField }
 
 {
 -- | The specific parsing error

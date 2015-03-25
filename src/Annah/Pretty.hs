@@ -50,6 +50,10 @@ instance Builds ProductValueSectionField where
     build (TypeValueField t) = build t
     build  EmptyValueField   = mempty
 
+instance Builds SumTypeSectionField where
+    build  EmptySumTypeField  = mempty
+    build (SumTypeField f   ) = build f
+
 instance Builds Family where
     build (Family gs ts)
         =   "given "
@@ -101,13 +105,13 @@ instance Builds Expr where
             Var x               -> M.buildVar x
             Lam x _A b          -> quoteAbove 1 (
                     "λ"
-                <>  (if M.used x (desugar b)
+                <>  (if x /= " "
                      then "(" <> fromLazyText x <> " : " <>  go 1 _A <>  ")"
                      else go 3 _A)
                 <>  " → "
                 <>  go 1 b )
             Pi  x _A b          -> quoteAbove 1 (
-                    (if M.used x (desugar b)
+                    (if x /= " "
                      then "∀(" <> fromLazyText x <> " : " <> go 1 _A <> ")"
                      else go 2 _A )
                 <>  " → "
@@ -123,15 +127,15 @@ instance Builds Expr where
             SumConstructor m n  -> decimal m <> "to" <> decimal n
             SumType ts          ->
                     "{0"
-                <>  mconcat (map (\t -> "| " <> build t) ts)
+                <>  mconcat (map (\t -> "|" <> build t) ts)
                 <>  "}"
             ProductValue fields ->
                     "<1"
-                <>  mconcat (map (\field -> ", " <> build field) fields)
+                <>  mconcat (map (\field -> "," <> build field) fields)
                 <>  ">"
             ProductType args    ->
                     "{1"
-                <>  mconcat (map (\arg -> ", " <> build arg) args)
+                <>  mconcat (map (\arg -> "," <> build arg) args)
                 <>  "}"
             Import m            -> go prec (runIdentity m)
           where

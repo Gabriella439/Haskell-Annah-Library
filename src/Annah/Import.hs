@@ -75,5 +75,9 @@ instance Loads ProductValueSectionField where
     load (TypeValueField a) = TypeValueField <$> load a
     load  EmptyValueField   = pure EmptyValueField
 
+instance Loads SumTypeSectionField where
+    load (SumTypeField f   ) = SumTypeField <$> load f
+    load  EmptySumTypeField  = pure EmptySumTypeField
+
 instance Loads MultiLambda where
     load (MultiLambda as b) = MultiLambda <$> mapM load as <*> load b

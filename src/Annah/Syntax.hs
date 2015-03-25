@@ -9,6 +9,7 @@ module Annah.Syntax (
     , ProductTypeSectionField(..)
     , ProductValueField(..)
     , ProductValueSectionField(..)
+    , SumTypeSectionField(..)
     , Let(..)
     , MultiLambda(..)
     , Data(..)
@@ -58,6 +59,11 @@ data ProductValueSectionField m
     = EmptyValueField
     | TypeValueField (Expr m)
     | ValueField (ProductValueField m)
+
+-- | Field of a sum type section
+data SumTypeSectionField m
+    = EmptySumTypeField
+    | SumTypeField (Expr m)
 
 {-| Compressed nested lambdas
 
@@ -134,7 +140,7 @@ data Expr m
     -- | > SumConstructor i j     ~  itoj
     | SumConstructor Int Int
     -- | > SumType [t1, t2]       ~  {t1| t2| 0}
-    | SumType [Expr m]
+    | SumType [SumTypeSectionField m]
     | Import (m (Expr m))
 
 instance IsString (Expr m) where
