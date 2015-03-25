@@ -31,7 +31,6 @@ desugar (Lam x _A  b        ) = M.Lam x (desugar _A) (desugar  b)
 desugar (Pi  x _A _B        ) = M.Pi  x (desugar _A) (desugar _B)
 desugar (App f a            ) = M.App (desugar f) (desugar a)
 desugar (Annot a _A         ) = desugar (Lets [Let "x" [] _A a] "x")
-desugar (MultiLam m         ) = desugarMultiLambda m
 desugar (Lets ls e          ) = desugarLets  ls               e
 desugar (Fam f e            ) = desugarLets (desugarFamily f) e
 desugar (Natural n          ) = desugarNat n
@@ -44,25 +43,21 @@ desugar (Import m           ) = desugar (runIdentity m)
 
 -- | Convert a Morte expression to an Annah expression
 resugar :: M.Expr -> Expr m
-resugar e0 = go1 (go0 e0)
+resugar e
+    | Just e' <-  fmap Natural      (resugarNat                 e)
+              <|> fmap ProductValue (resugarProductValueSection e)
+              <|> fmap ProductType  (resugarProductTypeSection  e)
+              <|> fmap ASCII        (resugarASCII               e)
+              <|> fmap sc           (resugarSumConstructor      e)
+              <|> fmap SumType      (resugarSumTypeSection      e)
+    = e'
   where
-    go0 e | Just e' <-  fmap Natural      (resugarNat                 e)
-                    <|> fmap ProductValue (resugarProductValueSection e)
-                    <|> fmap ProductType  (resugarProductTypeSection  e)
-                    <|> fmap ASCII        (resugarASCII               e)
-                    <|> fmap sc           (resugarSumConstructor      e)
-                    <|> fmap SumType      (resugarSumTypeSection      e)
-         = e'
-      where
-        sc = uncurry SumConstructor
-    go0 (M.Const c    ) = Const c
-    go0 (M.Var v      ) = Var v
-    go0 (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
-    go0 (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
-    go0 (M.App f0 a0  ) = App (resugar f0) (resugar a0)
-
-    go1 e | Just e' <- fmap MultiLam (resugarMultiLambda e) = e'
-          | otherwise                                       = e
+    sc = uncurry SumConstructor
+resugar (M.Const c    ) = Const c
+resugar (M.Var v      ) = Var v
+resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
+resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
+resugar (M.App f a    ) = App (resugar f) (resugar a)
 
 toBin :: Integer -> [Bool]
 toBin n0 = reverse (go n0)
@@ -494,29 +489,6 @@ resugarProductTypeSection e0 = go0 e0 0
             ptf = ProductTypeField x (shift t)
             diff' = diff . (TypeField ptf:)
         go1  _                                           _    _ = empty
-
-{-| Convert a compressed lambda to a Morte expression
-
-> \a b c -> e  =>  \a -> \b -> \c -> e
--}
-desugarMultiLambda :: MultiLambda Identity -> M.Expr
-desugarMultiLambda (MultiLambda args e) = desugar (lam args e)
-
-{-| Convert a Morte expression back into a compressed lambda
-
-> \a -> \b -> \c -> e  =>  \a b c -> e
--}
-resugarMultiLambda :: Expr m -> Maybe (MultiLambda m)
-resugarMultiLambda (Lam x0 _A0 e0) = do
-    -- Ensure that the resugared MultiLambda has at least one argument
-    MultiLambda args e' <- go e0
-    return (MultiLambda (Arg x0 _A0:args) e')
-  where
-    go (Lam x _A e) = do
-        MultiLambda args e' <- go e
-        return (MultiLambda (Arg x _A:args) e')
-    go           e  = pure (MultiLambda [] e)
-resugarMultiLambda _ = empty
 
 {-| `desugarLets` converts this:
 

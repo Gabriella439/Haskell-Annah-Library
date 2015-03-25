@@ -15,7 +15,6 @@ import Data.Text.Lazy.Builder (Builder, fromLazyText, toLazyText)
 import Data.Text.Lazy.Builder.Int (decimal)
 import qualified Morte.Core as M
 
-import Annah.Sugar (desugar)
 import Annah.Syntax
 
 {-| Pretty-print an expression
@@ -89,14 +88,6 @@ instance Builds Let where
         <>  build r
         <>  " "
 
-instance Builds MultiLambda where
-    build (MultiLambda args e)
-        =   "λ"
-        <>  mconcat (map (\arg -> build arg <> " ") args)
-        <>  "→ "
-        <> build e
-    -- TODO: Fix this to use precedence correctly for unused case
-
 instance Builds Expr where
     build = go 0
       where
@@ -119,7 +110,6 @@ instance Builds Expr where
                 <>  go 1 b )
             App f a             -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
             Annot s t           -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
-            MultiLam m          -> quoteAbove 1 (build m)
             Lets ls e'          -> quoteAbove 1 (
                 mconcat (map build ls) <> "in " <> go 1 e' )
             Fam f e'            -> quoteAbove 1 (build f <> "in " <> go 1 e')

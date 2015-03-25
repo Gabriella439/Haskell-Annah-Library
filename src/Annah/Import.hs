@@ -34,7 +34,6 @@ instance Loads Expr where
     load (Pi  x _A _B        ) = Pi  x <$> load _A <*> load _B
     load (App f a            ) = App <$> load f <*> load a
     load (Annot a _A         ) = Annot <$> load a <*> load _A
-    load (MultiLam m         ) = MultiLam <$> load m
     load (Lets ls e          ) = Lets <$> mapM load ls <*> load e
     load (Fam f e            ) = Fam <$> load f <*> load e
     load (Natural n          ) = pure (Natural n)
@@ -78,6 +77,3 @@ instance Loads ProductValueSectionField where
 instance Loads SumTypeSectionField where
     load (SumTypeField f   ) = SumTypeField <$> load f
     load  EmptySumTypeField  = pure EmptySumTypeField
-
-instance Loads MultiLambda where
-    load (MultiLambda as b) = MultiLambda <$> mapM load as <*> load b
