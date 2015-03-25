@@ -1,7 +1,6 @@
--- given a : *
--- type List
--- data Nil
--- data Cons (head : a) (tail : List)
--- fold foldr
--- in   List
-λ(a : *) → ∀(List : *) → ∀(Nil : List) → ∀(Cons : ∀(head : a) → ∀(tail : List) → List) → List
+given a : *
+type List
+data Nil
+data Cons (head : a) (tail : List)
+fold foldr
+in   List

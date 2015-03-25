@@ -1,6 +1,5 @@
--- type Bool
--- data True
--- data False
--- fold if
--- in Bool
-∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool
+type Bool
+data True
+data False
+fold if
+in Bool

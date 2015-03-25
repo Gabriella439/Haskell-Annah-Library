@@ -1,34 +1,33 @@
--- let Succ (bin : #Bin) : #Bin = bin
---     #Bin
---     (#One #Nil_)
---     (\(bin_ : #Bin_) ->
---         let x : {1, #Bool, #Bin_} = bin_
---             {1, #Bool, #Bin_}
---             <1, #True : #Bool, #Nil_ : #Bin_>
---             (\(t : {1, #Bool, #Bin_}) -> t
---                 {1, #Bool, #Bin_}
---                 (\(b : #Bool) (bin_ : #Bin_) -> b
---                     {1, #Bool, #Bin_}
---                     <1, #False : #Bool, #One_  bin_ : #Bin_>
---                     <1, #False : #Bool, #Zero_ bin_ : #Bin_>
---                 )
---             )
---             (\(t : {1, #Bool, #Bin_}) -> t
---                 {1, #Bool, #Bin_}
---                 (\(b : #Bool) (bin_ : #Bin_) -> b
---                     {1, #Bool, #Bin_}
---                     <1, #True  : #Bool, #Zero_ bin_ : #Bin_>
---                     <1, #False : #Bool, #One_  bin_ : #Bin_>
---                 )
---             )
---         in  x
---             #Bin
---             (\(b : #Bool) (bin_ : #Bin_) -> b
---                 #Bin
---                 (#One (#Zero_ bin_))
---                 (      #One   bin_ )
---             )
---     )
--- 
--- in Succ
-λ(bin : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) → bin (∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) 1 (λ(bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → bin_ {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, λ(Bool : *) (True : Bool) (False : Bool) → True : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Nil_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> (λ(t : {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_}) → t {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} (λ(b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → b {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, λ(Bool : *) (True : Bool) (False : Bool) → False : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> <1, λ(Bool : *) (True : Bool) (False : Bool) → False : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_>)) (λ(t : {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_}) → t {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} (λ(b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → b {1, ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_} <1, λ(Bool : *) (True : Bool) (False : Bool) → True : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_> <1, λ(Bool : *) (True : Bool) (False : Bool) → False : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool, λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → One_ (bin_ Bin_ Nil_ Zero_ One_) : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_>)) (∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) (λ(b : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → b (∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) (λ(Bin : *) (Zero : Bin) (One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → One (λ(Bin_ : *) (Nil_ : Bin_) (Zero_ : Bin_ → Bin_) (One_ : Bin_ → Bin_) → Zero_ (bin_ Bin_ Nil_ Zero_ One_))) (λ(Bin : *) (Zero : Bin) (One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → One bin_)))
+let Succ (bin : #Bin) : #Bin = bin
+    #Bin
+    (#One #Nil_)
+    (\(bin_ : #Bin_) ->
+        let x : {1, #Bool, #Bin_} = bin_
+            {1, #Bool, #Bin_}
+            <1, #True : #Bool, #Nil_ : #Bin_>
+            (\(t : {1, #Bool, #Bin_}) -> t
+                {1, #Bool, #Bin_}
+                (\(b : #Bool) -> \(bin_ : #Bin_) -> b
+                    {1, #Bool, #Bin_}
+                    <1, #False : #Bool, #One_  bin_ : #Bin_>
+                    <1, #False : #Bool, #Zero_ bin_ : #Bin_>
+                )
+            )
+            (\(t : {1, #Bool, #Bin_}) -> t
+                {1, #Bool, #Bin_}
+                (\(b : #Bool) -> \(bin_ : #Bin_) -> b
+                    {1, #Bool, #Bin_}
+                    <1, #True  : #Bool, #Zero_ bin_ : #Bin_>
+                    <1, #False : #Bool, #One_  bin_ : #Bin_>
+                )
+            )
+        in  x
+            #Bin
+            (\(b : #Bool) -> \(bin_ : #Bin_) -> b
+                #Bin
+                (#One (#Zero_ bin_))
+                (      #One   bin_ )
+            )
+    )
+
+in Succ

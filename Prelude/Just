@@ -1,7 +1,6 @@
--- given a : *
--- type Maybe
--- data Nothing
--- data Just a
--- fold foldMaybe
--- in Just
-λ(a : *) (_ : a) (Maybe : *) (Nothing : Maybe) (Just : a → Maybe) → Just _
+given a : *
+type Maybe
+data Nothing
+data Just a
+fold foldMaybe
+in Just

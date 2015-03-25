@@ -1,25 +1,24 @@
--- let foldNat (bin : #Bin) (Nat : *) (Zero : Nat) (Succ : Nat -> Nat) : Nat = bin
---     Nat
---     Zero
---     (\(bin_ : #Bin_) ->
---         let x : {1, Nat -> Nat, Nat} = bin_
---             {1, Nat -> Nat, Nat}
---             <1, Succ : Nat -> Nat, Zero : Nat>
---             (\(t : {1, Nat -> Nat, Nat}) -> t
---                 {1, Nat -> Nat, Nat}
---                 (\(f : Nat -> Nat) (accum : Nat) ->
---                     <1, \(n : Nat) -> f (f n) : Nat -> Nat, accum : Nat>
---                 )
---             )
---             (\(t : {1, Nat -> Nat, Nat}) -> t
---                 {1, Nat -> Nat, Nat}
---                 (\(f : Nat -> Nat) (accum : Nat) ->
---                     <1, \(n : Nat) -> f (f n) : Nat -> Nat, f accum : Nat>
---                 )
---             )
---         in  x
---             Nat
---             (\(f : Nat -> Nat) (accum : Nat) -> f accum)
---     )
--- in  foldNat
-λ(bin : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin) (Nat : *) (Zero : Nat) (Succ : Nat → Nat) → bin Nat Zero (λ(bin_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → bin_ {1, Nat → Nat, Nat} <1, Succ : Nat → Nat, Zero : Nat> (λ(t : {1, Nat → Nat, Nat}) → t {1, Nat → Nat, Nat} (λ(f : Nat → Nat) (accum : Nat) (Product : *) (MakeProduct : (Nat → Nat) → Nat → Product) → MakeProduct (λ(n : Nat) → f (f n)) accum)) (λ(t : {1, Nat → Nat, Nat}) → t {1, Nat → Nat, Nat} (λ(f : Nat → Nat) (accum : Nat) (Product : *) (MakeProduct : (Nat → Nat) → Nat → Product) → MakeProduct (λ(n : Nat) → f (f n)) (f accum))) Nat (λ(f : Nat → Nat) → f))
+let foldNat (bin : #Bin) (Nat : *) (Zero : Nat) (Succ : Nat -> Nat) : Nat = bin
+    Nat
+    Zero
+    (\(bin_ : #Bin_) ->
+        let x : {1, Nat -> Nat, Nat} = bin_
+            {1, Nat -> Nat, Nat}
+            <1, Succ : Nat -> Nat, Zero : Nat>
+            (\(t : {1, Nat -> Nat, Nat}) -> t
+                {1, Nat -> Nat, Nat}
+                (\(f : Nat -> Nat) -> \(accum : Nat) ->
+                    <1, \(n : Nat) -> f (f n) : Nat -> Nat, accum : Nat>
+                )
+            )
+            (\(t : {1, Nat -> Nat, Nat}) -> t
+                {1, Nat -> Nat, Nat}
+                (\(f : Nat -> Nat) -> \(accum : Nat) ->
+                    <1, \(n : Nat) -> f (f n) : Nat -> Nat, f accum : Nat>
+                )
+            )
+        in  x
+            Nat
+            (\(f : Nat -> Nat) -> \(accum : Nat) -> f accum)
+    )
+in  foldNat

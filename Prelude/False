@@ -1,6 +1,5 @@
--- type Bool
--- data True
--- data False
--- fold if
--- in   False
-λ(Bool : *) (True : Bool) (False : Bool) → False
+type Bool
+data True
+data False
+fold if
+in   False
