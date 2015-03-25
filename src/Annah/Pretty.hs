@@ -30,7 +30,8 @@ class Builds f where
     build :: f Identity -> Builder
 
 instance Builds Arg where
-    build (Arg x _A) = "(" <> fromLazyText x <> " : " <> build _A <> ")"
+    build (Arg "_" _A) =                                   build _A
+    build (Arg  x  _A) = "(" <> fromLazyText x <> " : " <> build _A <> ")"
 
 instance Builds ProductTypeField where
     build (ProductTypeField x _A) =
