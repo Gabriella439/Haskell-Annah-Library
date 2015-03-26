@@ -1,6 +1,6 @@
 given a : *
 type List
-data Nil
 data Cons (head : a) (tail : List)
+data Nil
 fold foldr
 in   Cons
