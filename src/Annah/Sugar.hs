@@ -50,10 +50,12 @@ resugar e
               <|> fmap ProductType  (resugarProductTypeSection  e)
               <|> fmap ASCII        (resugarASCII               e)
               <|> fmap sc           (resugarSumConstructor      e)
+              <|> fmap list         (resugarList                e)
               <|> fmap SumType      (resugarSumTypeSection      e)
     = e'
   where
-    sc = uncurry SumConstructor
+    sc   = uncurry SumConstructor
+    list = uncurry List
 resugar (M.Const c    ) = Const c
 resugar (M.Var v      ) = Var v
 resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
@@ -513,6 +515,23 @@ desugarList e0 ts0 =
     desugar0 = M.shift 1 "List" . desugar
 
     desugar1 = M.shift 1 "List" . M.shift 1 "Cons" . M.shift 1 "Nil" . desugar
+
+resugarList :: M.Expr -> Maybe (Expr m, [Expr m])
+resugarList
+    (M.Lam "List" (M.Const Star)
+        (M.Lam "Cons"
+            (M.Pi "head" e0
+                (M.Pi "tail" (M.Var (M.V "List" 0)) (M.Var (M.V "List" 0))) )
+            (M.Lam "Nil" (M.Var (M.V "List" 0)) ts0) ) )
+    = fmap ((,) (resugar0 e0)) (go ts0)
+  where
+    go (M.Var (M.V "Nil" 0))                       = pure []
+    go (M.App (M.App (M.Var (M.V "Cons" 0)) t) ts) = fmap (resugar1 t:) (go ts)
+    go _ = empty
+
+    resugar0 = resugar . M.shift (-1) "List"
+    resugar1 = resugar . M.shift (-1) "List" . M.shift (-1) "Cons" . M.shift (-1) "Nil"
+resugarList _ = empty
 
 {-| `desugarLets` converts this:
 
