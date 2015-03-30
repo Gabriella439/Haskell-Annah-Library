@@ -53,6 +53,7 @@ tokens :-
     ","                             { \_    -> yield Comma                     }
     "|"                             { \_    -> yield Bar                       }
     ":"                             { \_    -> yield Colon                     }
+    "#" $path* "(" $opchar+ ")"     { \text -> yield (File (Text.drop 1 text)) }
     "#" $path+                      { \text -> yield (File (Text.drop 1 text)) }
     "@"                             { \_    -> yield At                        }
     "*"                             { \_    -> yield Star                      }
