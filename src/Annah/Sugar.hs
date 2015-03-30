@@ -39,6 +39,7 @@ desugar (SumConstructor m n ) = desugarSumConstructor m n
 desugar (SumType ts         ) = desugarSumTypeSection ts
 desugar (ProductValue fs    ) = desugarProductValueSection fs
 desugar (ProductType  as    ) = desugarProductTypeSection as
+desugar (List t es          ) = desugarList t es
 desugar (Import m           ) = desugar (runIdentity m)
 
 -- | Convert a Morte expression to an Annah expression
@@ -489,6 +490,29 @@ resugarProductTypeSection e0 = go0 e0 0
             ptf = ProductTypeField x (shift t)
             diff' = diff . (TypeField ptf:)
         go1  _                                           _    _ = empty
+
+{-| Convert a list into a Morte expression
+
+    Example:
+
+> [* Bool, True, False]
+> =>  λ(List : *)
+> →   λ(Cons : ∀(head : Bool}) → ∀(tail : List) → List)
+> →   λ(Nil : List)
+> →   Cons True (Cons False Nil)
+-}
+desugarList :: Expr Identity -> [Expr Identity] -> M.Expr
+desugarList e0 ts0 =
+    M.Lam "List" (M.Const Star)
+        (M.Lam "Cons" (M.Pi "head" (desugar0 e0) (M.Pi "tail" "List" "List"))
+            (M.Lam "Nil" "List" (go ts0)) )
+  where
+    go  []    = "Nil"
+    go (t:ts) = M.App (M.App "Cons" (desugar1 t)) (go ts)
+
+    desugar0 = M.shift 1 "List" . desugar
+
+    desugar1 = M.shift 1 "List" . M.shift 1 "Cons" . M.shift 1 "Nil" . desugar
 
 {-| `desugarLets` converts this:
 

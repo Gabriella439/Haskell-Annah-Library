@@ -44,6 +44,8 @@ tokens :-
     "--".*                          ;
     "("                             { \_    -> yield OpenParen                 }
     ")"                             { \_    -> yield CloseParen                }
+    "["                             { \_    -> yield OpenBracket               }
+    "]"                             { \_    -> yield CloseBracket              }
     "{1"                            { \_    -> yield OpenProductType           }
     "{0"                            { \_    -> yield OpenSumType               }
     "}"                             { \_    -> yield CloseBrace                }
@@ -168,6 +170,8 @@ lexExpr text = go (AlexInput '\n' [] text)
 data Token
     = OpenParen
     | CloseParen
+    | OpenBracket
+    | CloseBracket
     | OpenProductType
     | OpenSumType
     | CloseBrace

@@ -47,6 +47,8 @@ import Annah.Syntax
 %token
     '('     { Lexer.OpenParen         }
     ')'     { Lexer.CloseParen        }
+    '['     { Lexer.OpenBracket       }
+    ']'     { Lexer.CloseBracket      }
     '{1'    { Lexer.OpenProductType   }
     '{0'    { Lexer.OpenSumType       }
     '}'     { Lexer.CloseBrace        }
@@ -97,17 +99,18 @@ Expr2 :: { Expr Load }
     | Expr3       { $1        }
 
 Expr3 :: { Expr Load }
-    : VExpr                       { Var $1                    }
-    | '*'                         { Const Star                }
-    | 'BOX'                       { Const Box                 }
-    | file                        { importFile $1             }
-    | of                          { uncurry SumConstructor $1 }
-    | number                      { Natural (fromIntegral $1) }
-    | ascii                       { ASCII $1                  }
-    | '<1' ProductValueFields '>' { ProductValue $2           }
-    | '{1' ProductTypeFields  '}' { ProductType  $2           }
-    | '{0' SumTypeFields      '}' { SumType      $2           }
-    | '(' Expr0               ')' { $2                        }
+    : VExpr                        { Var $1                    }
+    | '*'                          { Const Star                }
+    | 'BOX'                        { Const Box                 }
+    | file                         { importFile $1             }
+    | of                           { uncurry SumConstructor $1 }
+    | number                       { Natural (fromIntegral $1) }
+    | ascii                        { ASCII $1                  }
+    | '<1' ProductValueFields  '>' { ProductValue $2           }
+    | '{1' ProductTypeFields   '}' { ProductType  $2           }
+    | '{0' SumTypeFields       '}' { SumType      $2           }
+    | '[' '*' Expr0 ListFields ']' { List $3 $4                }
+    | '(' Expr0                ')' { $2                        }
 
 Args :: { [Arg Load] }
      : ArgsRev { reverse $1 }
@@ -194,6 +197,13 @@ SumTypeFields :: { [SumTypeSectionField Load] }
 SumTypeSectionField :: { SumTypeSectionField Load }
     : Expr0 { SumTypeField $1   }
     |       { EmptySumTypeField }
+
+ListFields :: { [Expr Load] }
+    : ListFieldsRev { reverse $1 }
+
+ListFieldsRev :: { [Expr Load] }
+    : ListFieldsRev ',' Expr0 { $3 : $1 }
+    |                         { []      }
 
 {
 -- | The specific parsing error

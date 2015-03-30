@@ -130,6 +130,8 @@ data Expr m
     | SumConstructor Int Int
     -- | > SumType [t1, t2]       ~  {t1| t2| 0}
     | SumType [SumTypeSectionField m]
+    -- | > List t [x, y, z]       ~  [t*,x,y,z]
+    | List (Expr m) [Expr m]
     | Import (m (Expr m))
 
 instance IsString (Expr m) where

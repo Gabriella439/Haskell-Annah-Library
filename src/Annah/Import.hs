@@ -42,6 +42,7 @@ instance Loads Expr where
     load (SumType ts         ) = SumType <$> mapM load ts
     load (ProductValue fs    ) = ProductValue <$> mapM load fs
     load (ProductType  as    ) = ProductType <$> mapM load as
+    load (List t es          ) = List <$> load t <*> mapM load es
     load (Import io          ) = io >>= load
 
 instance Loads Family where

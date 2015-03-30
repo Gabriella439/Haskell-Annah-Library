@@ -128,6 +128,10 @@ instance Builds Expr where
                     "{1"
                 <>  mconcat (map (\arg -> "," <> build arg) args)
                 <>  "}"
+            List t as           ->
+                    "[* " <> build t
+                <> mconcat (map (\a -> "," <> build a) as)
+                <>  "]"
             Import m            -> go prec (runIdentity m)
           where
             quoteAbove :: Int -> Builder -> Builder
