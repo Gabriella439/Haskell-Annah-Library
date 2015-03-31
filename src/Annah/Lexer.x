@@ -42,9 +42,12 @@ tokens :-
                                         line   += 1
                                         column .= 0 )                          }
     "--".*                          ;
+    "(|"                            { \_    -> yield OpenBanana                }
+    "|)"                            { \_    -> yield CloseBanana               }
     "("                             { \_    -> yield OpenParen                 }
     ")"                             { \_    -> yield CloseParen                }
-    "["                             { \_    -> yield OpenBracket               }
+    "[*"                            { \_    -> yield OpenList                  }
+    "[."                            { \_    -> yield OpenPath                  }
     "]"                             { \_    -> yield CloseBracket              }
     "{1"                            { \_    -> yield OpenProductType           }
     "{0"                            { \_    -> yield OpenSumType               }
@@ -168,9 +171,12 @@ lexExpr text = go (AlexInput '\n' [] text)
 
 -- | Token type, used to communicate between the lexer and parser
 data Token
-    = OpenParen
+    = OpenBanana
+    | CloseBanana
+    | OpenParen
     | CloseParen
-    | OpenBracket
+    | OpenList
+    | OpenPath
     | CloseBracket
     | OpenProductType
     | OpenSumType
@@ -178,6 +184,7 @@ data Token
     | OpenProductValue
     | CloseAngle
     | ASCII Text
+    | Period
     | Comma
     | Bar
     | Colon

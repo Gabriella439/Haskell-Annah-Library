@@ -45,15 +45,19 @@ import Annah.Syntax
 %error { parseError }
 
 %token
+    '(|'    { Lexer.OpenBanana        }
+    '|)'    { Lexer.CloseBanana       }
     '('     { Lexer.OpenParen         }
     ')'     { Lexer.CloseParen        }
-    '['     { Lexer.OpenBracket       }
+    '[*'    { Lexer.OpenList          }
+    '[.'    { Lexer.OpenPath          }
     ']'     { Lexer.CloseBracket      }
     '{1'    { Lexer.OpenProductType   }
     '{0'    { Lexer.OpenSumType       }
     '}'     { Lexer.CloseBrace        }
     '<1'    { Lexer.OpenProductValue  }
     '>'     { Lexer.CloseAngle        }
+    '.'     { Lexer.Period            }
     ','     { Lexer.Comma             }
     '|'     { Lexer.Bar               }
     ':'     { Lexer.Colon             }
@@ -99,18 +103,19 @@ Expr2 :: { Expr Load }
     | Expr3       { $1        }
 
 Expr3 :: { Expr Load }
-    : VExpr                        { Var $1                    }
-    | '*'                          { Const Star                }
-    | 'BOX'                        { Const Box                 }
-    | file                         { importFile $1             }
-    | of                           { uncurry SumConstructor $1 }
-    | number                       { Natural (fromIntegral $1) }
-    | ascii                        { ASCII $1                  }
-    | '<1' ProductValueFields  '>' { ProductValue $2           }
-    | '{1' ProductTypeFields   '}' { ProductType  $2           }
-    | '{0' SumTypeFields       '}' { SumType      $2           }
-    | '[' '*' Expr0 ListFields ']' { List $3 $4                }
-    | '(' Expr0                ')' { $2                        }
+    : VExpr                       { Var $1                              }
+    | '*'                         { Const Star                          }
+    | 'BOX'                       { Const Box                           }
+    | file                        { importFile $1                       }
+    | of                          { uncurry SumConstructor $1           }
+    | number                      { Natural (fromIntegral $1)           }
+    | ascii                       { ASCII $1                            }
+    | '<1' ProductValueFields '>' { ProductValue $2                     }
+    | '{1' ProductTypeFields  '}' { ProductType  $2                     }
+    | '{0' SumTypeFields      '}' { SumType      $2                     }
+    | '[*' Expr0 ListFields   ']' { List $2 $3                          }
+    | '[.' Expr0 PathFields   ']' { let ~(oms, o) = $3 in Path $2 oms o }
+    | '(' Expr0               ')' { $2                                  }
 
 Args :: { [Arg Load] }
      : ArgsRev { reverse $1 }
@@ -204,6 +209,13 @@ ListFields :: { [Expr Load] }
 ListFieldsRev :: { [Expr Load] }
     : ListFieldsRev ',' Expr0 { $3 : $1 }
     |                         { []      }
+
+PathFields :: { ([(Expr Load, Expr Load)], Expr Load) }
+    : Object Expr0 PathFields { let ~(oms, o) = $3 in (($1, $2):oms, o) }
+    | Object                  { ([], $1)                                }
+
+Object :: { Expr Load }
+    : '(|' Expr0 '|)' { $2 }
 
 {
 -- | The specific parsing error

@@ -132,6 +132,11 @@ instance Builds Expr where
                     "[* " <> build t
                 <> mconcat (map (\a -> "," <> build a) as)
                 <>  "]"
+            Path c oms o0       ->
+                    "[. " <> build c
+                <> mconcat
+                    (map (\(o, m) -> " (|" <> build o <> "|) " <> build m) oms)
+                <> " (|" <> build o0 <> "|)]"
             Import m            -> go prec (runIdentity m)
           where
             quoteAbove :: Int -> Builder -> Builder

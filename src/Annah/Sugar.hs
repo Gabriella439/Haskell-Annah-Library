@@ -40,6 +40,7 @@ desugar (SumType ts         ) = desugarSumTypeSection ts
 desugar (ProductValue fs    ) = desugarProductValueSection fs
 desugar (ProductType  as    ) = desugarProductTypeSection as
 desugar (List t es          ) = desugarList t es
+desugar (Path t oms o       ) = desugarPath t oms o
 desugar (Import m           ) = desugar (runIdentity m)
 
 -- | Convert a Morte expression to an Annah expression
@@ -532,6 +533,59 @@ resugarList
     resugar0 = resugar . M.shift (-1) "List"
     resugar1 = resugar . M.shift (-1) "List" . M.shift (-1) "Cons" . M.shift (-1) "Nil"
 resugarList _ = empty
+
+{-| Convert a path into a Morte expression
+
+    Example:
+
+> [. cat (|a|) f (|b|) g (|c|)]
+> =>  λ(Path : ∀(a : *) → ∀(b : *) → *)
+> →   λ(  Step
+>     :   ∀(a : *)
+>     →   ∀(b : *)
+>     →   ∀(c : *)
+>     →   ∀(head : cat a b)
+>     →   ∀(tail : Path b c)
+>     →   Path a c
+>     )
+> →   λ(End : ∀(a : *) → Path a a)
+> →   Step a b c f (Step b c c g (End c))
+-}
+desugarPath
+    ::  Expr Identity
+    ->  [(Expr Identity, Expr Identity)]
+    ->  Expr Identity
+    ->  M.Expr
+desugarPath c0 oms0 o0 =
+    M.Lam "Path"
+        (M.Pi "a" (M.Const M.Star) (M.Pi "b" (M.Const M.Star) (M.Const M.Star)))
+        (M.Lam "Step"
+            (M.Pi "a" (M.Const M.Star)
+                (M.Pi "b" (M.Const M.Star)
+                    (M.Pi "c" (M.Const M.Star)
+                        (M.Pi "head" (M.App (M.App (desugar0 c0) "a") "b")
+                            (M.Pi "tail" (M.App (M.App "Path" "b") "c")
+                                (M.App (M.App "Path" "a") "c") ) ) ) ) )
+            (M.Lam "End"
+                (M.Pi "a" (M.Const M.Star) (M.App (M.App "Path" "a") "a"))
+                (go oms0) ) )
+  where
+    desugar0 = M.shift 1 "Path" . desugar
+    desugar1 = M.shift 1 "Path" . M.shift 1 "Step" . M.shift 1 "End" . desugar
+    go []                         = M.App "End" (desugar1 o0)
+    go [(o1, m1)]                 =
+        M.App (M.App (M.App (M.App (M.App "Step" o1') o0') o0') m1') (go [] )
+      where
+        o0' = desugar1 o0
+        o1' = desugar1 o1
+        m1' = desugar1 m1
+    go ((o1, m1):oms@((o2, _):_)) =
+        M.App (M.App (M.App (M.App (M.App "Step" o1') o2') o0') m1') (go oms)
+      where
+        o0' = desugar1 o0
+        o1' = desugar1 o1
+        o2' = desugar1 o2
+        m1' = desugar1 m1
 
 {-| `desugarLets` converts this:
 

@@ -43,6 +43,9 @@ instance Loads Expr where
     load (ProductValue fs    ) = ProductValue <$> mapM load fs
     load (ProductType  as    ) = ProductType <$> mapM load as
     load (List t es          ) = List <$> load t <*> mapM load es
+    load (Path c oms o0      ) = Path <$> load c <*> mapM loadP oms <*> load o0
+      where
+        loadP (o, m) = (,) <$> load o <*> load m
     load (Import io          ) = io >>= load
 
 instance Loads Family where

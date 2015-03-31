@@ -101,37 +101,39 @@ data Data m = Data
 
 -- | Syntax tree for expressions
 data Expr m
-    -- | > Const c                ~  c
+    -- | > Const c                         ~  c
     = Const M.Const
-    -- | > Var (V x 0)            ~  x
-    --   > Var (V x 0)            ~  x
+    -- | > Var (V x 0)                     ~  x
+    --   > Var (V x 0)                     ~  x
     | Var M.Var
-    -- | > Lam x     _A  b        ~  λ(x : _A) →  b
+    -- | > Lam x     _A  b                 ~  λ(x : _A) →  b
     | Lam Text (Expr m) (Expr m)
-    -- | > Pi x      _A _B        ~  ∀(x : _A) → _B
-    --   > Pi unused _A _B        ~        _A  → _B
+    -- | > Pi x      _A _B                 ~  ∀(x : _A) → _B
+    --   > Pi unused _A _B                 ~        _A  → _B
     | Pi  Text (Expr m) (Expr m)
-    -- | > App f a                ~  f a
+    -- | > App f a                         ~  f a
     | App (Expr m) (Expr m)
-    -- | > Annot a _A             ~  a : _A
+    -- | > Annot a _A                      ~  a : _A
     | Annot (Expr m) (Expr m)
-    -- | > Lets [l1, l2] e        ~ l1 l2 in e
+    -- | > Lets [l1, l2] e                 ~  l1 l2 in e
     | Lets [Let m] (Expr m)
     | Fam (Family m) (Expr m)
-    -- | > Nat n                  ~  n
+    -- | > Nat n                           ~  n
     | Natural Integer
-    -- | > ASCII str              ~  str
+    -- | > ASCII str                       ~  str
     | ASCII Text
-    -- | > ProductValue [f1, f2]  ~  <f1, f2, 1>
+    -- | > ProductValue [f1, f2]           ~  <f1,f2,1>
     | ProductValue [ProductValueSectionField m]
-    -- | > ProductType [f1, f2]   ~  {f1, f2, 1}
+    -- | > ProductType [f1, f2]            ~  {f1,f2,1}
     | ProductType [ProductTypeSectionField m]
-    -- | > SumConstructor i j     ~  itoj
+    -- | > SumConstructor i j              ~  itoj
     | SumConstructor Int Int
-    -- | > SumType [t1, t2]       ~  {t1| t2| 0}
+    -- | > SumType [t1, t2]                ~  {t1|t2|0}
     | SumType [SumTypeSectionField m]
-    -- | > List t [x, y, z]       ~  [t*,x,y,z]
+    -- | > List t [x, y, z]                ~  [* t,x,y,z]
     | List (Expr m) [Expr m]
+    -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [. c (|o1|) m1 (|o2|) m2 (|o3|)]
+    | Path (Expr m) [(Expr m, Expr m)] (Expr m)
     | Import (m (Expr m))
 
 instance IsString (Expr m) where
