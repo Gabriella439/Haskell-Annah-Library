@@ -1,0 +1,14 @@
+let Path (f : * -> * -> *) (a : *) (b : *) : * =
+        forall (Path : forall (a : *) -> forall (b : *) -> *)
+    ->  forall
+        (   Step
+        :   forall (a : *)
+        ->  forall (b : *)
+        ->  forall (c : *)
+        ->  forall (head : f a b)
+        ->  forall (tail : Path b c)
+        ->  Path a c
+        )
+    ->  forall (End : forall (a : *) -> Path a a)
+    ->  Path a b
+in  Path
