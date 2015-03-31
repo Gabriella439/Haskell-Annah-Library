@@ -52,11 +52,13 @@ resugar e
               <|> fmap ASCII        (resugarASCII               e)
               <|> fmap sc           (resugarSumConstructor      e)
               <|> fmap list         (resugarList                e)
+              <|> fmap path         (resugarPath                e)
               <|> fmap SumType      (resugarSumTypeSection      e)
     = e'
   where
     sc   = uncurry SumConstructor
     list = uncurry List
+    path (x, y, z) = Path x y z
 resugar (M.Const c    ) = Const c
 resugar (M.Var v      ) = Var v
 resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
@@ -572,6 +574,7 @@ desugarPath c0 oms0 o0 =
   where
     desugar0 = M.shift 1 "Path" . desugar
     desugar1 = M.shift 1 "Path" . M.shift 1 "Step" . M.shift 1 "End" . desugar
+
     go []                         = M.App "End" (desugar1 o0)
     go [(o1, m1)]                 =
         M.App (M.App (M.App (M.App (M.App "Step" o1') o0') o0') m1') (go [] )
@@ -586,6 +589,59 @@ desugarPath c0 oms0 o0 =
         o1' = desugar1 o1
         o2' = desugar1 o2
         m1' = desugar1 m1
+
+resugarPath :: M.Expr -> Maybe (Expr m, [(Expr m, Expr m)], Expr m)
+resugarPath
+    (M.Lam "Path"
+        (M.Pi "a" (M.Const M.Star) (M.Pi "b" (M.Const M.Star) (M.Const M.Star)))
+        (M.Lam "Step"
+            (M.Pi "a" (M.Const M.Star)
+                (M.Pi "b" (M.Const M.Star)
+                    (M.Pi "c" (M.Const M.Star)
+                        (M.Pi "head"
+                            cab
+--                          (M.App
+--                              (M.App c0 (M.Var (M.V "a" 0)))
+--                              (M.Var (M.V "b" 0)) )
+                            (M.Pi "tail"
+                                (M.App
+                                    (M.App
+                                        (M.Var (M.V "Path" 0))
+                                        (M.Var (M.V "b" 0)) )
+                                    (M.Var (M.V "c" 0)) )
+                                (M.App
+                                    (M.App
+                                        (M.Var (M.V "Path" 0))
+                                        (M.Var (M.V "a" 0)) )
+                                    (M.Var (M.V "c" 0)) ) ) ) ) ) )
+            (M.Lam "End"
+                (M.Pi "a"
+                    (M.Const M.Star)
+                    (M.App
+                        (M.App (M.Var (M.V "Path" 0)) (M.Var (M.V "a" 0)))
+                        (M.Var (M.V "a" 0)) ) )
+                e0 ) ) ) = do
+    ((oms, o0), _) <- go e0
+    let c0 = M.Lam "a" (M.Const M.Star) (M.Lam "b" (M.Const M.Star) cab)
+    return (resugar0 c0, oms, resugar1 o0)
+  where
+    resugar0 = resugar . M.shift (-1) "Path"
+    resugar1 =
+        resugar . M.shift (-1) "Path" . M.shift (-1) "Step" . M.shift (-1) "End"
+
+    go (M.App (M.Var (M.V "End" 0)) o0') = return (([], o0'), o0')
+    go (M.App
+           (M.App
+               (M.App (M.App (M.App (M.Var (M.V "Step" 0)) o1') o2') o0')
+               m1' )
+           e) = do
+        ((oms, o0), o2) <- go e
+        guard (o0 == o0' && o2 == o2')
+        let o1 = resugar1 o1'
+        let m1 = resugar1 m1'
+        return (((o1, m1):oms, o0), o1')
+    go _ = empty
+resugarPath _ = empty
 
 {-| `desugarLets` converts this:
 
