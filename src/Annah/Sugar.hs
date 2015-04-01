@@ -15,16 +15,16 @@ module Annah.Sugar (
 import Control.Applicative (pure, empty, (<|>))
 import Control.Monad (guard)
 import Data.Char (chr, ord)
-import Data.Functor.Identity (Identity, runIdentity)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
+import Data.Void (Void, absurd)
 import qualified Morte.Core as M
 import Prelude hiding (pi)
 
 import Annah.Syntax
 
 -- | Convert an Annah expression to a Morte expression
-desugar :: Expr Identity -> M.Expr
+desugar :: Expr Void -> M.Expr
 desugar (Const c            ) = M.Const c
 desugar (Var v              ) = M.Var   v
 desugar (Lam x _A  b        ) = M.Lam x (desugar _A) (desugar  b)
@@ -41,7 +41,7 @@ desugar (ProductValue fs    ) = desugarProductValueSection fs
 desugar (ProductType  as    ) = desugarProductTypeSection as
 desugar (List t es          ) = desugarList t es
 desugar (Path t oms o       ) = desugarPath t oms o
-desugar (Import m           ) = desugar (runIdentity m)
+desugar (Import m           ) = absurd m
 
 -- | Convert a Morte expression to an Annah expression
 resugar :: M.Expr -> Expr m
@@ -208,7 +208,7 @@ resugarSumConstructor e0 = go0 e0 0
     go0 _ _ = empty
 
 -- | Convert a sum type to a Morte expression
-desugarSumType :: [Expr Identity] -> M.Expr
+desugarSumType :: [Expr Void] -> M.Expr
 desugarSumType ts0 = M.Pi "Sum" (M.Const M.Star) (go ts0 0)
   where
     go (t:ts) n = M.Pi "MkSum" (M.Pi "x" t' "Sum") (go ts $! n + 1)
@@ -228,7 +228,7 @@ resugarSumType (M.Pi "Sum" (M.Const M.Star) e0) = go id e0 0
 resugarSumType _ = empty
 
 -- | Convert a sum type section to a Morte expression
-desugarSumTypeSection :: [SumTypeSectionField Identity] -> M.Expr
+desugarSumTypeSection :: [SumTypeSectionField Void] -> M.Expr
 desugarSumTypeSection fs0 = go fs0 id n0
   where
     n0 = length [ () | EmptySumTypeField <- fs0 ]
@@ -269,7 +269,7 @@ resugarSumTypeSection e0 = go0 e0 0
 > (True : Bool, 1 : Nat)
 > =>  \(Product : *) -> \(MakeProduct : Bool -> Nat -> Product) -> MakeProduct True 1
 -}
-desugarProductValue :: [ProductValueField Identity] -> M.Expr
+desugarProductValue :: [ProductValueField Void] -> M.Expr
 desugarProductValue fs0 =
     M.Lam "Product" (M.Const M.Star)
         (M.Lam "MakeProduct" (go0 fs0) (go1 (reverse fs0)))
@@ -320,7 +320,7 @@ resugarProductValue _ = empty
 >     ->  \(Product : *) -> \(MakeProduct : t -> Nat -> Bool -> Product)
 >     ->  MakeProduct f@1 1 f
 -}
-desugarProductValueSection :: [ProductValueSectionField Identity] -> M.Expr
+desugarProductValueSection :: [ProductValueSectionField Void] -> M.Expr
 desugarProductValueSection fs0 = go fs0 id id id numBoth numEmpties
   where
     numTypes   = length [ () | TypeValueField _ <- fs0 ]
@@ -417,7 +417,7 @@ resugarProductValueSection e0 = go0 e0 0
 
 > {Bool, Nat}  =>  forall (Product : *) -> (Bool -> Nat -> Product) -> Product
 -}
-desugarProductType :: [ProductTypeField Identity] -> M.Expr
+desugarProductType :: [ProductTypeField Void] -> M.Expr
 desugarProductType args0 =
     M.Pi "Product" (M.Const M.Star) (M.Pi "MakeProduct" (go args0 0) "Product")
   where
@@ -450,7 +450,7 @@ resugarProductType _ = empty
 
 > {, Nat}  =>  forall (t : *) -> forall (Product : *) -> (t -> Nat -> Product) -> Product
 -}
-desugarProductTypeSection :: [ProductTypeSectionField Identity] -> M.Expr
+desugarProductTypeSection :: [ProductTypeSectionField Void] -> M.Expr
 desugarProductTypeSection fs0 = go fs0 id numEmpty
   where
     numEmpty = length [ () | EmptyTypeField <- fs0 ]
@@ -506,7 +506,7 @@ resugarProductTypeSection e0 = go0 e0 0
 > →   λ(Nil : List)
 > →   Cons True (Cons False Nil)
 -}
-desugarList :: Expr Identity -> [Expr Identity] -> M.Expr
+desugarList :: Expr Void -> [Expr Void] -> M.Expr
 desugarList e0 ts0 =
     M.Lam "List" (M.Const Star)
         (M.Lam "Cons" (M.Pi "head" (desugar0 e0) (M.Pi "tail" "List" "List"))
@@ -554,9 +554,9 @@ resugarList _ = empty
 > →   Step a b c f (Step b c c g (End c))
 -}
 desugarPath
-    ::  Expr Identity
-    ->  [(Expr Identity, Expr Identity)]
-    ->  Expr Identity
+    ::  Expr Void
+    ->  [(Expr Void, Expr Void)]
+    ->  Expr Void
     ->  M.Expr
 desugarPath c0 oms0 o0 =
     M.Lam "Path"
@@ -663,7 +663,7 @@ resugarPath _ = empty
 > (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
 
 -}
-desugarLets :: [Let Identity] -> Expr Identity -> M.Expr
+desugarLets :: [Let Void] -> Expr Void -> M.Expr
 desugarLets lets e = apps
   where
     -- > (   \(f0 : forall (x00 : _A00) -> ... -> forall (x0j : _A0j) -> _B0)
@@ -695,8 +695,8 @@ desugarLets lets e = apps
 -- | A type or data constructor
 data Cons = Cons
     { consName :: Text
-    , consArgs :: [Arg Identity]
-    , consType :: Expr Identity
+    , consArgs :: [Arg Void]
+    , consType :: Expr Void
     }
 
 {-| This is the meat of the Boehm-Berarducci encoding which translates type
@@ -727,13 +727,13 @@ data Cons = Cons
     > ->  \(MkPair : a -> b -> Pair)
     > ->  MkPair _@1 _
 -}
-desugarFamily :: Family Identity -> [Let Identity]
+desugarFamily :: Family Void -> [Let Void]
 desugarFamily fam = typeLets ++ dataLets ++ foldLets
   where
-    universalArgs :: [Arg Identity]
+    universalArgs :: [Arg Void]
     universalArgs = familyGivens fam
 
-    universalVars :: [Expr Identity]
+    universalVars :: [Expr Void]
     universalVars = do
         Arg x _ <- familyGivens fam
         return (Var (M.V x 0))
@@ -761,7 +761,7 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
         go ((Cons x args _A):stmts) = piOrLam x (pi args _A) (go stmts)
         go  []                      = con
 
-    typeLets, foldLets :: [Let Identity]
+    typeLets, foldLets :: [Let Void]
     (typeLets, foldLets) = unzip (do
         let folds = map typeFold (familyTypes fam)
         ((_, t, tsAfter), fold) <- zip (zippers typeConstructors) folds
@@ -778,7 +778,7 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
 
     -- TODO: Enforce that argument types are `Var`s?
     desugarType
-        :: Expr Identity -> Maybe ([Arg Identity], Expr Identity, Expr Identity)
+        :: Expr Void -> Maybe ([Arg Void], Expr Void, Expr Void)
     desugarType (Pi x _A e      )   = do
         ~(args, f, f') <- desugarType e
         return (Arg x _A:args, f, f')
@@ -797,12 +797,12 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
         go1  []    _ _                   = empty
     desugarType _ = empty
 
-    consVars :: [Text] -> [Expr Identity]
+    consVars :: [Text] -> [Expr Void]
     consVars argNames = do
         (_, name, namesAfter) <- zippers (map consName constructors)
         return (name `isShadowedBy` (argNames ++ namesAfter))
 
-    dataLets :: [Let Identity]
+    dataLets :: [Let Void]
     dataLets = do
         (_, d, dsAfter) <- zippers dataConstructors
         let conVar  = consName d `isShadowedBy` map consName dsAfter

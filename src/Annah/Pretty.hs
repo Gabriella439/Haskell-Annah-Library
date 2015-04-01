@@ -11,9 +11,11 @@ module Annah.Pretty (
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.Monoid ((<>), mempty, mconcat)
 import Data.Text.Lazy (Text)
-import Data.Text.Lazy.Builder (Builder, fromLazyText, toLazyText)
+import Data.Text.Lazy.Builder (Builder, fromText, fromLazyText, toLazyText)
 import Data.Text.Lazy.Builder.Int (decimal)
 import qualified Morte.Core as M
+import Turtle (FilePath, format, fp)
+import Prelude hiding (FilePath)
 
 import Annah.Syntax
 
@@ -21,12 +23,12 @@ import Annah.Syntax
 
     The result is a syntactically valid Annah program
 -}
-prettyExpr :: Expr Identity -> Text
+prettyExpr :: Expr FilePath -> Text
 prettyExpr = toLazyText . build
 
 -- | Pretty-print a value as a `Builder`
 class Builds f where
-    build :: f Identity -> Builder
+    build :: f FilePath -> Builder
 
 instance Builds Arg where
     build (Arg "_" _A) =                                   build _A
@@ -91,7 +93,7 @@ instance Builds Let where
 instance Builds Expr where
     build = go 0
       where
-        go :: Int -> Expr Identity -> Builder
+        go :: Int -> Expr FilePath -> Builder
         go prec e = case e of
             Const c             -> M.buildConst c
             Var x               -> M.buildVar x
@@ -137,7 +139,7 @@ instance Builds Expr where
                 <> mconcat
                     (map (\(o, m) -> " (|" <> build o <> "|) " <> build m) oms)
                 <> " (|" <> build o0 <> "|)]"
-            Import m            -> go prec (runIdentity m)
+            Import m            -> "#" <> fromText (format fp m)
           where
             quoteAbove :: Int -> Builder -> Builder
             quoteAbove n b = if prec > n then "(" <> b <> ")" else b

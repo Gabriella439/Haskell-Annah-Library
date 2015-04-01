@@ -9,23 +9,29 @@ module Annah.Import (
     ) where
 
 import Control.Applicative (Applicative(pure, (<*>)), (<$>))
-import Control.Monad.Trans.State.Strict (StateT, evalStateT)
-import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HashMap
+import Control.Exception (throwIO)
+import Control.Monad.Trans.State.Strict (StateT, evalStateT, get, put)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Text (unpack)
 import Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy.IO as Text
+import Turtle hiding (Text)
+import Prelude hiding (FilePath)
 
 import Annah.Syntax
+import Annah.Parser (exprFromText)
 
 -- | Extend `IO` with `StateT` to cache previously imported expressions
-newtype Load a = Load { unLoad :: StateT (HashMap Text (Expr Load)) IO a }
+newtype Load a = Load { unLoad :: StateT (Map FilePath (Expr FilePath)) IO a }
     deriving (Functor, Applicative, Monad)
 
-loadExpr :: Expr Load -> IO (Expr m)
-loadExpr e = evalStateT (unLoad (load e)) HashMap.empty
+loadExpr :: Expr FilePath -> IO (Expr m)
+loadExpr e = evalStateT (unLoad (load e)) Map.empty
 
 -- | `load` evaluates all `Import`s, leaving behind a pure expression
 class Loads f where
-    load :: f Load -> Load (f m)
+    load :: f FilePath -> Load (f m)
 
 instance Loads Expr where
     load (Const c            ) = pure (Const c)
@@ -46,7 +52,17 @@ instance Loads Expr where
     load (Path c oms o0      ) = Path <$> load c <*> mapM loadP oms <*> load o0
       where
         loadP (o, m) = (,) <$> load o <*> load m
-    load (Import io          ) = io >>= load
+    load (Import path        ) = Load (do
+        m <- get
+        case Map.lookup path m of
+            Just expr -> unLoad (load expr)
+            Nothing   -> do
+                txt <- liftIO (Text.readFile (unpack (format fp path)))
+                case exprFromText txt of
+                    Left pe    -> liftIO (throwIO pe)
+                    Right expr -> do
+                        put (Map.insert path expr m)
+                        unLoad (load expr) )
 
 instance Loads Family where
     load (Family as bs) = Family <$> mapM load as <*> mapM load bs

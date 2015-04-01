@@ -19,7 +19,6 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Error (ErrorT, Error(..), throwError, runErrorT)
 import Control.Monad.Trans.State.Strict (State, runState, get, put)
 import Data.Functor.Identity (Identity, runIdentity)
-import qualified Data.HashMap.Strict as HashMap
 import Data.Monoid (mempty, (<>))
 import Data.Text.Lazy (Text, unpack)
 import qualified Data.Text.Lazy as Text
@@ -30,9 +29,10 @@ import Data.Typeable (Typeable)
 import Lens.Family.Stock (_1, _2)
 import Lens.Family.State.Strict ((.=), use, zoom)
 import Pipes (Producer, hoist, lift, next)
+import Turtle (FilePath, fromText)
+import Prelude hiding (FilePath)
 
 import qualified Annah.Lexer as Lexer
-import Annah.Import (Load(..))
 import Annah.Lexer (Token, Position)
 import Annah.Syntax
 
@@ -82,11 +82,11 @@ import Annah.Syntax
 
 %%
 
-Expr0 :: { Expr Load }
+Expr0 :: { Expr FilePath }
     : Expr1 ':' Expr0 { Annot $1 $3 }
     | Expr1           { $1          }
 
-Expr1 :: { Expr Load }
+Expr1 :: { Expr FilePath }
     : '\\'  '(' label ':' Expr1 ')' '->' Expr1 { Lam $3  $5 $8 }
     | '|~|' '(' label ':' Expr1 ')' '->' Expr1 { Pi  $3  $5 $8 }
     | Expr2 '->' Expr1                         { Pi  "_" $1 $3 }
@@ -98,123 +98,123 @@ VExpr  :: { Var }
     : label '@' number { V $1 $3 }
     | label            { V $1 0  }
 
-Expr2 :: { Expr Load }
+Expr2 :: { Expr FilePath }
     : Expr2 Expr3 { App $1 $2 }
     | Expr3       { $1        }
 
-Expr3 :: { Expr Load }
-    : VExpr                       { Var $1                              }
-    | '*'                         { Const Star                          }
-    | 'BOX'                       { Const Box                           }
-    | file                        { importFile $1                       }
-    | of                          { uncurry SumConstructor $1           }
-    | number                      { Natural (fromIntegral $1)           }
-    | ascii                       { ASCII $1                            }
-    | '<1' ProductValueFields '>' { ProductValue $2                     }
-    | '{1' ProductTypeFields  '}' { ProductType  $2                     }
-    | '{0' SumTypeFields      '}' { SumType      $2                     }
-    | '[*' Expr0 ListFields   ']' { List $2 $3                          }
-    | '[.' Expr0 PathFields   ']' { let ~(oms, o) = $3 in Path $2 oms o }
-    | '(' Expr0               ')' { $2                                  }
+Expr3 :: { Expr FilePath }
+    : VExpr                       { Var $1                               }
+    | '*'                         { Const Star                           }
+    | 'BOX'                       { Const Box                            }
+    | file                        { Import (fromText (Text.toStrict $1)) }
+    | of                          { uncurry SumConstructor $1            }
+    | number                      { Natural (fromIntegral $1)            }
+    | ascii                       { ASCII $1                             }
+    | '<1' ProductValueFields '>' { ProductValue $2                      }
+    | '{1' ProductTypeFields  '}' { ProductType  $2                      }
+    | '{0' SumTypeFields      '}' { SumType      $2                      }
+    | '[*' Expr0 ListFields   ']' { List $2 $3                           }
+    | '[.' Expr0 PathFields   ']' { let ~(oms, o) = $3 in Path $2 oms o  }
+    | '(' Expr0               ')' { $2                                   }
 
-Args :: { [Arg Load] }
+Args :: { [Arg FilePath] }
      : ArgsRev { reverse $1 }
 
-ArgsRev :: { [Arg Load] }
+ArgsRev :: { [Arg FilePath] }
     : ArgsRev Arg { $2 : $1 }
     |             { []      }
 
-Arg :: { Arg Load }
+Arg :: { Arg FilePath }
     : '(' label ':' Expr1 ')' { Arg $2  $4 }
     |               Expr3     { Arg "_" $1 }
 
-GivensRev :: { [Arg Load] }
+GivensRev :: { [Arg FilePath] }
     : GivensRev 'given' label ':' Expr0 { Arg $3 $5 : $1 }
     |                                   { []             }
 
-Givens :: { [Arg Load] }
+Givens :: { [Arg FilePath] }
     : GivensRev { reverse $1 }
 
-Data :: { Data Load }
+Data :: { Data FilePath }
     : 'data' label Args { Data $2 $3 }
 
-DatasRev :: { [Data Load] }
+DatasRev :: { [Data FilePath] }
     : DatasRev Data { $2 : $1 }
     |               { []      }
 
-Datas :: { [Data Load] }
+Datas :: { [Data FilePath] }
     : DatasRev { reverse $1 }
 
-Type :: { Type Load }
+Type :: { Type FilePath }
     : 'type' label Datas 'fold' label { Type $2 $5 $3 }
 
-TypesRev :: { [Type Load] }
+TypesRev :: { [Type FilePath] }
     : TypesRev Type { $2 : $1 }
     |               { []      }
 
-Types :: { [Type Load] }
+Types :: { [Type FilePath] }
     : TypesRev { reverse $1 }
 
 Family :: { Family m }
     : Givens Types { Family $1 $2 }
 
-Let :: { Let Load }
+Let :: { Let FilePath }
     : 'let'  label Args ':' Expr0 '=' Expr1 { Let $2 $3 $5 $7 }
 
-LetsRev :: { [Let Load] }
+LetsRev :: { [Let FilePath] }
     : LetsRev Let { $2 : $1 }
     | Let         { [$1]    }
 
-Lets :: { [Let Load] }
+Lets :: { [Let FilePath] }
     : LetsRev { reverse $1 }
 
-ProductValueField :: { ProductValueSectionField Load }
+ProductValueField :: { ProductValueSectionField FilePath }
     : Expr1 ':' Expr0 { ValueField (ProductValueField $1 $3) }
     | Expr0           { TypeValueField $1                    }
     |                 { EmptyValueField                      }
 
-ProductValueFieldsRev :: { [ProductValueSectionField Load] }
+ProductValueFieldsRev :: { [ProductValueSectionField FilePath] }
     : ProductValueFieldsRev ',' ProductValueField { $3 : $1  }
     |                                             { []       }
 
-ProductValueFields :: { [ProductValueSectionField Load] }
+ProductValueFields :: { [ProductValueSectionField FilePath] }
     : ProductValueFieldsRev { reverse $1 }
 
-ProductTypeField :: { ProductTypeSectionField Load }
+ProductTypeField :: { ProductTypeSectionField FilePath }
     : label ':' Expr0 { TypeField (ProductTypeField $1  $3) }
     | Expr0           { TypeField (ProductTypeField "_" $1) }
     |                 { EmptyTypeField                      }
 
-ProductTypeFieldsRev :: { [ProductTypeSectionField Load] }
+ProductTypeFieldsRev :: { [ProductTypeSectionField FilePath] }
     : ProductTypeFieldsRev ',' ProductTypeField { $3 : $1  }
     |                                           { []       }
 
-ProductTypeFields :: { [ProductTypeSectionField Load] }
+ProductTypeFields :: { [ProductTypeSectionField FilePath] }
     : ProductTypeFieldsRev { reverse $1 }
 
-SumTypeFieldsRev :: { [SumTypeSectionField Load] }
+SumTypeFieldsRev :: { [SumTypeSectionField FilePath] }
     : SumTypeFieldsRev '|' SumTypeSectionField { $3 : $1 }
     |                                          { []      }
 
-SumTypeFields :: { [SumTypeSectionField Load] }
+SumTypeFields :: { [SumTypeSectionField FilePath] }
     : SumTypeFieldsRev { reverse $1 }
 
-SumTypeSectionField :: { SumTypeSectionField Load }
+SumTypeSectionField :: { SumTypeSectionField FilePath }
     : Expr0 { SumTypeField $1   }
     |       { EmptySumTypeField }
 
-ListFields :: { [Expr Load] }
+ListFields :: { [Expr FilePath] }
     : ListFieldsRev { reverse $1 }
 
-ListFieldsRev :: { [Expr Load] }
+ListFieldsRev :: { [Expr FilePath] }
     : ListFieldsRev ',' Expr0 { $3 : $1 }
     |                         { []      }
 
-PathFields :: { ([(Expr Load, Expr Load)], Expr Load) }
+PathFields :: { ([(Expr FilePath, Expr FilePath)], Expr FilePath) }
     : Object Expr0 PathFields { let ~(oms, o) = $3 in (($1, $2):oms, o) }
     | Object                  { ([], $1)                                }
 
-Object :: { Expr Load }
+Object :: { Expr FilePath }
     : '(|' Expr0 '|)' { $2 }
 
 {
@@ -258,7 +258,7 @@ parseError :: Token -> Lex a
 parseError token = throwError (Parsing token)
 
 -- | Parse an `Expr` from `Text` or return a `ParseError` if parsing fails
-exprFromText :: Text -> Either ParseError (Expr Load)
+exprFromText :: Text -> Either ParseError (Expr FilePath)
 exprFromText text = case runState (runErrorT parseExpr) initialStatus of
     (x, (position, _)) -> case x of
         Left  e    -> Left (ParseError position e)
@@ -296,19 +296,4 @@ prettyParseError (ParseError (Lexer.P l c) e) = Builder.toLazyText (
                 "Parsing: " <> Builder.fromString (show t) <> "\n"
             <>  "\n"
             <>  "Error: Parsing failed\n" )
-
--- TODO: Check for normalized or serialized alternatives when importing
---       expressions
-importFile :: Text -> Expr Load
-importFile path = Import (Load (do
-    m <- get
-    case HashMap.lookup path m of
-        Just expr -> return expr
-        Nothing   -> do
-            txt <- liftIO (Text.readFile (unpack path))
-            case exprFromText txt of
-                Left pe    -> liftIO (throwIO pe)
-                Right expr -> do
-                    put (HashMap.insert path expr m)
-                    return expr ))
 }

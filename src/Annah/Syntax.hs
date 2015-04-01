@@ -134,7 +134,7 @@ data Expr m
     | List (Expr m) [Expr m]
     -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [. c (|o1|) m1 (|o2|) m2 (|o3|)]
     | Path (Expr m) [(Expr m, Expr m)] (Expr m)
-    | Import (m (Expr m))
+    | Import m
 
 instance IsString (Expr m) where
     fromString str = Var (fromString str)
