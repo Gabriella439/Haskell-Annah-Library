@@ -10,6 +10,7 @@ module Annah.Syntax (
     , ProductValueField(..)
     , ProductValueSectionField(..)
     , SumTypeSectionField(..)
+    , ListTypeSectionField(..)
     , Let(..)
     , Data(..)
     , Type(..)
@@ -63,6 +64,11 @@ data ProductValueSectionField m
 data SumTypeSectionField m
     = EmptySumTypeField
     | SumTypeField (Expr m)
+
+-- | Field of a list type section
+data ListTypeSectionField m
+    = EmptyListTypeSectionField
+    | ListTypeSectionField (Expr m)
 
 {-|
 > Let f [a1, a2] _A rhs  ~  let f a1 a2 : _A = rhs
@@ -133,7 +139,7 @@ data Expr m
     -- | > List t [x, y, z]                ~  [* t,x,y,z]
     | List (Expr m) [Expr m]
     -- | > ListType t                      ~  [t]
-    | ListType (Expr m)
+    | ListType (ListTypeSectionField m)
     -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [. c (|o1|) m1 (|o2|) m2 (|o3|)]
     | Path (Expr m) [(Expr m, Expr m)] (Expr m)
     | Import m

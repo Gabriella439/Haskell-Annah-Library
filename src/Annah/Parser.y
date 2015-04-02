@@ -116,7 +116,7 @@ Expr3 :: { Expr FilePath }
     | '{0' SumTypeFields      '}' { SumType      $2                      }
     | '[*' Expr0 ListFields   ']' { List $2 $3                           }
     | '[.' Expr0 PathFields   ']' { let ~(oms, o) = $3 in Path $2 oms o  }
-    | '['  Expr0              ']' { ListType $2                          }
+    | '['  ListTypeField      ']' { ListType $2                          }
     | '(' Expr0               ')' { $2                                   }
 
 Args :: { [Arg FilePath] }
@@ -211,6 +211,10 @@ ListFields :: { [Expr FilePath] }
 ListFieldsRev :: { [Expr FilePath] }
     : ListFieldsRev ',' Expr0 { $3 : $1 }
     |                         { []      }
+
+ListTypeField :: { ListTypeSectionField m }
+    : Expr0 { ListTypeSectionField $1   }
+    |       { EmptyListTypeSectionField }
 
 PathFields :: { ([(Expr FilePath, Expr FilePath)], Expr FilePath) }
     : Object Expr0 PathFields { let ~(oms, o) = $3 in (($1, $2):oms, o) }

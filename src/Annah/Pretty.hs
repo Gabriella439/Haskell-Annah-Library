@@ -55,6 +55,10 @@ instance Builds SumTypeSectionField where
     build  EmptySumTypeField  = mempty
     build (SumTypeField f   ) = build f
 
+instance Builds ListTypeSectionField where
+    build  EmptyListTypeSectionField  = mempty
+    build (ListTypeSectionField f   ) = build f
+
 instance Builds Family where
     build (Family gs ts)
         =   "given "

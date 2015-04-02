@@ -97,3 +97,7 @@ instance Loads ProductValueSectionField where
 instance Loads SumTypeSectionField where
     load (SumTypeField f   ) = SumTypeField <$> load f
     load  EmptySumTypeField  = pure EmptySumTypeField
+
+instance Loads ListTypeSectionField where
+    load EmptyListTypeSectionField = pure EmptyListTypeSectionField
+    load (ListTypeSectionField f)  = ListTypeSectionField <$> load f

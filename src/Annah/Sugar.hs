@@ -45,7 +45,7 @@ desugar (SumType ts         ) = desugarSumTypeSection ts
 desugar (ProductValue fs    ) = desugarProductValueSection fs
 desugar (ProductType  as    ) = desugarProductTypeSection as
 desugar (List t es          ) = desugarList t es
-desugar (ListType t         ) = desugarListType t
+desugar (ListType f         ) = desugarListTypeSection f
 desugar (Path t oms o       ) = desugarPath t oms o
 desugar (Import m           ) = absurd m
 
@@ -58,7 +58,7 @@ resugar link e
               <|> fmap ASCII        (resugarASCII                    e)
               <|> fmap sc           (resugarSumConstructor           e)
               <|> fmap list         (resugarList                link e)
-              <|> fmap ListType     (resugarListType            link e)
+              <|> fmap ListType     (resugarListTypeSection     link e)
               <|> fmap path         (resugarPath                link e)
               <|> fmap SumType      (resugarSumTypeSection      link e)
               <|> fmap Import       (link                            e)
@@ -592,6 +592,42 @@ resugarListType link
   where
     resugar0 = resugar link . M.shift (-1) "List"
 resugarListType _ _ = empty
+
+{-| Convert a list section into a Morte expression
+
+    Example:
+
+> []
+> =>  λ(t : *)
+> →   ∀(List : *)
+> →   ∀(Cons : ∀(head : t) → ∀(tail : List) → List)
+> →   ∀(Nil : List)
+> →   List
+-}
+desugarListTypeSection :: ListTypeSectionField Void -> M.Expr
+desugarListTypeSection (ListTypeSectionField t)   = desugarListType t
+desugarListTypeSection  EmptyListTypeSectionField =
+    M.Lam "t" (M.Const M.Star) (desugarListType "t")
+
+{-| Convert a Morte expression back into a list type section
+
+    Example:
+
+>     λ(t : *)
+> →   ∀(List : *)
+> →   ∀(Cons : ∀(head : t) → ∀(tail : List) → List)
+> →   ∀(Nil : List)
+> →   List
+> =>  []
+-}
+resugarListTypeSection
+    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe (ListTypeSectionField m)
+resugarListTypeSection link
+    (M.Lam "t" (M.Const M.Star) e) = do
+        Var (M.V "t" 0) <- resugarListType link e
+        return EmptyListTypeSectionField
+resugarListTypeSection link e =
+    fmap ListTypeSectionField (resugarListType link e)
 
 {-| Convert a path into a Morte expression
 
