@@ -37,8 +37,9 @@ main = do
     ae'    <- Annah.loadExpr ae
     let me = Annah.desugar ae'
     mt     <- throws (Morte.typeOf me)
-    h      <- fmap HashMap.fromList (fold files Fold.list)
-    let link = if dynamic then Annah.dynamic h else Annah.static
+    link <- if dynamic
+        then fmap (Annah.dynamic . HashMap.fromList) (fold files Fold.list)
+        else return Annah.static
     let at   = Annah.resugar link (Morte.normalize mt)
     let ae'' = Annah.resugar link (Morte.normalize me)
 
