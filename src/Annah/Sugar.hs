@@ -45,6 +45,7 @@ desugar (SumType ts         ) = desugarSumTypeSection ts
 desugar (ProductValue fs    ) = desugarProductValueSection fs
 desugar (ProductType  as    ) = desugarProductTypeSection as
 desugar (List t es          ) = desugarList t es
+desugar (ListType t         ) = desugarListType t
 desugar (Path t oms o       ) = desugarPath t oms o
 desugar (Import m           ) = absurd m
 
@@ -57,6 +58,7 @@ resugar link e
               <|> fmap ASCII        (resugarASCII                    e)
               <|> fmap sc           (resugarSumConstructor           e)
               <|> fmap list         (resugarList                link e)
+              <|> fmap ListType     (resugarListType            link e)
               <|> fmap path         (resugarPath                link e)
               <|> fmap SumType      (resugarSumTypeSection      link e)
               <|> fmap Import       (link                            e)
@@ -550,6 +552,46 @@ resugarList link
         .   M.shift (-1) "Cons"
         .   M.shift (-1) "Nil"
 resugarList _ _ = empty
+
+{-| Convert a list type into a Morte expression
+
+    Example:
+
+> [t]
+> =>  ∀(List : *)
+> →   ∀(Cons : ∀(head : t) → ∀(tail : List) → List)
+> →   ∀(Nil : List)
+> →   List
+-}
+desugarListType :: Expr Void -> M.Expr
+desugarListType t =
+    M.Pi "List" (M.Const M.Star)
+        (M.Pi "Cons" (M.Pi "head" (desugar0 t) (M.Pi "tail" "List" "List"))
+            (M.Pi "Nil" "List" "List") )
+  where
+    desugar0 = M.shift 1 "List" . desugar
+
+{-| Convert a Morte expression back into a list type
+
+    Example:
+
+>     ∀(List : *)
+> →   ∀(Cons : ∀(head : t) → ∀(tail : List) → List)
+> →   ∀(Nil : List)
+> →   List
+> =>  [t]
+-}
+resugarListType :: (M.Expr -> Maybe m) -> M.Expr -> Maybe (Expr m)
+resugarListType link
+    (M.Pi "List" (M.Const M.Star)
+        (M.Pi "Cons"
+            (M.Pi "head" e
+                (M.Pi "tail" (M.Var (M.V "List" 0)) (M.Var (M.V "List" 0))) )
+            (M.Pi "Nil" (M.Var (M.V "List" 0)) (M.Var (M.V "List" 0))) ) )
+    = pure (resugar0 e)
+  where
+    resugar0 = resugar link . M.shift (-1) "List"
+resugarListType _ _ = empty
 
 {-| Convert a path into a Morte expression
 

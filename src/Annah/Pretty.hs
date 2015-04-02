@@ -8,7 +8,6 @@ module Annah.Pretty (
     , Builds(..)
     ) where
 
-import Data.Functor.Identity (Identity, runIdentity)
 import Data.Monoid ((<>), mempty, mconcat)
 import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Builder (Builder, fromText, fromLazyText, toLazyText)
@@ -132,6 +131,7 @@ instance Builds Expr where
                     "[* " <> build t
                 <> mconcat (map (\a -> "," <> build a) as)
                 <>  "]"
+            ListType t          -> "[" <> build t <> "]"
             Path c oms o0       ->
                     "[. " <> build c
                 <> mconcat

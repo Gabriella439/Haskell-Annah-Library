@@ -51,6 +51,7 @@ import Annah.Syntax
     ')'     { Lexer.CloseParen        }
     '[*'    { Lexer.OpenList          }
     '[.'    { Lexer.OpenPath          }
+    '['     { Lexer.OpenBracket       }
     ']'     { Lexer.CloseBracket      }
     '{1'    { Lexer.OpenProductType   }
     '{0'    { Lexer.OpenSumType       }
@@ -115,6 +116,7 @@ Expr3 :: { Expr FilePath }
     | '{0' SumTypeFields      '}' { SumType      $2                      }
     | '[*' Expr0 ListFields   ']' { List $2 $3                           }
     | '[.' Expr0 PathFields   ']' { let ~(oms, o) = $3 in Path $2 oms o  }
+    | '['  Expr0              ']' { ListType $2                          }
     | '(' Expr0               ')' { $2                                   }
 
 Args :: { [Arg FilePath] }

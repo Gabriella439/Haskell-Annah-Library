@@ -132,6 +132,8 @@ data Expr m
     | SumType [SumTypeSectionField m]
     -- | > List t [x, y, z]                ~  [* t,x,y,z]
     | List (Expr m) [Expr m]
+    -- | > ListType t                      ~  [t]
+    | ListType (Expr m)
     -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [. c (|o1|) m1 (|o2|) m2 (|o3|)]
     | Path (Expr m) [(Expr m, Expr m)] (Expr m)
     | Import m

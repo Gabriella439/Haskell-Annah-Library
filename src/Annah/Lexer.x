@@ -48,6 +48,7 @@ tokens :-
     ")"                             { \_    -> yield CloseParen                }
     "[*"                            { \_    -> yield OpenList                  }
     "[."                            { \_    -> yield OpenPath                  }
+    "["                             { \_    -> yield OpenBracket               }
     "]"                             { \_    -> yield CloseBracket              }
     "{1"                            { \_    -> yield OpenProductType           }
     "{0"                            { \_    -> yield OpenSumType               }
@@ -177,6 +178,7 @@ data Token
     | CloseParen
     | OpenList
     | OpenPath
+    | OpenBracket
     | CloseBracket
     | OpenProductType
     | OpenSumType

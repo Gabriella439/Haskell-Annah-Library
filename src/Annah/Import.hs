@@ -14,9 +14,8 @@ import Control.Monad.Trans.State.Strict (StateT, evalStateT, get, put)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (unpack)
-import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy.IO as Text
-import Turtle hiding (Text)
+import Turtle (FilePath, format, fp, liftIO)
 import Prelude hiding (FilePath)
 
 import Annah.Syntax
@@ -49,6 +48,7 @@ instance Loads Expr where
     load (ProductValue fs    ) = ProductValue <$> mapM load fs
     load (ProductType  as    ) = ProductType <$> mapM load as
     load (List t es          ) = List <$> load t <*> mapM load es
+    load (ListType t         ) = ListType <$> load t
     load (Path c oms o0      ) = Path <$> load c <*> mapM loadP oms <*> load o0
       where
         loadP (o, m) = (,) <$> load o <*> load m
