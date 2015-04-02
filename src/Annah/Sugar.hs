@@ -10,16 +10,21 @@ module Annah.Sugar (
     -- * Sugar
       desugar
     , resugar
+    , static
+    , dynamic
     ) where
 
 import Control.Applicative (pure, empty, (<|>))
 import Control.Monad (guard)
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HashMap
 import Data.Char (chr, ord)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
 import Data.Void (Void, absurd)
 import qualified Morte.Core as M
-import Prelude hiding (pi)
+import Turtle (FilePath)
+import Prelude hiding (FilePath, pi)
 
 import Annah.Syntax
 
@@ -44,26 +49,27 @@ desugar (Path t oms o       ) = desugarPath t oms o
 desugar (Import m           ) = absurd m
 
 -- | Convert a Morte expression to an Annah expression
-resugar :: M.Expr -> Expr m
-resugar e
-    | Just e' <-  fmap Natural      (resugarNat                 e)
-              <|> fmap ProductValue (resugarProductValueSection e)
-              <|> fmap ProductType  (resugarProductTypeSection  e)
-              <|> fmap ASCII        (resugarASCII               e)
-              <|> fmap sc           (resugarSumConstructor      e)
-              <|> fmap list         (resugarList                e)
-              <|> fmap path         (resugarPath                e)
-              <|> fmap SumType      (resugarSumTypeSection      e)
+resugar :: (M.Expr -> Maybe m) -> M.Expr -> Expr m
+resugar link e
+    | Just e' <-  fmap Natural      (resugarNat                      e)
+              <|> fmap ProductValue (resugarProductValueSection link e)
+              <|> fmap ProductType  (resugarProductTypeSection  link e)
+              <|> fmap ASCII        (resugarASCII                    e)
+              <|> fmap sc           (resugarSumConstructor           e)
+              <|> fmap list         (resugarList                link e)
+              <|> fmap path         (resugarPath                link e)
+              <|> fmap SumType      (resugarSumTypeSection      link e)
+              <|> fmap Import       (link                            e)
     = e'
   where
-    sc   = uncurry SumConstructor
-    list = uncurry List
-    path (x, y, z) = Path x y z
-resugar (M.Const c    ) = Const c
-resugar (M.Var v      ) = Var v
-resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
-resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
-resugar (M.App f a    ) = App (resugar f) (resugar a)
+    sc   (x, y)    = SumConstructor x y
+    list (x, y)    = List           x y
+    path (x, y, z) = Path           x y z
+resugar _ (M.Const c    ) = Const c
+resugar _ (M.Var v      ) = Var v
+resugar link (M.Lam x _A  b) = Lam x (resugar link _A) (resugar link  b)
+resugar link (M.Pi  x _A _B) = Pi  x (resugar link _A) (resugar link _B)
+resugar link (M.App f a    ) = App (resugar link f) (resugar link a)
 
 toBin :: Integer -> [Bool]
 toBin n0 = reverse (go n0)
@@ -217,15 +223,15 @@ desugarSumType ts0 = M.Pi "Sum" (M.Const M.Star) (go ts0 0)
     go  []    _ = "Sum"
 
 -- | Convert a Morte expression back into a sum type
-resugarSumType :: M.Expr -> Maybe [Expr m]
-resugarSumType (M.Pi "Sum" (M.Const M.Star) e0) = go id e0 0
+resugarSumType :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [Expr m]
+resugarSumType link (M.Pi "Sum" (M.Const M.Star) e0) = go id e0 0
   where
     go diff (M.Pi "MkSum" (M.Pi "x" t "Sum") e) n = go (diff . (t':)) e $! n + 1
       where
-        t' = (resugar . M.shift (-1) "Sum" . M.shift (negate n) "MkSum") t
+        t' = (resugar link . M.shift (-1) "Sum" . M.shift (negate n) "MkSum") t
     go diff (M.Var (M.V "Sum" 0))               _ = pure (diff [])
     go _ _ _ = empty
-resugarSumType _ = empty
+resugarSumType _ _ = empty
 
 -- | Convert a sum type section to a Morte expression
 desugarSumTypeSection :: [SumTypeSectionField Void] -> M.Expr
@@ -241,15 +247,16 @@ desugarSumTypeSection fs0 = go fs0 id n0
         t  = Var (M.V "t" n')
     go (SumTypeField    t:fs) diff n = go fs (diff . (shift t:)) n
       where
-        shift = resugar . M.shift n0 "t" . desugar
+        shift = resugar static . M.shift n0 "t" . desugar
 
 -- | Convert a Morte expression back into a sum type section
-resugarSumTypeSection :: M.Expr -> Maybe [SumTypeSectionField m]
-resugarSumTypeSection e0 = go0 e0 0
+resugarSumTypeSection
+    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [SumTypeSectionField m]
+resugarSumTypeSection link e0 = go0 e0 0
   where
     go0 (M.Lam "t" (M.Const M.Star) e) n0 = go0 e $! n0 + 1
     go0                             e  n0 = do
-        fs <- resugarSumType e
+        fs <- resugarSumType static e
         go1 fs n0
       where
         go1  []                  0           = pure []
@@ -259,7 +266,7 @@ resugarSumTypeSection e0 = go0 e0 0
             m' = m - 1
         go1 (f:fs) m = fmap (SumTypeField (shift f):) (go1 fs m)
           where
-            shift = resugar . M.shift (negate n0) "t" . desugar
+            shift = resugar link . M.shift (negate n0) "t" . desugar
         go1 _ _ = empty
 
 {-| Convert product values to Morte expressions
@@ -291,25 +298,26 @@ desugarProductValue fs0 =
 > \(Product : *) -> \(MakeProduct : Bool -> Nat -> Product) -> MakeProduct True 1
 > =>  (True : Bool, 1 : Nat)
 -}
-resugarProductValue :: M.Expr -> Maybe [ProductValueField m]
 resugarProductValue
+    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [ProductValueField m]
+resugarProductValue link
     (M.Lam "Product" (M.Const M.Star) (M.Lam "MakeProduct" t0 e0)) = do
         es <- fmap reverse (go0 e0)
         ts <- go1 t0
         guard (length es == length ts)
         return (zipWith ProductValueField es ts)
   where
-    go0 (M.App e a)                   = fmap (resugar (shiftBoth a):) (go0 e)
+    go0 (M.App e a)                   = fmap (resugar link (shiftBoth a):) (go0 e)
     go0 (M.Var (M.V "MakeProduct" _)) = pure []
     go0  _                            = empty
 
-    go1 (M.Pi "_" t e)            = fmap (resugar (shiftOne t):) (go1 e)
+    go1 (M.Pi "_" t e)            = fmap (resugar link (shiftOne t):) (go1 e)
     go1 (M.Var (M.V "Product" _)) = pure []
     go1  _                        = empty
 
     shiftOne  = M.shift (-1) "Product"
     shiftBoth = M.shift (-1) "Product" . M.shift (-1) "MakeProduct"
-resugarProductValue _ = empty
+resugarProductValue _ _ = empty
 
 {-| Convert product value sections to Morte expressions
 
@@ -327,7 +335,8 @@ desugarProductValueSection fs0 = go fs0 id id id numBoth numEmpties
     numEmpties = length [ () | EmptyValueField  <- fs0 ]
     numBoth    = numTypes + numEmpties
 
-    shift = resugar . M.shift numBoth "f" . M.shift numEmpties "t" . desugar
+    shift =
+        resugar static . M.shift numBoth "f" . M.shift numEmpties "t" . desugar
 
     go  []                  diffFs diffL1 diffL2 _ _ =
         diffL1 (diffL2 (desugarProductValue (diffFs [])))
@@ -361,8 +370,9 @@ desugarProductValueSection fs0 = go fs0 id id id numBoth numEmpties
 > ->  MakeProduct f@1 1 f
 > =>  (,1 : Nat,Bool)
 -}
-resugarProductValueSection :: M.Expr -> Maybe [ProductValueSectionField m]
-resugarProductValueSection e0 = go0 e0 0
+resugarProductValueSection
+    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [ProductValueSectionField m]
+resugarProductValueSection link e0 = go0 e0 0
   where
     go0 (M.Lam "t" (M.Const Star) e) i = go0 e $! i + 1
     go0                           e  i = go1 e id i i 0
@@ -376,13 +386,13 @@ resugarProductValueSection e0 = go0 e0 0
     go1 (M.Lam "f"  t                  e) diff n i  m           = m' `seq`
         go1 e diff' n i  m'
       where
-        diff' = diff . (TypeValueField (resugar t):)
+        diff' = diff . (TypeValueField (resugar static t):)
         m' = m + 1
     go1                                e  diff n 0  m           = do
-        pvfs <- resugarProductValue e
+        pvfs <- resugarProductValue static e
         go2 pvfs (diff []) m n id
       where
-        shift = resugar . M.shift (negate m) "f" . M.shift (negate n) "t" . desugar
+        shift = resugar link . M.shift (negate m) "f" . M.shift (negate n) "t" . desugar
 
         go2  [] [] 0 0 diff_ = pure (diff_ [])
         go2 (ProductValueField (Var (M.V "f" i)) (Var (M.V "t" j)):pvfs)
@@ -401,7 +411,7 @@ resugarProductValueSection e0 = go0 e0 0
                 go2 pvfs pvss m_' n_ diff_'
           where
             m_' = m_ - 1
-            diff_' = diff_ . (TypeValueField (resugar (desugar t')):)
+            diff_' = diff_ . (TypeValueField (resugar link (desugar t')):)
         go2 (pvf:pvfs) pvss m_ n_ diff_ = go2 pvfs pvss m_ n_ diff_'
           where
             ProductValueField e' t' = pvf
@@ -432,17 +442,17 @@ desugarProductType args0 =
 
 > forall (Product : *) -> (Bool -> Nat -> Product) -> Product  =>  {Bool, Nat}
 -}
-resugarProductType :: M.Expr -> Maybe [ProductTypeField m]
-resugarProductType
+resugarProductType :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [ProductTypeField m]
+resugarProductType link
     (M.Pi "Product" (M.Const M.Star) (M.Pi "MakeProduct" t0 "Product")) =
     go t0 0
   where
-    go (M.Pi x _A e) n = fmap (ProductTypeField x (resugar _A):) (go e $! n')
+    go (M.Pi x _A e) n = fmap (ProductTypeField x (resugar link _A):) (go e $! n')
       where
         n' = if x == "Product" then n + 1 else n
     go (M.Var (M.V "Product" n')) n | (n == n') = pure []
     go  _                         _             = empty
-resugarProductType _ = empty
+resugarProductType _ _ = empty
 
 {-| Convert a product type section to a Morte expression
 
@@ -466,7 +476,7 @@ desugarProductTypeSection fs0 = go fs0 id numEmpty
         ptf' = ProductTypeField "_" (Var (M.V "t" n'))
         n'   = n - 1
 
-    shift = resugar . M.shift numEmpty "t" . desugar
+    shift = resugar static . M.shift numEmpty "t" . desugar
 
 {-| Convert a Morte expression back into a product type section
 
@@ -474,15 +484,16 @@ desugarProductTypeSection fs0 = go fs0 id numEmpty
 
 > forall (t : *) -> forall (Product : *) -> (t -> Nat -> Product) -> Product  =>  {, Nat}
 -}
-resugarProductTypeSection :: M.Expr -> Maybe [ProductTypeSectionField m]
-resugarProductTypeSection e0 = go0 e0 0
+resugarProductTypeSection
+    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [ProductTypeSectionField m]
+resugarProductTypeSection link e0 = go0 e0 0
   where
     go0 (M.Lam "t" (M.Const M.Star) e) n = go0 e $! n + 1
     go0                             e  n = do
-        ptfs <- resugarProductType e
+        ptfs <- resugarProductType static e
         go1 ptfs id n
       where
-        shift = resugar . M.shift (negate n) "t" . desugar
+        shift = resugar link . M.shift (negate n) "t" . desugar
 
         go1 [] diff 0 = pure (diff [])
         go1 (ProductTypeField "_" (Var (M.V "t" i)):ptfs) diff n_ | n_' == i =
@@ -519,8 +530,8 @@ desugarList e0 ts0 =
 
     desugar1 = M.shift 1 "List" . M.shift 1 "Cons" . M.shift 1 "Nil" . desugar
 
-resugarList :: M.Expr -> Maybe (Expr m, [Expr m])
-resugarList
+resugarList :: (M.Expr -> Maybe m) -> M.Expr -> Maybe (Expr m, [Expr m])
+resugarList link
     (M.Lam "List" (M.Const Star)
         (M.Lam "Cons"
             (M.Pi "head" e0
@@ -532,9 +543,13 @@ resugarList
     go (M.App (M.App (M.Var (M.V "Cons" 0)) t) ts) = fmap (resugar1 t:) (go ts)
     go _ = empty
 
-    resugar0 = resugar . M.shift (-1) "List"
-    resugar1 = resugar . M.shift (-1) "List" . M.shift (-1) "Cons" . M.shift (-1) "Nil"
-resugarList _ = empty
+    resugar0 = resugar link . M.shift (-1) "List"
+    resugar1 =
+            resugar link
+        .   M.shift (-1) "List"
+        .   M.shift (-1) "Cons"
+        .   M.shift (-1) "Nil"
+resugarList _ _ = empty
 
 {-| Convert a path into a Morte expression
 
@@ -590,8 +605,9 @@ desugarPath c0 oms0 o0 =
         o2' = desugar1 o2
         m1' = desugar1 m1
 
-resugarPath :: M.Expr -> Maybe (Expr m, [(Expr m, Expr m)], Expr m)
 resugarPath
+    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe (Expr m, [(Expr m, Expr m)], Expr m)
+resugarPath link
     (M.Lam "Path"
         (M.Pi "a" (M.Const M.Star) (M.Pi "b" (M.Const M.Star) (M.Const M.Star)))
         (M.Lam "Step"
@@ -600,9 +616,6 @@ resugarPath
                     (M.Pi "c" (M.Const M.Star)
                         (M.Pi "head"
                             cab
---                          (M.App
---                              (M.App c0 (M.Var (M.V "a" 0)))
---                              (M.Var (M.V "b" 0)) )
                             (M.Pi "tail"
                                 (M.App
                                     (M.App
@@ -625,9 +638,12 @@ resugarPath
     let c0 = M.Lam "a" (M.Const M.Star) (M.Lam "b" (M.Const M.Star) cab)
     return (resugar0 c0, oms, resugar1 o0)
   where
-    resugar0 = resugar . M.shift (-1) "Path"
+    resugar0 = resugar link . M.shift (-1) "Path"
     resugar1 =
-        resugar . M.shift (-1) "Path" . M.shift (-1) "Step" . M.shift (-1) "End"
+            resugar link
+        .   M.shift (-1) "Path"
+        .   M.shift (-1) "Step"
+        .   M.shift (-1) "End"
 
     go (M.App (M.Var (M.V "End" 0)) o0') = return (([], o0'), o0')
     go (M.App
@@ -641,7 +657,13 @@ resugarPath
         let m1 = resugar1 m1'
         return (((o1, m1):oms, o0), o1')
     go _ = empty
-resugarPath _ = empty
+resugarPath _ _ = empty
+
+dynamic :: HashMap M.Expr FilePath -> M.Expr -> Maybe FilePath
+dynamic h e = HashMap.lookup e h
+
+static :: M.Expr -> Maybe m
+static _ = empty
 
 {-| `desugarLets` converts this:
 

@@ -99,9 +99,7 @@ instance Builds Expr where
             Var x               -> M.buildVar x
             Lam x _A b          -> quoteAbove 1 (
                     "λ"
-                <>  (if x /= "_"
-                     then "(" <> fromLazyText x <> " : " <>  go 1 _A <>  ")"
-                     else go 3 _A)
+                <>  "(" <> fromLazyText x <> " : " <>  go 1 _A <>  ")"
                 <>  " → "
                 <>  go 1 b )
             Pi  x _A b          -> quoteAbove 1 (

@@ -36,6 +36,8 @@ module Annah.Core (
     , loadExpr
     , desugar
     , resugar
+    , dynamic
+    , static
     , prettyExpr
 
     -- * Re-exports
