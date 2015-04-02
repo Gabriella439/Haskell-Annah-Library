@@ -49,6 +49,7 @@ Executable annah
     Build-Depends:
         base                 >= 4        && < 5   ,
         annah                                     ,
+        async                >= 2.0.0.0  && < 2.1 ,
         foldl                >= 1.0.2    && < 1.1 ,
         morte                >= 1.1.0    && < 1.2 ,
         optparse-applicative                < 0.11,

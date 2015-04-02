@@ -2,16 +2,17 @@ module Main where
 
 import qualified Annah.Parser as Annah
 import qualified Annah.Core   as Annah
+import Control.Concurrent.Async (async, wait)
 import Control.Exception (Exception, throwIO)
 import qualified Control.Foldl as Fold
 import qualified Data.HashMap.Strict as HashMap
-import Data.Monoid (mempty)
 import Data.Text.Lazy (fromStrict)
+import Data.Monoid (mempty)
 import qualified Data.Text.Lazy.IO as Text
 import qualified Morte.Core as Morte
 import Options.Applicative
 import System.IO (stderr)
-import Turtle hiding (stderr)
+import Turtle (Shell, FilePath, fold, ls, strict, basename, liftIO, pwd, input)
 import Prelude hiding (FilePath)
 
 throws :: Exception e => Either e a -> IO a
@@ -31,15 +32,17 @@ main = do
                      \to standard error, and writing the normalized program to\
                      \standard output"
         )
+    let io = fmap (Annah.dynamic . HashMap.fromList) (fold files Fold.list)
+    getLink <- if dynamic
+        then fmap wait (async io)
+        else return (return Annah.static)
 
     inText <- Text.getContents
     ae     <- throws (Annah.exprFromText inText)
     ae'    <- Annah.loadExpr ae
     let me = Annah.desugar ae'
     mt     <- throws (Morte.typeOf me)
-    link <- if dynamic
-        then fmap (Annah.dynamic . HashMap.fromList) (fold files Fold.list)
-        else return Annah.static
+    link   <- getLink
     let at   = Annah.resugar link (Morte.normalize mt)
     let ae'' = Annah.resugar link (Morte.normalize me)
 
