@@ -18,9 +18,12 @@ throws :: Exception e => Either e a -> IO a
 throws (Left  e) = throwIO e
 throws (Right a) = return a
 
+options :: Parser Bool
+options = switch (long "dynamic" <> short 'd')
+
 main :: IO ()
 main = do
-    execParser $ info (helper <*> pure ())
+    dynamic <- execParser $ info (helper <*> options)
         (   fullDesc
         <>  header "annah - A strongly typed, purely functional language"
         <>  progDesc "Type-check and normalize an Annah program, reading the \
@@ -35,8 +38,9 @@ main = do
     let me = Annah.desugar ae'
     mt     <- throws (Morte.typeOf me)
     h      <- fmap HashMap.fromList (fold files Fold.list)
-    let at   = Annah.resugar (Annah.dynamic h) (Morte.normalize mt)
-    let ae'' = Annah.resugar (Annah.dynamic h) (Morte.normalize me)
+    let link = if dynamic then Annah.dynamic h else Annah.static
+    let at   = Annah.resugar link (Morte.normalize mt)
+    let ae'' = Annah.resugar link (Morte.normalize me)
 
     Text.hPutStrLn stderr (Annah.prettyExpr at)
     Text.hPutStrLn stderr mempty
