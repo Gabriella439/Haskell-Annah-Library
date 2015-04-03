@@ -1,2 +1,2 @@
-let Monoid (m : *) : * = {1, plus : m -> m -> m, zero : m}
+let Monoid (m : *) : * = [m] -> m
 in  Monoid

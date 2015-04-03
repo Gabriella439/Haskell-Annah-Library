@@ -1,2 +1,2 @@
-let or : #Monoid #Bool = <1, #(||) : #Bool -> #Bool -> #Bool, #False : #Bool>
+let or : #Monoid #Bool = \(xs : [#Bool]) -> xs #Bool #(||) #False
 in  or

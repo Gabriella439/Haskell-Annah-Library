@@ -1,2 +1,2 @@
-let add : #Monoid #Bin = <1, #(+) : #Bin -> #Bin -> #Bin, 0 : #Bin>
+let add : #Monoid #Bin = \(xs : [#Bin]) -> xs #Bin #(+) 0
 in  add
