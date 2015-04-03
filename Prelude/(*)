@@ -6,7 +6,7 @@ let shiftL (places : #Bin) (bin : #Bin) : #Bin = bin
     )
 in
 
-let times (bin1 : #Bin) (bin2 : #Bin) : #Bin = bin1
+let (*) (bin1 : #Bin) (bin2 : #Bin) : #Bin = bin1
     #Bin
     #Zero
     (\(bin_ : #Bin_) ->
@@ -24,15 +24,15 @@ let times (bin1 : #Bin) (bin2 : #Bin) : #Bin = bin1
                 (\(place : #Bin) -> \(accum : #Bin) ->
                     <1
                     , #Succ place : #Bin
-                    , #plus (shiftL place bin2) accum : #Bin
+                    , #(+) (shiftL place bin2) accum : #Bin
                     >
                 )
             )
         in  x
             #Bin
             (\(place : #Bin) -> \(accum : #Bin) ->
-                #plus (shiftL place bin2) accum
+                #(+) (shiftL place bin2) accum
             )
     )
 
-in times
+in (*)

@@ -1,0 +1,2 @@
+let mult : #Monoid #Bin = <1, #(*) : #Bin -> #Bin -> #Bin, 1 : #Bin>
+in  mult

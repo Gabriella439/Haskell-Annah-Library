@@ -1,0 +1,2 @@
+let add : #Monoid #Bin = <1, #(+) : #Bin -> #Bin -> #Bin, 0 : #Bin>
+in  add
