@@ -1,2 +1,0 @@
-let mult : #Monoid #Bin = \(xs : [#Bin]) -> xs #Bin #(*) 1
-in  mult
