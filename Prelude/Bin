@@ -2,13 +2,11 @@ type Bin_
 data Nil_
 data Zero_ Bin_
 data One_  Bin_
-fold foldBin_
 in
 
 type Bin
 data Zero
 data One Bin_
-fold foldBin
 in
 
 Bin

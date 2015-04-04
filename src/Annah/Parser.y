@@ -148,7 +148,8 @@ Datas :: { [Data FilePath] }
     : DatasRev { reverse $1 }
 
 Type :: { Type FilePath }
-    : 'type' label Datas 'fold' label { Type $2 $5 $3 }
+    : 'type' label Datas 'fold' label { Type $2 $5  $3 }
+    | 'type' label Datas              { Type $2 "_" $3 }
 
 TypesRev :: { [Type FilePath] }
     : TypesRev Type { $2 : $1 }
