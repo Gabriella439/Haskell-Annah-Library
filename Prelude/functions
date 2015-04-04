@@ -1,0 +1,6 @@
+let function : #Category #(->) =
+        \(a : *)
+    ->  \(b : *)
+    ->  \(p : #Path #(->) a b)
+    ->  p #(->) #(|) #id
+in  function

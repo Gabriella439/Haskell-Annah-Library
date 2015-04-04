@@ -1,0 +1,13 @@
+let unzip (a : *) (b : *) (abs : [{1, a, b}]) : {1, [a], [b]} = abs
+    {1, [a], [b]}
+    (\(ab : {1, a, b}) -> \(asbs : {1, [a], [b]}) -> ab
+        {1, [a], [b]}
+        (\(x : a) -> \(y : b) -> asbs
+            {1, [a], [b]}
+            (\(as : [a]) -> \(bs : [b]) ->
+                <1, #Cons a x as : [a], #Cons b y bs : [b]>
+            )
+        )
+    )
+    <1, [* a] : [a], [* b] : [b]>
+in  unzip

@@ -1,0 +1,7 @@
+let first (a : *) : #Monoid (#Maybe a) =
+    let c (m1 : #Maybe a) (m2 : #Maybe a) : #Maybe a = m1
+        (#Maybe a)
+        m2
+        (\(x : a) -> #Just a x)
+    in  \(l : [#Maybe a]) -> l (#Maybe a) c (#Nothing a)
+in  first
