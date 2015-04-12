@@ -1,18 +1,19 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import qualified Annah.Parser as Annah
 import qualified Annah.Core   as Annah
-import Control.Concurrent.Async (async, wait)
+import Control.Concurrent.Async (async)
 import Control.Exception (Exception, throwIO)
 import qualified Control.Foldl as Fold
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text.Lazy (fromStrict)
-import Data.Monoid (mempty)
 import qualified Data.Text.Lazy.IO as Text
 import qualified Morte.Core as Morte
 import Options.Applicative
 import System.IO (stderr)
-import Turtle (Shell, FilePath, fold, ls, strict, basename, liftIO, pwd, input)
+import Turtle hiding (stderr, e)
 import Prelude hiding (FilePath)
 
 throws :: Exception e => Either e a -> IO a
@@ -52,10 +53,16 @@ main = do
 
 files :: Shell (Morte.Expr, FilePath)
 files = do
-    dir  <- liftIO pwd
-    file <- ls dir
-    txt        <- liftIO (strict (input file))
+    dir        <- liftIO pwd
+    -- This adds a trailing slash, otherwise `stripPrefix` will not work
+    let dir' = dir </> mempty
+    file       <- lstree dir
+    file'      <- liftIO (realpath file)
+    False      <- liftIO (testdir file')
+    txt        <- liftIO (strict (input file'))
     Right expr <- return (Annah.exprFromText (fromStrict txt))
     expr'      <- liftIO (fmap Annah.desugar (Annah.loadExpr expr))
     Right _    <- return (Morte.typeOf expr')
-    return (Morte.normalize expr', basename file)
+    Just  rel  <- return (stripPrefix dir' file')
+    let rel' = if basename rel == "=" then dirname rel else rel
+    return (Morte.normalize expr', rel')

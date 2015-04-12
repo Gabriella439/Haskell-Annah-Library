@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 -- | Importing external expressions
 
@@ -15,7 +16,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (unpack)
 import qualified Data.Text.Lazy.IO as Text
-import Turtle (FilePath, format, fp, liftIO)
+import Turtle (FilePath, format, fp, liftIO, testdir, (</>))
 import Prelude hiding (FilePath)
 
 import Annah.Syntax
@@ -57,7 +58,11 @@ instance Loads Expr where
         case Map.lookup path m of
             Just expr -> unLoad (load expr)
             Nothing   -> do
-                txt <- liftIO (Text.readFile (unpack (format fp path)))
+                let readFile' = do
+                        isDir <- testdir path
+                        let path' = if isDir then path </> "=" else path
+                        Text.readFile (unpack (format fp path'))
+                txt <- liftIO readFile'
                 case exprFromText txt of
                     Left pe    -> liftIO (throwIO pe)
                     Right expr -> do
