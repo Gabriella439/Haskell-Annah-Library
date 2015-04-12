@@ -32,6 +32,7 @@ module Annah.Core (
       module Annah.Syntax
 
     -- * Core functions
+    -- $core
     , exprFromText
     , loadExpr
     , desugar
@@ -51,3 +52,23 @@ import Annah.Parser
 import Annah.Pretty
 import Annah.Sugar
 import Annah.Syntax
+
+import qualified Morte.Core as M
+
+{- $core
+    The typical workflow is:
+
+    * You parse a `Text` source using `exprFromText`
+
+    * You load all external imports using `loadExpr`
+
+    * You `desugar` the Annah expression to Morte
+
+    * You type-check the Morte expression using `M.typeOf`
+
+    * You `M.normalize` the Morte expression
+
+    * You `resugar` the Morte expression back to Annah
+
+    * You pretty-print the Annah expression using `prettyExpr`
+-}

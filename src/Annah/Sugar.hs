@@ -49,7 +49,12 @@ desugar (ListType f         ) = desugarListTypeSection f
 desugar (Path t oms o       ) = desugarPath t oms o
 desugar (Import m           ) = absurd m
 
--- | Convert a Morte expression to an Annah expression
+{-| Convert a Morte expression to an Annah expression
+
+    The first argument is a function used to dynamically link expressions by
+    replacing them with external imports.  This argument will typically be either
+    `static` or `dynamic`
+-}
 resugar :: (M.Expr -> Maybe m) -> M.Expr -> Expr m
 resugar link e
     | Just e' <-  fmap Natural      (resugarNat                      e)
@@ -737,9 +742,19 @@ resugarPath link
     go _ = empty
 resugarPath _ _ = empty
 
+{-| Pass this to `resugar` if you wish to replace certain expressions with
+    external imports
+
+    In other words, if you call @resugar (dynamic h)@, then `resugar` will take any
+    expression that matches a key in @h@ and replace the matching expression with
+    the corresponding @FilePath@ value
+-}
 dynamic :: HashMap M.Expr FilePath -> M.Expr -> Maybe FilePath
 dynamic h e = HashMap.lookup e h
 
+{-| Pass this to `resugar` if you don't want the result to contain any external
+    imports
+-}
 static :: M.Expr -> Maybe m
 static _ = empty
 

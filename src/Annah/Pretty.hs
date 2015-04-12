@@ -69,10 +69,8 @@ instance Builds Type where
     build (Type t f ds)
         =   "type "
         <>  fromLazyText t
-        <>  " fold "
-        <>  fromLazyText f
-        <>  " "
         <>  mconcat (map build ds)
+        <>  (if f == "_" then mempty else " fold " <> fromLazyText f <> " ")
 
 instance Builds Data where
     build (Data d args)

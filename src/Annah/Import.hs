@@ -1,7 +1,21 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
--- | Importing external expressions
+{-| You can import external Annah expressions stored in other files by using a
+    hashtag followed by the file path.  For example, if you have an Annah
+    expression located at @foo/bar/expr@, then you can import it within a larger
+    expression by using @#foo/bar/expr@.
+
+    For example, using the Prelude you could write:
+
+    > #(&&) #True #False
+
+    ... and that would search for three files named @(&&)@, @True@, and @False@ and
+    read in their expressions and embed them within the generated syntax tree.
+
+    All imports are relative to the root Prelude directory, not relative to the
+    source file's location.
+-}
 
 module Annah.Import (
     -- * Import
@@ -22,10 +36,13 @@ import Prelude hiding (FilePath)
 import Annah.Syntax
 import Annah.Parser (exprFromText)
 
--- | Extend `IO` with `StateT` to cache previously imported expressions
+{-| `Load` caches previously imported expressions to avoid wastefully reading in the
+    same files or performing the same network requests over and over.
+-}
 newtype Load a = Load { unLoad :: StateT (Map FilePath (Expr FilePath)) IO a }
     deriving (Functor, Applicative, Monad)
 
+-- | Evaluate all imports by replacing them with their equivalent expressions
 loadExpr :: Expr FilePath -> IO (Expr m)
 loadExpr e = evalStateT (unLoad (load e)) Map.empty
 
@@ -58,6 +75,19 @@ instance Loads Expr where
         case Map.lookup path m of
             Just expr -> unLoad (load expr)
             Nothing   -> do
+                -- Annah lets you reuse a directory as an importable expression by
+                -- placing a file named `=` within that directory.  The typical use
+                -- case for this is if you want to create a directory for a type
+                -- that holds all its constructors and you want to reuse the
+                -- directory as the type, such as:
+                --
+                --     Either/
+                --     |-- =      -- This file contains the Either type constructor
+                --     |-- Left   -- This file contains the Left   data constructor
+                --     `-- Right  -- This file contains the Right  data constructor
+                --
+                -- The above layout would let you import the Either type constructor
+                -- using `#Either`
                 let readFile' = do
                         isDir <- testdir path
                         let path' = if isDir then path </> "=" else path

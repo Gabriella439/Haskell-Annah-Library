@@ -128,13 +128,13 @@ data Expr m
     | Natural Integer
     -- | > ASCII str                       ~  str
     | ASCII Text
-    -- | > ProductValue [f1, f2]           ~  <f1,f2,1>
+    -- | > ProductValue [f1, f2]           ~  <1,f1,f2>
     | ProductValue [ProductValueSectionField m]
-    -- | > ProductType [f1, f2]            ~  {f1,f2,1}
+    -- | > ProductType [f1, f2]            ~  {1,f1,f2}
     | ProductType [ProductTypeSectionField m]
     -- | > SumConstructor i j              ~  itoj
     | SumConstructor Int Int
-    -- | > SumType [t1, t2]                ~  {t1|t2|0}
+    -- | > SumType [t1, t2]                ~  {0|t1|t2}
     | SumType [SumTypeSectionField m]
     -- | > List t [x, y, z]                ~  [* t,x,y,z]
     | List (Expr m) [Expr m]
