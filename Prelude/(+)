@@ -3,34 +3,34 @@
 -- the initial `One`.  There is a step in the implementation of `plus` that
 -- requires proving that the result of `succ` is greater than `0` but if you
 -- include the initial `One` that information is lost.
-let succ (bin : #Bin) : #Bin_ = bin
-    #Bin_
-    #Nil_
-    (\(bin_ : #Bin_) ->
-        let x : {1, #Bool, #Bin_} = bin_
-            {1, #Bool, #Bin_}
-            <1, #True : #Bool, #Nil_ : #Bin_>
-            (\(t : {1, #Bool, #Bin_}) -> t
-                {1, #Bool, #Bin_}
-                (\(b : #Bool) -> \(bin_ : #Bin_) -> b
-                    {1, #Bool, #Bin_}
-                    <1, #False : #Bool, #One_  bin_ : #Bin_>
-                    <1, #False : #Bool, #Zero_ bin_ : #Bin_>
+let succ (bin : #Bin) : #Bin/Bin_ = bin
+    #Bin/Bin_
+    #Bin/Nil_
+    (\(bin_ : #Bin/Bin_) ->
+        let x : {1, #Bool, #Bin/Bin_} = bin_
+            {1, #Bool, #Bin/Bin_}
+            <1, #True : #Bool, #Bin/Nil_ : #Bin/Bin_>
+            (\(t : {1, #Bool, #Bin/Bin_}) -> t
+                {1, #Bool, #Bin/Bin_}
+                (\(b : #Bool) -> \(bin_ : #Bin/Bin_) -> b
+                    {1, #Bool, #Bin/Bin_}
+                    <1, #False : #Bool, #Bin/One_  bin_ : #Bin/Bin_>
+                    <1, #False : #Bool, #Bin/Zero_ bin_ : #Bin/Bin_>
                 )
             )
-            (\(t : {1, #Bool, #Bin_}) -> t
-                {1, #Bool, #Bin_}
-                (\(b : #Bool) -> \(bin_ : #Bin_) -> b
-                    {1, #Bool, #Bin_}
-                    <1, #True  : #Bool, #Zero_ bin_ : #Bin_>
-                    <1, #False : #Bool, #One_  bin_ : #Bin_>
+            (\(t : {1, #Bool, #Bin/Bin_}) -> t
+                {1, #Bool, #Bin/Bin_}
+                (\(b : #Bool) -> \(bin_ : #Bin/Bin_) -> b
+                    {1, #Bool, #Bin/Bin_}
+                    <1, #True  : #Bool, #Bin/Zero_ bin_ : #Bin/Bin_>
+                    <1, #False : #Bool, #Bin/One_  bin_ : #Bin/Bin_>
                 )
             )
         in  x
-            #Bin_
-            (\(b : #Bool) -> \(bin_ : #Bin_) -> b
-                #Bin_
-                (#Zero_ bin_)
+            #Bin/Bin_
+            (\(b : #Bool) -> \(bin_ : #Bin/Bin_) -> b
+                #Bin/Bin_
+                (#Bin/Zero_ bin_)
                 bin_
             )
     )
@@ -40,37 +40,47 @@ let succ (bin : #Bin) : #Bin_ = bin
 let unsnoc (bin : #Bin) : #Maybe {1, #Bin, #Bool} = bin
     (#Maybe   {1, #Bin, #Bool})
     (#Nothing {1, #Bin, #Bool})
-    (\(n : #Bin_) ->
-        let x : #Maybe {1, #Bin_, #Bool} = n
-            (#Maybe   {1, #Bin_, #Bool})
-            (#Nothing {1, #Bin_, #Bool})
-            (\(m : #Maybe {1, #Bin_, #Bool}) -> m
-                (#Maybe {1, #Bin_, #Bool})
-                (#Just {1, #Bin_, #Bool} <1, #Nil_ : #Bin_, #False : #Bool>)
-                (\(t : {1, #Bin_, #Bool}) -> t
-                    (#Maybe {1, #Bin_, #Bool})
-                    (\(n : #Bin_) -> \(b : #Bool) ->
-                        #Just {1, #Bin_, #Bool} <1, #Zero_ n : #Bin_, b : #Bool>
+    (\(n : #Bin/Bin_) ->
+        let x : #Maybe {1, #Bin/Bin_, #Bool} = n
+            (#Maybe   {1, #Bin/Bin_, #Bool})
+            (#Nothing {1, #Bin/Bin_, #Bool})
+            (\(m : #Maybe {1, #Bin/Bin_, #Bool}) -> m
+                (#Maybe {1, #Bin/Bin_, #Bool})
+                (   #Just
+                    {1, #Bin/Bin_, #Bool}
+                    <1, #Bin/Nil_ : #Bin/Bin_, #False : #Bool>
+                )
+                (\(t : {1, #Bin/Bin_, #Bool}) -> t
+                    (#Maybe {1, #Bin/Bin_, #Bool})
+                    (\(n : #Bin/Bin_) -> \(b : #Bool) ->
+                        #Just
+                        {1, #Bin/Bin_, #Bool}
+                        <1, #Bin/Zero_ n : #Bin/Bin_, b : #Bool>
                     )
                 )
             )
-            (\(m : #Maybe {1, #Bin_, #Bool}) -> m
-                (#Maybe {1, #Bin_, #Bool})
-                (#Just {1, #Bin_, #Bool} <1, #Nil_ : #Bin_, #True : #Bool>)
-                (\(t : {1, #Bin_, #Bool}) -> t
-                    (#Maybe {1, #Bin_, #Bool})
-                    (\(n : #Bin_) -> \(b : #Bool) ->
-                        #Just {1, #Bin_, #Bool} <1, #One_ n : #Bin_, b : #Bool>
+            (\(m : #Maybe {1, #Bin/Bin_, #Bool}) -> m
+                (#Maybe {1, #Bin/Bin_, #Bool})
+                (   #Just
+                    {1, #Bin/Bin_, #Bool}
+                    <1, #Bin/Nil_ : #Bin/Bin_, #True : #Bool>
+                )
+                (\(t : {1, #Bin/Bin_, #Bool}) -> t
+                    (#Maybe {1, #Bin/Bin_, #Bool})
+                    (\(n : #Bin/Bin_) -> \(b : #Bool) ->
+                        #Just
+                        {1, #Bin/Bin_, #Bool}
+                        <1, #Bin/One_ n : #Bin/Bin_, b : #Bool>
                     )
                 )
             )
         in  x
             (#Maybe {1, #Bin, #Bool})
-            (#Just  {1, #Bin, #Bool} <1, #Zero : #Bin, #True : #Bool>)
-            (\(t : {1, #Bin_, #Bool}) -> t
+            (#Just  {1, #Bin, #Bool} <1, #Bin/Zero : #Bin, #True : #Bool>)
+            (\(t : {1, #Bin/Bin_, #Bool}) -> t
                 (#Maybe {1, #Bin, #Bool})
-                (\(n : #Bin_) -> \(b : #Bool) ->
-                    #Just {1, #Bin, #Bool} <1, #One n : #Bin, b : #Bool>
+                (\(n : #Bin/Bin_) -> \(b : #Bool) ->
+                    #Just {1, #Bin, #Bool} <1, #Bin/One n : #Bin, b : #Bool>
                 )
             )
     )
@@ -80,45 +90,48 @@ in  \(b1 : #Bin)
 ->  b1
     #Bin
     b2
-    (\(n : #Bin_) ->
-        let x : {1, #Bin, #Bin_} = n
-            {1, #Bin, #Bin_}
-            <1, b2 : #Bin, #Nil_ : #Bin_>
+    (\(n : #Bin/Bin_) ->
+        let x : {1, #Bin, #Bin/Bin_} = n
+            {1, #Bin, #Bin/Bin_}
+            <1, b2 : #Bin, #Bin/Nil_ : #Bin/Bin_>
             -- Add `Zero` with the last bit of `carry`
-            (\(t : {1, #Bin, #Bin_}) -> t
-                {1, #Bin, #Bin_}
-                (\(carry : #Bin) -> \(accum: #Bin_) -> unsnoc carry
-                    {1, #Bin, #Bin_}
-                    <1, #Zero : #Bin, #Zero_ accum : #Bin_>
+            (\(t : {1, #Bin, #Bin/Bin_}) -> t
+                {1, #Bin, #Bin/Bin_}
+                (\(carry : #Bin) -> \(accum: #Bin/Bin_) -> unsnoc carry
+                    {1, #Bin, #Bin/Bin_}
+                    <1, #Bin/Zero : #Bin, #Bin/Zero_ accum : #Bin/Bin_>
                     (\(t : {1, #Bin, #Bool}) -> t
-                        {1, #Bin, #Bin_}
+                        {1, #Bin, #Bin/Bin_}
                         (\(bin : #Bin) -> \(b : #Bool) -> b
-                            {1, #Bin, #Bin_}
-                            <1, bin : #Bin, #One_  accum : #Bin_>
-                            <1, bin : #Bin, #Zero_ accum : #Bin_>
+                            {1, #Bin, #Bin/Bin_}
+                            <1, bin : #Bin, #Bin/One_  accum : #Bin/Bin_>
+                            <1, bin : #Bin, #Bin/Zero_ accum : #Bin/Bin_>
                         )
                     )
                 )
             )
             -- Add `One` with the last bit of `carry`
-            (\(t : {1, #Bin, #Bin_}) -> t
-                {1, #Bin, #Bin_}
-                (\(carry : #Bin) -> \(accum: #Bin_) -> unsnoc carry
-                    {1, #Bin, #Bin_}
-                    <1, #Zero : #Bin, #One_  accum : #Bin_>
+            (\(t : {1, #Bin, #Bin/Bin_}) -> t
+                {1, #Bin, #Bin/Bin_}
+                (\(carry : #Bin) -> \(accum: #Bin/Bin_) -> unsnoc carry
+                    {1, #Bin, #Bin/Bin_}
+                    <1, #Bin/Zero : #Bin, #Bin/One_  accum : #Bin/Bin_>
                     (\(t : {1, #Bin, #Bool}) -> t
-                        {1, #Bin, #Bin_}
+                        {1, #Bin, #Bin/Bin_}
                         (\(bin : #Bin) -> \(b : #Bool) -> b
-                            {1, #Bin, #Bin_}
-                            <1, #One (succ bin) : #Bin, #Zero_ accum : #Bin_>
-                            <1,             bin : #Bin, #One_  accum : #Bin_>
+                            {1, #Bin, #Bin/Bin_}
+                            <1
+                            , #Bin/One (succ bin) : #Bin
+                            , #Bin/Zero_ accum : #Bin/Bin_
+                            >
+                            <1, bin : #Bin, #Bin/One_ accum : #Bin/Bin_>
                         )
                     )
                 )
             )
         in  x
             #Bin
-            (\(carry : #Bin) -> \(accum : #Bin_) ->
-                #One (succ carry #Bin_ accum #Zero_ #One_)
+            (\(carry : #Bin) -> \(accum : #Bin/Bin_) ->
+                #Bin/One (succ carry #Bin/Bin_ accum #Bin/Zero_ #Bin/One_)
             )
     )

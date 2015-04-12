@@ -1,7 +1,7 @@
 let foldNat (bin : #Bin) (Nat : *) (Zero : Nat) (Succ : Nat -> Nat) : Nat = bin
     Nat
     Zero
-    (\(bin_ : #Bin_) ->
+    (\(bin_ : #Bin/Bin_) ->
         let x : {1, Nat -> Nat, Nat} = bin_
             {1, Nat -> Nat, Nat}
             <1, Succ : Nat -> Nat, Zero : Nat>

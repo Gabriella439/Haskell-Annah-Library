@@ -1,0 +1,33 @@
+let Succ (bin : #Bin) : #Bin = bin
+    #Bin
+    (#Bin/One #Bin/Nil_)
+    (\(bin_ : #Bin/Bin_) ->
+        let x : {1, #Bool, #Bin/Bin_} = bin_
+            {1, #Bool, #Bin/Bin_}
+            <1, #True : #Bool, #Bin/Nil_ : #Bin/Bin_>
+            (\(t : {1, #Bool, #Bin/Bin_}) -> t
+                {1, #Bool, #Bin/Bin_}
+                (\(b : #Bool) -> \(bin_ : #Bin/Bin_) -> b
+                    {1, #Bool, #Bin/Bin_}
+                    <1, #False : #Bool, #Bin/One_  bin_ : #Bin/Bin_>
+                    <1, #False : #Bool, #Bin/Zero_ bin_ : #Bin/Bin_>
+                )
+            )
+            (\(t : {1, #Bool, #Bin/Bin_}) -> t
+                {1, #Bool, #Bin/Bin_}
+                (\(b : #Bool) -> \(bin_ : #Bin/Bin_) -> b
+                    {1, #Bool, #Bin/Bin_}
+                    <1, #True  : #Bool, #Bin/Zero_ bin_ : #Bin/Bin_>
+                    <1, #False : #Bool, #Bin/One_  bin_ : #Bin/Bin_>
+                )
+            )
+        in  x
+            #Bin
+            (\(b : #Bool) -> \(bin_ : #Bin/Bin_) -> b
+                #Bin
+                (#Bin/One (#Bin/Zero_ bin_))
+                (          #Bin/One   bin_ )
+            )
+    )
+
+in Succ
