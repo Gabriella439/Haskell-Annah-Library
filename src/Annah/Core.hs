@@ -44,8 +44,6 @@ module Annah.Core (
     , Identity
     ) where
 
-import qualified Morte.Core as M
-
 import Data.Functor.Identity (Identity)
 
 import Annah.Import
