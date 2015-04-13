@@ -2,7 +2,6 @@
 
 module Main where
 
-import qualified Annah.Parser as Annah
 import qualified Annah.Core   as Annah
 import Control.Concurrent.Async (async)
 import Control.Exception (Exception, throwIO)
@@ -19,6 +18,10 @@ import Prelude hiding (FilePath)
 throws :: Exception e => Either e a -> IO a
 throws (Left  e) = throwIO e
 throws (Right a) = return a
+
+fmapL :: (e -> f)  -> Either e a -> Either f a
+fmapL k (Left  e) = Left (k e)
+fmapL _ (Right a) = Right a
 
 options :: Parser Bool
 options = switch (long "dynamic" <> short 'd')
@@ -42,8 +45,8 @@ main = do
     ae     <- throws (Annah.exprFromText inText)
     ae'    <- Annah.loadExpr ae
     let me = Annah.desugar ae'
-    mt     <- throws (Morte.typeOf me)
     link   <- getLink
+    mt     <- throws (fmapL (Annah.resugarTypeError link) (Morte.typeOf me))
     let at   = Annah.resugar link (Morte.normalize mt)
     let ae'' = Annah.resugar link (Morte.normalize me)
 

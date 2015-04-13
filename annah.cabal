@@ -33,6 +33,7 @@ Library
         void                 >= 0.3      && < 0.8
     Exposed-Modules:
         Annah.Core,
+        Annah.Error,
         Annah.Import,
         Annah.Lexer,
         Annah.Parser,

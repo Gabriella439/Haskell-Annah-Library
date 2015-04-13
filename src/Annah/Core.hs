@@ -36,6 +36,7 @@ module Annah.Core (
     , exprFromText
     , loadExpr
     , desugar
+    , resugarTypeError
     , resugar
     , dynamic
     , static
@@ -47,6 +48,7 @@ module Annah.Core (
 
 import Data.Functor.Identity (Identity)
 
+import Annah.Error
 import Annah.Import
 import Annah.Parser
 import Annah.Pretty
@@ -65,6 +67,8 @@ import qualified Morte.Core as M
     * You `desugar` the Annah expression to Morte
 
     * You type-check the Morte expression using `M.typeOf`
+
+    * If there is a type error, resugar the type error using `resugarTypeError`
 
     * You `M.normalize` the Morte expression
 
