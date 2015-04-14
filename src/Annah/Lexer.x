@@ -52,6 +52,7 @@ tokens :-
     "]"                             { \_    -> yield CloseBracket              }
     "{1"                            { \_    -> yield OpenProductType           }
     "{0"                            { \_    -> yield OpenSumType               }
+    "{"                             { \_    -> yield OpenBrace                 }
     "}"                             { \_    -> yield CloseBrace                }
     "<1"                            { \_    -> yield OpenProductValue          }
     ">"                             { \_    -> yield CloseAngle                }
@@ -59,12 +60,14 @@ tokens :-
     ","                             { \_    -> yield Comma                     }
     "|"                             { \_    -> yield Bar                       }
     ":"                             { \_    -> yield Colon                     }
+    ";"                             { \_    -> yield Semicolon                 }
     "#" $path* "(" $opchar+ ")"     { \text -> yield (File (Text.drop 1 text)) }
     "#" $path+                      { \text -> yield (File (Text.drop 1 text)) }
     "@"                             { \_    -> yield At                        }
     "*"                             { \_    -> yield Star                      }
     "BOX" | "□"                     { \_    -> yield Box                       }
     "->" | "→"                      { \_    -> yield Arrow                     }
+    "<-" | "←"                      { \_    -> yield LArrow                    }
     "\/" | "|~|" | "forall" | "∀" | "Π" { \_ -> yield Pi                       }
     "\" | "λ"                       { \_    -> yield Lambda                    }
     "given"                         { \_    -> yield Given                     }
@@ -74,6 +77,7 @@ tokens :-
     "let"                           { \_    -> yield Let                       }
     "="                             { \_    -> yield Equals                    }
     "in"                            { \_    -> yield In                        }
+    "do"                            { \_    -> yield Do                        }
     $digit+ "to" $digit+            { \txt  -> yield (parseOf txt)             }
     $digit+                         { \text -> yield (Number (toInt text))     }
     $fst $label* | "(" $opchar+ ")" { \text -> yield (Label text)              }
@@ -182,6 +186,7 @@ data Token
     | CloseBracket
     | OpenProductType
     | OpenSumType
+    | OpenBrace
     | CloseBrace
     | OpenProductValue
     | CloseAngle
@@ -190,10 +195,12 @@ data Token
     | Comma
     | Bar
     | Colon
+    | Semicolon
     | At
     | Star
     | Box
     | Arrow
+    | LArrow
     | Lambda
     | Pi
     | Given
@@ -203,6 +210,7 @@ data Token
     | Let
     | Equals
     | In
+    | Do
     | Of (Int, Int)
     | Label Text
     | Number Int

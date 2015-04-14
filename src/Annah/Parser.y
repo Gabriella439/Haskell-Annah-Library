@@ -55,6 +55,7 @@ import Annah.Syntax
     ']'     { Lexer.CloseBracket      }
     '{1'    { Lexer.OpenProductType   }
     '{0'    { Lexer.OpenSumType       }
+    '{'     { Lexer.OpenBrace         }
     '}'     { Lexer.CloseBrace        }
     '<1'    { Lexer.OpenProductValue  }
     '>'     { Lexer.CloseAngle        }
@@ -62,10 +63,12 @@ import Annah.Syntax
     ','     { Lexer.Comma             }
     '|'     { Lexer.Bar               }
     ':'     { Lexer.Colon             }
+    ';'     { Lexer.Semicolon         }
     '@'     { Lexer.At                }
     '*'     { Lexer.Star              }
     'BOX'   { Lexer.Box               }
     '->'    { Lexer.Arrow             }
+    '<-'    { Lexer.LArrow            }
     '\\'    { Lexer.Lambda            }
     '|~|'   { Lexer.Pi                }
     'given' { Lexer.Given             }
@@ -75,6 +78,7 @@ import Annah.Syntax
     'let'   { Lexer.Let               }
     '='     { Lexer.Equals            }
     'in'    { Lexer.In                }
+    'do'    { Lexer.Do                }
     of      { Lexer.Of $$             }
     label   { Lexer.Label $$          }
     number  { Lexer.Number $$         }
@@ -104,20 +108,21 @@ Expr2 :: { Expr FilePath }
     | Expr3       { $1        }
 
 Expr3 :: { Expr FilePath }
-    : VExpr                       { Var $1                               }
-    | '*'                         { Const Star                           }
-    | 'BOX'                       { Const Box                            }
-    | file                        { Import (fromText (Text.toStrict $1)) }
-    | of                          { uncurry SumConstructor $1            }
-    | number                      { Natural (fromIntegral $1)            }
-    | ascii                       { ASCII $1                             }
-    | '<1' ProductValueFields '>' { ProductValue $2                      }
-    | '{1' ProductTypeFields  '}' { ProductType  $2                      }
-    | '{0' SumTypeFields      '}' { SumType      $2                      }
-    | '[*' Expr0 ListFields   ']' { List $2 $3                           }
-    | '[.' Expr0 PathFields   ']' { let ~(oms, o) = $3 in Path $2 oms o  }
-    | '['  ListTypeField      ']' { ListType $2                          }
-    | '(' Expr0               ')' { $2                                   }
+    : VExpr                       { Var $1                                   }
+    | '*'                         { Const Star                               }
+    | 'BOX'                       { Const Box                                }
+    | file                        { Import (fromText (Text.toStrict $1))     }
+    | of                          { uncurry SumConstructor $1                }
+    | number                      { Natural (fromIntegral $1)                }
+    | ascii                       { ASCII $1                                 }
+    | '<1' ProductValueFields '>' { ProductValue $2                          }
+    | '{1' ProductTypeFields  '}' { ProductType  $2                          }
+    | '{0' SumTypeFields      '}' { SumType      $2                          }
+    | '[*' Expr0 ListFields   ']' { List $2 $3                               }
+    | '[.' Expr0 PathFields   ']' { let ~(oms, o) = $3 in Path $2 oms o      }
+    | '['  ListTypeField      ']' { ListType $2                              }
+    | 'do' Expr0 '{' Binds '}'    { let (init, last) = $4 in Do $2 init last }
+    | '(' Expr0               ')' { $2                                       }
 
 Args :: { [Arg FilePath] }
      : ArgsRev { reverse $1 }
@@ -223,6 +228,13 @@ PathFields :: { ([(Expr FilePath, Expr FilePath)], Expr FilePath) }
 
 Object :: { Expr FilePath }
     : '(|' Expr0 '|)' { $2 }
+
+Bind :: { Bind FilePath }
+    : label ':' Expr0 '<-' Expr0 ';' { Bind (Arg $1 $3) $5 }
+
+Binds :: { ([Bind FilePath], Bind FilePath) }
+    : Bind Binds { let ~(init, last) = $2 in ($1:init, last) }
+    | Bind       { ([], $1)                                  }
 
 {
 -- | The specific parsing error

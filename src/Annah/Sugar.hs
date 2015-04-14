@@ -47,6 +47,7 @@ desugar (ProductType  as    ) = desugarProductTypeSection as
 desugar (List t es          ) = desugarList t es
 desugar (ListType f         ) = desugarListTypeSection f
 desugar (Path t oms o       ) = desugarPath t oms o
+desugar (Do m bs b          ) = desugarDo m bs b
 desugar (Import m           ) = absurd m
 
 {-| Convert a Morte expression to an Annah expression
@@ -636,6 +637,9 @@ resugarListTypeSection link e =
 
 {-| Convert a path into a Morte expression
 
+    For the experts, a path is a \"free category\" (a.k.a. a \"type-aligned
+    list\")
+
     Example:
 
 > [. cat (|a|) f (|b|) g (|c|)]
@@ -688,6 +692,23 @@ desugarPath c0 oms0 o0 =
         o2' = desugar1 o2
         m1' = desugar1 m1
 
+{-| Convert a Morte expression back into a path
+
+    Example:
+
+>     λ(Path : ∀(a : *) → ∀(b : *) → *)
+> →   λ(  Step
+>     :   ∀(a : *)
+>     →   ∀(b : *)
+>     →   ∀(c : *)
+>     →   ∀(head : cat a b)
+>     →   ∀(tail : Path b c)
+>     →   Path a c
+>     )
+> →   λ(End : ∀(a : *) → Path a a)
+> →   Step a b c f (Step b c c g (End c))
+> =>  [. cat (|a|) f (|b|) g (|c|)]
+-}
 resugarPath
     :: (M.Expr -> Maybe m) -> M.Expr -> Maybe (Expr m, [(Expr m, Expr m)], Expr m)
 resugarPath link
@@ -741,6 +762,48 @@ resugarPath link
         return (((o1, m1):oms, o0), o1')
     go _ = empty
 resugarPath _ _ = empty
+
+{-| Convert a command (i.e. do-notation) into a Morte expression
+
+    For the experts, this encodes the do-notation using what the Haskell world
+    calls the \"operational monad\" which is a free monad without a functor
+    constraint.  I choose this approach because Annah does not have type
+    classes.
+
+    Example:
+
+> do m { x0 : _A0 <- e0; x1 : _A1 <- e1 }
+> =>  λ(Cmd : *)
+> →   λ(Bind : ∀(b : *) → m b → (b → Cmd) → Cmd)
+> →   λ(Pure : ∀(x1 : _A1) → Cmd)
+> →   Bind
+>     _A0
+>     e0
+>     (   λ(x0 : _A0)
+>     →   Bind
+>         _A1
+>         e1
+>         Pure
+>     )
+-}
+desugarDo :: Expr Void -> [Bind Void] -> Bind Void -> M.Expr
+desugarDo m bs0 (Bind (Arg x0 _A0) e0) =
+    M.Lam "Cmd" (M.Const M.Star)
+        (M.Lam "Bind"
+            (M.Pi "b" (M.Const M.Star)
+                (M.Pi "_" (M.App (desugar m) "b")
+                    (M.Pi "_" (M.Pi "_" "b" "Cmd") "Cmd") ) )
+            (M.Lam "Pure" (M.Pi x0 (desugar _A0) "Cmd")
+                (go bs0 (0 :: Int) (0 :: Int)) ) )
+  where
+    go  []                    _       _       =
+        M.App (M.App (M.App "Bind" (desugar _A0)) (desugar e0)) "Pure"
+    go (Bind (Arg x _A) e:bs) numPure numBind = numBind' `seq` numPure' `seq`
+        M.App (M.App (M.App "Bind" (desugar _A )) (desugar e ))
+            (M.Lam x (desugar _A) (go bs numBind' numPure'))
+      where
+        numBind' = if x == "Bind" then numBind + 1 else numBind
+        numPure' = if x == "Pure" then numPure + 1 else numPure
 
 {-| Pass this to `resugar` if you wish to replace certain expressions with
     external imports

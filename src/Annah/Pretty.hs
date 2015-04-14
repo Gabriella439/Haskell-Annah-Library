@@ -91,6 +91,10 @@ instance Builds Let where
         <>  build r
         <>  " "
 
+instance Builds Bind where
+    build (Bind (Arg x _A) e) =
+        fromLazyText x <> " : " <> build _A <> " <- " <> build e <> "; "
+
 instance Builds Expr where
     build = go 0
       where
@@ -139,6 +143,11 @@ instance Builds Expr where
                 <> mconcat
                     (map (\(o, m) -> " (|" <> build o <> "|) " <> build m) oms)
                 <> " (|" <> build o0 <> "|)]"
+            Do m bs b           ->
+                    "do " <> build m <> " { "
+                <>  mconcat (map build bs)
+                <>  build b
+                <>  "}"
             Import m            -> "#" <> fromText (format fp m)
           where
             quoteAbove :: Int -> Builder -> Builder

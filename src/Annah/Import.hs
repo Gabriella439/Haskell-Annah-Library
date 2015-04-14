@@ -70,6 +70,7 @@ instance Loads Expr where
     load (Path c oms o0      ) = Path <$> load c <*> mapM loadP oms <*> load o0
       where
         loadP (o, m) = (,) <$> load o <*> load m
+    load (Do m bs b          ) = Do <$> load m <*> mapM load bs <*> load b
     load (Import path        ) = Load (do
         m <- get
         case Map.lookup path m of
@@ -136,3 +137,6 @@ instance Loads SumTypeSectionField where
 instance Loads ListTypeSectionField where
     load EmptyListTypeSectionField = pure EmptyListTypeSectionField
     load (ListTypeSectionField f)  = ListTypeSectionField <$> load f
+
+instance Loads Bind where
+    load (Bind arg e) = Bind <$> load arg <*> load e

@@ -15,6 +15,7 @@ module Annah.Syntax (
     , Data(..)
     , Type(..)
     , Family(..)
+    , Bind(..)
     , Expr(..)
     ) where
 
@@ -105,6 +106,14 @@ data Data m = Data
     , dataArgs :: [Arg m]
     }
 
+{-|
+> Bind arg e  ~  arg <- e;
+-}
+data Bind m = Bind
+    { bindLhs :: Arg m
+    , bindRhs :: Expr m
+    }
+
 -- | Syntax tree for expressions
 data Expr m
     -- | > Const c                         ~  c
@@ -142,6 +151,8 @@ data Expr m
     | ListType (ListTypeSectionField m)
     -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [. c (|o1|) m1 (|o2|) m2 (|o3|)]
     | Path (Expr m) [(Expr m, Expr m)] (Expr m)
+    -- | > Do m [b1, b2] b3                ~  do m { b1 b2 b3 }
+    | Do (Expr m) [Bind m] (Bind m)
     | Import m
 
 instance IsString (Expr m) where
