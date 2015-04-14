@@ -57,6 +57,7 @@ desugar (Import m           ) = absurd m
 resugar :: (M.Expr -> Maybe m) -> M.Expr -> Expr m
 resugar link e
     | Just e' <-  fmap Natural      (resugarNat                      e)
+              <|> fmap lets         (resugarLets                link e)
               <|> fmap ProductValue (resugarProductValueSection link e)
               <|> fmap ProductType  (resugarProductTypeSection  link e)
               <|> fmap ASCII        (resugarASCII                    e)
@@ -69,6 +70,7 @@ resugar link e
               <|> fmap Import       (link                            e)
     = e'
   where
+    lets (x, y)    = Lets           x y
     sc   (x, y)    = SumConstructor x y
     list (x, y)    = List           x y
     path (x, y, z) = Path           x y z
@@ -935,6 +937,35 @@ desugarLets lets e = apps
             M.App rest (desugar (lam args bn)) )
         lams
         (reverse lets)
+
+-- | Convert a Morte expression back into a let expression
+resugarLets :: (M.Expr -> Maybe m) -> M.Expr -> Maybe ([Let m], Expr m)
+resugarLets link e0 = do
+    -- Require at least one `Let` to ensure productivity
+    r@(_:_, _) <- go0 e0 []
+    return r
+  where
+    go0 (M.App rest rhs) rhss = go0 rest (rhs:rhss)
+    go0  e               rhss = go1 e rhss
+
+    go1 (M.Lam x _A e) (rhs:rhss) = do
+        ~(lets, e') <- go1 e rhss
+        let (args, _A', rhs') = go2 _A rhs
+        return (Let x args _A' rhs':lets, e')
+    go1             e      []     = return ([], e_)
+      where
+        e_ = resugar link e
+    go1             _      _      = empty
+
+    go2 (M.Pi xL _AL eL) (M.Lam xR _AR eR)
+        | xL == xR && _AL == _AR = (Arg xL _AL_:args, eL', eR')
+          where
+            _AL_ = resugar link _AL
+            (args, eL', eR') = go2 eL eR
+    go2 eL eR = ([], eL_, eR_)
+      where
+        eL_ = resugar link eL
+        eR_ = resugar link eR
 
 -- | A type or data constructor
 data Cons = Cons
