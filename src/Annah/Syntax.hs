@@ -145,11 +145,11 @@ data Expr m
     | SumConstructor Int Int
     -- | > SumType [t1, t2]                ~  {0|t1|t2}
     | SumType [SumTypeSectionField m]
-    -- | > List t [x, y, z]                ~  [* t,x,y,z]
+    -- | > List t [x, y, z]                ~  [nil t,x,y,z]
     | List (Expr m) [Expr m]
     -- | > ListType t                      ~  [t]
     | ListType (ListTypeSectionField m)
-    -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [. c (|o1|) m1 (|o2|) m2 (|o3|)]
+    -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [id c (|o1|) m1 (|o2|) m2 (|o3|)]
     | Path (Expr m) [(Expr m, Expr m)] (Expr m)
     -- | > Do m [b1, b2] b3                ~  do m { b1 b2 b3 }
     | Do (Expr m) [Bind m] (Bind m)

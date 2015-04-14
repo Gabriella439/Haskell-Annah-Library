@@ -134,12 +134,12 @@ instance Builds Expr where
                 <>  mconcat (map (\arg -> "," <> build arg) args)
                 <>  "}"
             List t as           ->
-                    "[* " <> build t
+                    "[nil " <> build t
                 <> mconcat (map (\a -> "," <> build a) as)
                 <>  "]"
             ListType t          -> "[" <> build t <> "]"
             Path c oms o0       ->
-                    "[. " <> build c
+                    "[id " <> build c
                 <> mconcat
                     (map (\(o, m) -> " (|" <> build o <> "|) " <> build m) oms)
                 <> " (|" <> build o0 <> "|)]"

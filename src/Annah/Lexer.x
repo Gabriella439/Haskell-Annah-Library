@@ -46,8 +46,8 @@ tokens :-
     "|)"                            { \_    -> yield CloseBanana               }
     "("                             { \_    -> yield OpenParen                 }
     ")"                             { \_    -> yield CloseParen                }
-    "[*"                            { \_    -> yield OpenList                  }
-    "[."                            { \_    -> yield OpenPath                  }
+    "[nil"                          { \_    -> yield OpenList                  }
+    "[id"                           { \_    -> yield OpenPath                  }
     "["                             { \_    -> yield OpenBracket               }
     "]"                             { \_    -> yield CloseBracket              }
     "{1"                            { \_    -> yield OpenProductType           }

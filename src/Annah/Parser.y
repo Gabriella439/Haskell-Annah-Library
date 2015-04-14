@@ -49,8 +49,8 @@ import Annah.Syntax
     '|)'    { Lexer.CloseBanana       }
     '('     { Lexer.OpenParen         }
     ')'     { Lexer.CloseParen        }
-    '[*'    { Lexer.OpenList          }
-    '[.'    { Lexer.OpenPath          }
+    '[nil'  { Lexer.OpenList          }
+    '[id'   { Lexer.OpenPath          }
     '['     { Lexer.OpenBracket       }
     ']'     { Lexer.CloseBracket      }
     '{1'    { Lexer.OpenProductType   }
@@ -118,8 +118,8 @@ Expr3 :: { Expr FilePath }
     | '<1' ProductValueFields '>' { ProductValue $2                          }
     | '{1' ProductTypeFields  '}' { ProductType  $2                          }
     | '{0' SumTypeFields      '}' { SumType      $2                          }
-    | '[*' Expr0 ListFields   ']' { List $2 $3                               }
-    | '[.' Expr0 PathFields   ']' { let ~(oms, o) = $3 in Path $2 oms o      }
+    | '[nil' Expr0 ListFields ']' { List $2 $3                               }
+    | '[id'  Expr0 PathFields ']' { let ~(oms, o) = $3 in Path $2 oms o      }
     | '['  ListTypeField      ']' { ListType $2                              }
     | 'do' Expr0 '{' Binds '}'    { let (init, last) = $4 in Do $2 init last }
     | '(' Expr0               ')' { $2                                       }
