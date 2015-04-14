@@ -29,7 +29,6 @@ Library
         text                 >= 0.11.1.0 && < 1.3 ,
         transformers         >= 0.2.0.0  && < 0.5 ,
         turtle               >= 1.1.0    && < 1.2 ,
-        unordered-containers                < 0.3 ,
         void                 >= 0.3      && < 0.8
     Exposed-Modules:
         Annah.Core,
@@ -56,5 +55,4 @@ Executable annah
         optparse-applicative                < 0.12,
         text                 >= 0.11.1.0 && < 1.3 ,
         turtle               >= 1.1.0    && < 1.2 ,
-        unordered-containers                < 0.3 ,
         transformers         >= 0.2.0.0  && < 0.5

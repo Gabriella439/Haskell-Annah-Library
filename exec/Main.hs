@@ -6,7 +6,6 @@ import qualified Annah.Core   as Annah
 import Control.Concurrent.Async (async)
 import Control.Exception (Exception, throwIO)
 import qualified Control.Foldl as Fold
-import qualified Data.HashMap.Strict as HashMap
 import Data.Text.Lazy (fromStrict)
 import qualified Data.Text.Lazy.IO as Text
 import qualified Morte.Core as Morte
@@ -36,7 +35,7 @@ main = do
                      \to standard error, and writing the normalized program to\
                      \standard output"
         )
-    let io = fmap (Annah.dynamic . HashMap.fromList) (fold files Fold.list)
+    let io = fmap Annah.dynamic (fold files Fold.list)
     getLink <- if dynamic
         then fmap wait (async io)
         else return (return Annah.static)

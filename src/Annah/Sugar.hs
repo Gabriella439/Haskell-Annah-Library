@@ -16,8 +16,6 @@ module Annah.Sugar (
 
 import Control.Applicative (pure, empty, (<|>))
 import Control.Monad (guard)
-import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HashMap
 import Data.Char (chr, ord)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
@@ -845,7 +843,7 @@ resugarDo link
                             (M.Var (M.V "Cmd" 0)) ) ) )
             (M.Lam "Pure" (M.Pi x0 _A0 (M.Var (M.V "Cmd" 0))) e0) ) ) = do
     (bs, b) <- go e0 0 0
-    let m_ = Lam "b" (Const M.Star) (resugar link mb)
+    let m_ = resugar link (M.Lam "b" (M.Const M.Star) mb)
     return (m_, bs, b)
   where
     _A0_ = resugar link _A0
@@ -876,12 +874,12 @@ resugarDo _ _ = empty
 {-| Pass this to `resugar` if you wish to replace certain expressions with
     external imports
 
-    In other words, if you call @resugar (dynamic h)@, then `resugar` will take any
-    expression that matches a key in @h@ and replace the matching expression with
-    the corresponding @FilePath@ value
+    In other words, if you call @resugar (dynamic h)@, then `resugar` will take
+    any expression that matches a key in @h@ and replace the matching expression
+    with the corresponding @FilePath@ value
 -}
-dynamic :: HashMap M.Expr FilePath -> M.Expr -> Maybe FilePath
-dynamic h e = HashMap.lookup e h
+dynamic :: [(M.Expr, FilePath)] -> M.Expr -> Maybe FilePath
+dynamic h e = lookup e h
 
 {-| Pass this to `resugar` if you don't want the result to contain any external
     imports
