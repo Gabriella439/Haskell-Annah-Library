@@ -84,7 +84,7 @@ instance Builds TypeError where
 
 instance Builds TypeMessage where
     build  UnboundVariable           =
-            "Error: Unboundvariable\n"
+            "Error: Unbound variable\n"
     build (InvalidInputType expr)    =
             "Error: Invalid input type\n"
         <>  "\n"
