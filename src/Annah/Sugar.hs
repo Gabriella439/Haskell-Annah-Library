@@ -66,6 +66,7 @@ resugar link e
               <|> fmap list         (resugarList                link e)
               <|> fmap ListType     (resugarListTypeSection     link e)
               <|> fmap path         (resugarPath                link e)
+              <|> fmap cmd          (resugarDo                  link e)
               <|> fmap SumType      (resugarSumTypeSection      link e)
               <|> fmap Import       (link                            e)
     = e'
@@ -73,6 +74,7 @@ resugar link e
     sc   (x, y)    = SumConstructor x y
     list (x, y)    = List           x y
     path (x, y, z) = Path           x y z
+    cmd  (x, y, z) = Do             x y z
 resugar _ (M.Const c    ) = Const c
 resugar _ (M.Var v      ) = Var v
 resugar link (M.Lam x _A  b) = Lam x (resugar link _A) (resugar link  b)
@@ -796,14 +798,80 @@ desugarDo m bs0 (Bind (Arg x0 _A0) e0) =
             (M.Lam "Pure" (M.Pi x0 (desugar _A0) "Cmd")
                 (go bs0 (0 :: Int) (0 :: Int)) ) )
   where
-    go  []                    _       _       =
-        M.App (M.App (M.App "Bind" (desugar _A0)) (desugar e0)) "Pure"
+    go  []                    numPure numBind =
+        M.App
+            (M.App (M.App (M.Var (M.V "Bind" numBind)) (desugar _A0))
+                (desugar e0) )
+            (M.Var (M.V "Pure" numPure))
     go (Bind (Arg x _A) e:bs) numPure numBind = numBind' `seq` numPure' `seq`
-        M.App (M.App (M.App "Bind" (desugar _A )) (desugar e ))
+        M.App
+            (M.App
+                (M.App (M.Var (M.V "Bind" numBind)) (desugar _A))
+                (desugar e) )
             (M.Lam x (desugar _A) (go bs numBind' numPure'))
       where
         numBind' = if x == "Bind" then numBind + 1 else numBind
         numPure' = if x == "Pure" then numPure + 1 else numPure
+
+{-| Convert a Morte expression back into a command (i.e. do-notation)
+
+    Example:
+
+>     λ(Cmd : *)
+> →   λ(Bind : ∀(b : *) → m b → (b → Cmd) → Cmd)
+> →   λ(Pure : ∀(x1 : _A1) → Cmd)
+> →   Bind
+>     _A0
+>     e0
+>     (   λ(x0 : _A0)
+>     →   Bind
+>         _A1
+>         e1
+>         Pure
+>     )
+> =>  do m { x0 : _A0 <- e0; x1 : _A1 <- e1 }
+-}
+resugarDo
+    :: (M.Expr -> Maybe m)
+    -> M.Expr
+    -> Maybe (Expr m, [Bind m], Bind m)
+resugarDo link
+    (M.Lam "Cmd" (M.Const M.Star)
+        (M.Lam "Bind"
+            (M.Pi "b" (M.Const M.Star)
+                (M.Pi "_" mb
+                    (M.Pi "_"
+                        (M.Pi "_" (M.Var (M.V "b" 0)) (M.Var (M.V "Cmd" 0)))
+                            (M.Var (M.V "Cmd" 0)) ) ) )
+            (M.Lam "Pure" (M.Pi x0 _A0 (M.Var (M.V "Cmd" 0))) e0) ) ) = do
+    (bs, b) <- go e0 0 0
+    let m_ = Lam "b" (Const M.Star) (resugar link mb)
+    return (m_, bs, b)
+  where
+    _A0_ = resugar link _A0
+
+    go  (M.App
+            (M.App (M.App (M.Var (M.V "Bind" numBind')) _A0') e0')
+            (M.Var (M.V "Pure" numPure')) )
+        numPure
+        numBind = do
+        guard (_A0 == _A0' && numPure == numPure' && numBind == numBind')
+        let _A0'_ = resugar link _A0'
+        let e0'_  = resugar link e0'
+        return ([], Bind (Arg x0 _A0_) e0'_)
+    go  (M.App (M.App (M.App (M.Var (M.V "Bind" numBind')) _A) e)
+            (M.Lam x _A' e') )
+        numPure
+        numBind = do
+        guard (_A == _A' && numBind == numBind')
+        let numPure'' = if x == "Pure" then numPure + 1 else numPure
+        let numBind'' = if x == "Bind" then numBind + 1 else numBind
+        ~(bs, b) <- numPure'' `seq` numBind'' `seq` go e' numPure'' numBind''
+        let _A_ = resugar link _A
+        let e_  = resugar link e
+        return (Bind (Arg x _A_) e_:bs, b)
+    go _ _ _ = empty
+resugarDo _ _ = empty
 
 {-| Pass this to `resugar` if you wish to replace certain expressions with
     external imports
