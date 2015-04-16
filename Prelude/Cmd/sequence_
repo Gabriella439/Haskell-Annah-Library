@@ -1,0 +1,8 @@
+let sequence_ (m : * -> *) (cmds : [#Cmd m {1}]) : #Cmd m {1} =
+    cmds
+    (#Cmd m {1})
+    (\(cmd1 : #Cmd m {1}) -> \(cmd2 : #Cmd m {1}) ->
+        #Cmd/(>>=) {1} {1} m cmd1 (\(_ : {1}) -> cmd2)
+    )
+    (#Cmd/Pure m {1} <1>)
+in  sequence_
