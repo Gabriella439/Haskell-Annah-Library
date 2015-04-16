@@ -1,2 +1,2 @@
-let getLine : #IO #ASCIIString = #IO/GetLine_ #ASCIIString (#IO/Pure_ #ASCIIString)
+let getLine : #IO #ASCII = #IO/GetLine_ #ASCII (#IO/Pure_ #ASCII)
 in  getLine

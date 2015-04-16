@@ -1,7 +1,7 @@
 given a : *
 type IO
-data PutLine_ (str : #ASCIIString) IO
-data GetLine_ (#ASCIIString -> IO)
+data PutLine_ (str : #ASCII) IO
+data GetLine_ (#ASCII -> IO)
 data Pure_ (r : a)
 in
 Pure_
