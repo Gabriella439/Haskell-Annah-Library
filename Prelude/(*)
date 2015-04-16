@@ -5,7 +5,7 @@ let shiftL (places : #Bin) (bin : #Bin) : #Bin = bin
         #Bin/One
         (   bin_
             #Bin/Bin_
-            (#foldNat places #Bin/Bin_ #Bin/Nil_ #Bin/Zero_)
+            (#foldNat places #Bin/Bin_ #Bin/Zero_ #Bin/Nil_)
             #Bin/Zero_
             #Bin/One_
         )

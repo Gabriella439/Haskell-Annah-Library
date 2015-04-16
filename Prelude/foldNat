@@ -1,4 +1,4 @@
-let foldNat (bin : #Bin) (Nat : *) (Zero : Nat) (Succ : Nat -> Nat) : Nat = bin
+let foldNat (bin : #Bin) (Nat : *) (Succ : Nat -> Nat) (Zero : Nat) : Nat = bin
     Nat
     Zero
     (\(bin_ : #Bin/Bin_) ->
