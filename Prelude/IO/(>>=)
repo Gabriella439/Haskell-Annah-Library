@@ -1,0 +1,17 @@
+given a : *
+type IO
+data PutLine_ (str : #ASCIIString) IO
+data GetLine_ (#ASCIIString -> IO)
+data Pure_ (r : a)
+fold foldIO
+in
+
+let (>>=) (a : *) (b : *) (m : IO a) (f : a -> IO b) : IO b =
+    foldIO a
+        m
+        (IO b)
+        (PutLine_ b)
+        (GetLine_ b)
+        (\(r : a) -> foldIO b (f r) (IO b) (PutLine_ b) (GetLine_ b) (Pure_ b))
+
+in (>>=)

@@ -1,0 +1,3 @@
+let putLine (str : #ASCIIString) : #IO {1} =
+    #IO/PutLine_ {1} str (#IO/Pure_ {1} <1>)
+in  putLine
