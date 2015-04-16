@@ -9,5 +9,5 @@ let unzip (a : *) (b : *) (abs : [{1, a, b}]) : {1, [a], [b]} = abs
             )
         )
     )
-    <1, [* a] : [a], [* b] : [b]>
+    <1, [nil a] : [a], [nil b] : [b]>
 in  unzip
