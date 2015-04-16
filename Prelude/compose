@@ -1,6 +1,6 @@
-let function : #Category #(->) =
+let compose : #Category #(->) =
         \(a : *)
     ->  \(b : *)
     ->  \(p : #Path #(->) a b)
     ->  p #(->) #(|) #id
-in  function
+in  compose
