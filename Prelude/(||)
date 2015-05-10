@@ -1,1 +1,1 @@
-\(b1 : #Bool) -> \(b2 : #Bool) -> #if b1 #Bool #True b2
+\(b1 : #Bool ) -> \(b2 : #Bool ) -> #if b1 #Bool #True b2

@@ -1,2 +1,2 @@
-let and : #Monoid #Bool = \(xs : [#Bool]) -> xs #Bool #(&&) #True
+let and : #Monoid #Bool = \(xs : [#Bool ]) -> xs #Bool #(&&) #True
 in  and
