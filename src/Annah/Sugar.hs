@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternGuards     #-}
+{-# OPTIONS_GHC -Wall #-}
 
 {-| This module contains all logic for desugaring Annah expressions to Morte and
     resugaring Morte expressions back to Annah.  I call this desugaring because
@@ -70,6 +71,7 @@ resugar (M.Var v      ) = Var v
 resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
 resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
 resugar (M.App f a    ) = App (resugar f) (resugar a)
+resugar (M.Import p   ) = Import p
 
 toBin :: Integer -> [Bool]
 toBin n0 = reverse (go n0)

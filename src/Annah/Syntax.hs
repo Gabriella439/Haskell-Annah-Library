@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wall #-}
 
 -- | This module exports all the types used to build Annah's syntax tree
 

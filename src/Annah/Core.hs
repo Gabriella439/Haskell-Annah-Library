@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings  #-}
+{-# OPTIONS_GHC -Wall -fno-warn-unused-imports #-}
 
 {-| This module contains the core machinery for the Annah language, which is a
     medium-level distributed language built on top of Morte.

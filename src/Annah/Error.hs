@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# OPTIONS_GHC -Wall #-}
 
 module Annah.Error (
     -- * Error
