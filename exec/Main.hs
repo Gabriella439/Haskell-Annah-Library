@@ -22,12 +22,9 @@ fmapL :: (e -> f)  -> Either e a -> Either f a
 fmapL k (Left  e) = Left (k e)
 fmapL _ (Right a) = Right a
 
-options :: Parser Bool
-options = switch (long "dynamic" <> short 'd')
-
 main :: IO ()
 main = do
-    dynamic <- execParser $ info (helper <*> options)
+    execParser $ info (helper <*> pure ())
         (   fullDesc
         <>  header "annah - A strongly typed, purely functional language"
         <>  progDesc "Type-check and normalize an Annah program, reading the \
@@ -35,36 +32,15 @@ main = do
                      \to standard error, and writing the normalized program to\
                      \standard output"
         )
-    let io = fmap Annah.dynamic (fold files Fold.list)
-    getLink <- if dynamic
-        then fmap wait (async io)
-        else return (return Annah.static)
 
     inText <- Text.getContents
     ae     <- throws (Annah.exprFromText inText)
     ae'    <- Annah.loadExpr ae
     let me = Annah.desugar ae'
-    link   <- getLink
-    mt     <- throws (fmapL (Annah.resugarTypeError link) (Morte.typeOf me))
-    let at   = Annah.resugar link (Morte.normalize mt)
-    let ae'' = Annah.resugar link (Morte.normalize me)
+    mt     <- throws (fmapL (Annah.resugarTypeError) (Morte.typeOf me))
+    let at   = Annah.resugar (Morte.normalize mt)
+    let ae'' = Annah.resugar (Morte.normalize me)
 
     Text.hPutStrLn stderr (Annah.prettyExpr at)
     Text.hPutStrLn stderr mempty
     Text.putStrLn (Annah.prettyExpr ae'')
-
-files :: Shell (Morte.Expr, FilePath)
-files = do
-    dir        <- liftIO pwd
-    -- This adds a trailing slash, otherwise `stripPrefix` will not work
-    let dir' = dir </> mempty
-    file       <- lstree dir
-    file'      <- liftIO (realpath file)
-    False      <- liftIO (testdir file')
-    txt        <- liftIO (strict (input file'))
-    Right expr <- return (Annah.exprFromText (fromStrict txt))
-    expr'      <- liftIO (fmap Annah.desugar (Annah.loadExpr expr))
-    Right _    <- return (Morte.typeOf expr')
-    Just  rel  <- return (stripPrefix dir' file')
-    let rel' = if basename rel == "=" then dirname rel else rel
-    return (Morte.normalize expr', rel')

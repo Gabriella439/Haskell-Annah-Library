@@ -22,64 +22,70 @@ import Annah.Syntax
 
     The result is a syntactically valid Annah program
 -}
-prettyExpr :: Expr FilePath -> Text
+prettyExpr :: Builds a => Expr a -> Text
 prettyExpr = toLazyText . build
 
 -- | Pretty-print a value as a `Builder`
-class Builds f where
-    build :: f FilePath -> Builder
+class Builds a where
+    build :: a -> Builder
 
-instance Builds Arg where
+instance Builds M.X where
+    build = M.absurd
+
+instance Builds M.Path where
+    build = M.buildPath
+
+instance Builds a => Builds (Arg a) where
     build (Arg "_" _A) =                                   build _A
     build (Arg  x  _A) = "(" <> fromLazyText x <> " : " <> build _A <> ")"
 
-instance Builds ProductTypeField where
+instance Builds a => Builds (ProductTypeField a) where
     build (ProductTypeField x _A) =
         if x == "_"
         then build _A
         else fromLazyText x <> " : " <> build _A
 
-instance Builds ProductTypeSectionField where
+instance Builds a => Builds (ProductTypeSectionField a) where
     build (TypeField a   ) = build a
     build  EmptyTypeField  = mempty
 
-instance Builds ProductValueField where
+instance Builds a => Builds (ProductValueField a) where
     build (ProductValueField a b) = build a <> " : " <> build b
 
-instance Builds ProductValueSectionField where
+instance Builds a => Builds (ProductValueSectionField a) where
     build (ValueField     a) = build a
     build (TypeValueField t) = build t
     build  EmptyValueField   = mempty
 
-instance Builds SumTypeSectionField where
+instance Builds a => Builds (SumTypeSectionField a) where
     build  EmptySumTypeField  = mempty
     build (SumTypeField f   ) = build f
 
-instance Builds ListTypeSectionField where
+instance Builds a => Builds (ListTypeSectionField a) where
     build  EmptyListTypeSectionField  = mempty
     build (ListTypeSectionField f   ) = build f
 
-instance Builds Family where
+instance Builds a => Builds (Family a) where
     build (Family gs ts)
         =   "given "
         <>  mconcat (map (\g -> build g <> " ") gs)
         <>  mconcat (map build ts)
 
-instance Builds Type where
+instance Builds a => Builds (Type a) where
     build (Type t f ds)
         =   "type "
         <>  fromLazyText t
         <>  mconcat (map build ds)
         <>  (if f == "_" then mempty else " fold " <> fromLazyText f <> " ")
 
-instance Builds Data where
+instance Builds a => Builds (Data a) where
     build (Data d args)
         =   "data "
         <>  fromLazyText d
         <>  " "
         <>  mconcat (map (\arg -> build arg <> " ") args)
 
-instance Builds Let where
+instance Builds a => Builds (Let a) where
     build (Let n args t r)
         =   "let "
         <>  fromLazyText n
@@ -91,14 +97,14 @@ instance Builds Let where
         <>  build r
         <>  " "
 
-instance Builds Bind where
+instance Builds a => Builds (Bind a) where
     build (Bind (Arg x _A) e) =
         fromLazyText x <> " : " <> build _A <> " <- " <> build e <> "; "
 
-instance Builds Expr where
+instance Builds a => Builds (Expr a) where
     build = go 0
       where
-        go :: Int -> Expr FilePath -> Builder
+        go :: Builds a => Int -> Expr a -> Builder
         go prec e = case e of
             Const c             -> M.buildConst c
             Var x               -> M.buildVar x
@@ -148,7 +154,7 @@ instance Builds Expr where
                 <>  mconcat (map build bs)
                 <>  build b
                 <>  "}"
-            Import m            -> "#" <> fromText (format fp m)
+            Import p            -> build p
           where
             quoteAbove :: Int -> Builder -> Builder
             quoteAbove n b = if prec > n then "(" <> b <> ")" else b

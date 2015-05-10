@@ -10,8 +10,6 @@ module Annah.Sugar (
     -- * Sugar
       desugar
     , resugar
-    , static
-    , dynamic
     ) where
 
 import Control.Applicative (pure, empty, (<|>))
@@ -27,12 +25,13 @@ import Prelude hiding (FilePath, pi)
 import Annah.Syntax
 
 -- | Convert an Annah expression to a Morte expression
-desugar :: Expr Void -> M.Expr
+desugar :: Eq a => Expr a -> M.Expr a
 desugar (Const c            ) = M.Const c
 desugar (Var v              ) = M.Var   v
 desugar (Lam x _A  b        ) = M.Lam x (desugar _A) (desugar  b)
 desugar (Pi  x _A _B        ) = M.Pi  x (desugar _A) (desugar _B)
 desugar (App f a            ) = M.App (desugar f) (desugar a)
+desugar (Import p           ) = M.Import p
 desugar (Annot a _A         ) = desugar (Lets [Let "x" [] _A a] "x")
 desugar (Lets ls e          ) = desugarLets  ls               e
 desugar (Fam f e            ) = desugarLets (desugarFamily f) e
@@ -46,28 +45,21 @@ desugar (List t es          ) = desugarList t es
 desugar (ListType f         ) = desugarListTypeSection f
 desugar (Path t oms o       ) = desugarPath t oms o
 desugar (Do m bs b          ) = desugarDo m bs b
-desugar (Import m           ) = absurd m
 
-{-| Convert a Morte expression to an Annah expression
-
-    The first argument is a function used to dynamically link expressions by
-    replacing them with external imports.  This argument will typically be either
-    `static` or `dynamic`
--}
-resugar :: (M.Expr -> Maybe m) -> M.Expr -> Expr m
-resugar link e
-    | Just e' <-  fmap Natural      (resugarNat                      e)
-              <|> fmap lets         (resugarLets                link e)
-              <|> fmap ProductValue (resugarProductValueSection link e)
-              <|> fmap ProductType  (resugarProductTypeSection  link e)
-              <|> fmap ASCII        (resugarASCII                    e)
-              <|> fmap sc           (resugarSumConstructor           e)
-              <|> fmap list         (resugarList                link e)
-              <|> fmap ListType     (resugarListTypeSection     link e)
-              <|> fmap path         (resugarPath                link e)
-              <|> fmap cmd          (resugarDo                  link e)
-              <|> fmap SumType      (resugarSumTypeSection      link e)
-              <|> fmap Import       (link                            e)
+-- | Convert a Morte expression to an Annah expression
+resugar :: Eq a => M.Expr a -> Expr a
+resugar e
+    | Just e' <-  fmap Natural      (resugarNat                 e)
+              <|> fmap lets         (resugarLets                e)
+              <|> fmap ProductValue (resugarProductValueSection e)
+              <|> fmap ProductType  (resugarProductTypeSection  e)
+              <|> fmap ASCII        (resugarASCII               e)
+              <|> fmap sc           (resugarSumConstructor      e)
+              <|> fmap list         (resugarList                e)
+              <|> fmap ListType     (resugarListTypeSection     e)
+              <|> fmap path         (resugarPath                e)
+              <|> fmap cmd          (resugarDo                  e)
+              <|> fmap SumType      (resugarSumTypeSection      e)
     = e'
   where
     lets (x, y)    = Lets           x y
@@ -75,11 +67,11 @@ resugar link e
     list (x, y)    = List           x y
     path (x, y, z) = Path           x y z
     cmd  (x, y, z) = Do             x y z
-resugar _ (M.Const c    ) = Const c
-resugar _ (M.Var v      ) = Var v
-resugar link (M.Lam x _A  b) = Lam x (resugar link _A) (resugar link  b)
-resugar link (M.Pi  x _A _B) = Pi  x (resugar link _A) (resugar link _B)
-resugar link (M.App f a    ) = App (resugar link f) (resugar link a)
+resugar (M.Const c    ) = Const c
+resugar (M.Var v      ) = Var v
+resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
+resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
+resugar (M.App f a    ) = App (resugar f) (resugar a)
 
 toBin :: Integer -> [Bool]
 toBin n0 = reverse (go n0)
@@ -98,7 +90,7 @@ fromBin bs0 = go (reverse bs0) 0 1
     go (True :bs) m n = (go bs $! m + n) $! 2 * n
 
 -- | Convert a numeric literal to a Morte expression
-desugarNat :: Integer -> M.Expr
+desugarNat :: Integer -> M.Expr a
 desugarNat n0 =
     M.Lam "Bin" (M.Const M.Star)
         (M.Lam "Zero" "Bin"
@@ -125,7 +117,7 @@ desugarNat n0 =
     go1 (True :bs) = M.App "One_"  (go1 bs)
 
 -- | Convert a Morte expression back into a numeric literal
-resugarNat :: M.Expr -> Maybe Integer
+resugarNat :: M.Expr a -> Maybe Integer
 resugarNat
     (M.Lam "Bin" (M.Const M.Star)
         (M.Lam "Zero" (M.Var (M.V "Bin" 0))
@@ -168,7 +160,7 @@ resugarNat
 resugarNat _ = empty
 
 -- | Convert an ASCII literal to a Morte expression
-desugarASCII :: Text -> M.Expr
+desugarASCII :: Text -> M.Expr a
 desugarASCII txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
   where
     go n | n < 128   = M.Lam "C" (M.Pi "_" "S" "S") (go $! n + 1)
@@ -178,7 +170,7 @@ desugarASCII txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
     nil      = "N"
 
 -- | Convert a Morte expression back into an ASCII literal
-resugarASCII :: M.Expr -> Maybe Text
+resugarASCII :: Eq a => M.Expr a -> Maybe Text
 resugarASCII (M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" e0)) =
     fmap Text.pack (go0 e0 (0 :: Int))
   where
@@ -192,7 +184,7 @@ resugarASCII (M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" e0)) =
 resugarASCII _ = empty
 
 -- | Convert a sum constructor to a Morte expression
-desugarSumConstructor :: Int -> Int -> M.Expr
+desugarSumConstructor :: Int -> Int -> M.Expr a
 desugarSumConstructor m0 n0 = go0 1
   where
     go0 n | n <= n0   = M.Lam "t" (M.Const M.Star) (go0 $! n + 1)
@@ -207,7 +199,7 @@ desugarSumConstructor m0 n0 = go0 1
         | otherwise = M.App (M.Var (M.V "MkSum" (n0 - m0))) "x"
 
 -- | Convert a Morte expression back into a sum constructor
-resugarSumConstructor :: M.Expr -> Maybe (Int, Int)
+resugarSumConstructor :: Eq a => M.Expr a -> Maybe (Int, Int)
 resugarSumConstructor e0 = go0 e0 0
   where
     go0 (M.Lam "t" (M.Const M.Star) e) n = go0 e $! n + 1
@@ -224,7 +216,7 @@ resugarSumConstructor e0 = go0 e0 0
     go0 _ _ = empty
 
 -- | Convert a sum type to a Morte expression
-desugarSumType :: [Expr Void] -> M.Expr
+desugarSumType :: Eq a => [Expr a] -> M.Expr a
 desugarSumType ts0 = M.Pi "Sum" (M.Const M.Star) (go ts0 0)
   where
     go (t:ts) n = M.Pi "MkSum" (M.Pi "x" t' "Sum") (go ts $! n + 1)
@@ -233,18 +225,18 @@ desugarSumType ts0 = M.Pi "Sum" (M.Const M.Star) (go ts0 0)
     go  []    _ = "Sum"
 
 -- | Convert a Morte expression back into a sum type
-resugarSumType :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [Expr m]
-resugarSumType link (M.Pi "Sum" (M.Const M.Star) e0) = go id e0 0
+resugarSumType :: Eq a => M.Expr a -> Maybe [Expr a]
+resugarSumType (M.Pi "Sum" (M.Const M.Star) e0) = go id e0 0
   where
     go diff (M.Pi "MkSum" (M.Pi "x" t "Sum") e) n = go (diff . (t':)) e $! n + 1
       where
-        t' = (resugar link . M.shift (-1) "Sum" . M.shift (negate n) "MkSum") t
+        t' = (resugar . M.shift (-1) "Sum" . M.shift (negate n) "MkSum") t
     go diff (M.Var (M.V "Sum" 0))               _ = pure (diff [])
     go _ _ _ = empty
-resugarSumType _ _ = empty
+resugarSumType _ = empty
 
 -- | Convert a sum type section to a Morte expression
-desugarSumTypeSection :: [SumTypeSectionField Void] -> M.Expr
+desugarSumTypeSection :: Eq a => [SumTypeSectionField a] -> M.Expr a
 desugarSumTypeSection fs0 = go fs0 id n0
   where
     n0 = length [ () | EmptySumTypeField <- fs0 ]
@@ -257,16 +249,15 @@ desugarSumTypeSection fs0 = go fs0 id n0
         t  = Var (M.V "t" n')
     go (SumTypeField    t:fs) diff n = go fs (diff . (shift t:)) n
       where
-        shift = resugar static . M.shift n0 "t" . desugar
+        shift = resugar . M.shift n0 "t" . desugar
 
 -- | Convert a Morte expression back into a sum type section
-resugarSumTypeSection
-    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [SumTypeSectionField m]
-resugarSumTypeSection link e0 = go0 e0 0
+resugarSumTypeSection :: Eq a => M.Expr a -> Maybe [SumTypeSectionField a]
+resugarSumTypeSection e0 = go0 e0 0
   where
     go0 (M.Lam "t" (M.Const M.Star) e) n0 = go0 e $! n0 + 1
     go0                             e  n0 = do
-        fs <- resugarSumType static e
+        fs <- resugarSumType e
         go1 fs n0
       where
         go1  []                  0           = pure []
@@ -276,7 +267,7 @@ resugarSumTypeSection link e0 = go0 e0 0
             m' = m - 1
         go1 (f:fs) m = fmap (SumTypeField (shift f):) (go1 fs m)
           where
-            shift = resugar link . M.shift (negate n0) "t" . desugar
+            shift = resugar . M.shift (negate n0) "t" . desugar
         go1 _ _ = empty
 
 {-| Convert product values to Morte expressions
@@ -286,7 +277,7 @@ resugarSumTypeSection link e0 = go0 e0 0
 > (True : Bool, 1 : Nat)
 > =>  \(Product : *) -> \(MakeProduct : Bool -> Nat -> Product) -> MakeProduct True 1
 -}
-desugarProductValue :: [ProductValueField Void] -> M.Expr
+desugarProductValue :: Eq a => [ProductValueField a] -> M.Expr a
 desugarProductValue fs0 =
     M.Lam "Product" (M.Const M.Star)
         (M.Lam "MakeProduct" (go0 fs0) (go1 (reverse fs0)))
@@ -308,26 +299,25 @@ desugarProductValue fs0 =
 > \(Product : *) -> \(MakeProduct : Bool -> Nat -> Product) -> MakeProduct True 1
 > =>  (True : Bool, 1 : Nat)
 -}
+resugarProductValue :: Eq a => M.Expr a -> Maybe [ProductValueField a]
 resugarProductValue
-    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [ProductValueField m]
-resugarProductValue link
     (M.Lam "Product" (M.Const M.Star) (M.Lam "MakeProduct" t0 e0)) = do
         es <- fmap reverse (go0 e0)
         ts <- go1 t0
         guard (length es == length ts)
         return (zipWith ProductValueField es ts)
   where
-    go0 (M.App e a)                   = fmap (resugar link (shiftBoth a):) (go0 e)
+    go0 (M.App e a)                   = fmap (resugar (shiftBoth a):) (go0 e)
     go0 (M.Var (M.V "MakeProduct" _)) = pure []
     go0  _                            = empty
 
-    go1 (M.Pi "_" t e)            = fmap (resugar link (shiftOne t):) (go1 e)
+    go1 (M.Pi "_" t e)            = fmap (resugar (shiftOne t):) (go1 e)
     go1 (M.Var (M.V "Product" _)) = pure []
     go1  _                        = empty
 
     shiftOne  = M.shift (-1) "Product"
     shiftBoth = M.shift (-1) "Product" . M.shift (-1) "MakeProduct"
-resugarProductValue _ _ = empty
+resugarProductValue _ = empty
 
 {-| Convert product value sections to Morte expressions
 
@@ -338,7 +328,7 @@ resugarProductValue _ _ = empty
 >     ->  \(Product : *) -> \(MakeProduct : t -> Nat -> Bool -> Product)
 >     ->  MakeProduct f@1 1 f
 -}
-desugarProductValueSection :: [ProductValueSectionField Void] -> M.Expr
+desugarProductValueSection :: Eq a => [ProductValueSectionField a] -> M.Expr a
 desugarProductValueSection fs0 = go fs0 id id id numBoth numEmpties
   where
     numTypes   = length [ () | TypeValueField _ <- fs0 ]
@@ -346,7 +336,7 @@ desugarProductValueSection fs0 = go fs0 id id id numBoth numEmpties
     numBoth    = numTypes + numEmpties
 
     shift =
-        resugar static . M.shift numBoth "f" . M.shift numEmpties "t" . desugar
+        resugar . M.shift numBoth "f" . M.shift numEmpties "t" . desugar
 
     go  []                  diffFs diffL1 diffL2 _ _ =
         diffL1 (diffL2 (desugarProductValue (diffFs [])))
@@ -380,9 +370,8 @@ desugarProductValueSection fs0 = go fs0 id id id numBoth numEmpties
 > ->  MakeProduct f@1 1 f
 > =>  (,1 : Nat,Bool)
 -}
-resugarProductValueSection
-    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [ProductValueSectionField m]
-resugarProductValueSection link e0 = go0 e0 0
+resugarProductValueSection :: Eq a => M.Expr a -> Maybe [ProductValueSectionField a]
+resugarProductValueSection e0 = go0 e0 0
   where
     go0 (M.Lam "t" (M.Const Star) e) i = go0 e $! i + 1
     go0                           e  i = go1 e id i i 0
@@ -396,13 +385,13 @@ resugarProductValueSection link e0 = go0 e0 0
     go1 (M.Lam "f"  t                  e) diff n i  m           = m' `seq`
         go1 e diff' n i  m'
       where
-        diff' = diff . (TypeValueField (resugar static t):)
+        diff' = diff . (TypeValueField (resugar t):)
         m' = m + 1
     go1                                e  diff n 0  m           = do
-        pvfs <- resugarProductValue static e
+        pvfs <- resugarProductValue e
         go2 pvfs (diff []) m n id
       where
-        shift = resugar link . M.shift (negate m) "f" . M.shift (negate n) "t" . desugar
+        shift = resugar . M.shift (negate m) "f" . M.shift (negate n) "t" . desugar
 
         go2  [] [] 0 0 diff_ = pure (diff_ [])
         go2 (ProductValueField (Var (M.V "f" i)) (Var (M.V "t" j)):pvfs)
@@ -421,7 +410,7 @@ resugarProductValueSection link e0 = go0 e0 0
                 go2 pvfs pvss m_' n_ diff_'
           where
             m_' = m_ - 1
-            diff_' = diff_ . (TypeValueField (resugar link (desugar t')):)
+            diff_' = diff_ . (TypeValueField (resugar (desugar t')):)
         go2 (pvf:pvfs) pvss m_ n_ diff_ = go2 pvfs pvss m_ n_ diff_'
           where
             ProductValueField e' t' = pvf
@@ -437,7 +426,7 @@ resugarProductValueSection link e0 = go0 e0 0
 
 > {Bool, Nat}  =>  forall (Product : *) -> (Bool -> Nat -> Product) -> Product
 -}
-desugarProductType :: [ProductTypeField Void] -> M.Expr
+desugarProductType :: Eq a => [ProductTypeField a] -> M.Expr a
 desugarProductType args0 =
     M.Pi "Product" (M.Const M.Star) (M.Pi "MakeProduct" (go args0 0) "Product")
   where
@@ -452,17 +441,17 @@ desugarProductType args0 =
 
 > forall (Product : *) -> (Bool -> Nat -> Product) -> Product  =>  {Bool, Nat}
 -}
-resugarProductType :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [ProductTypeField m]
-resugarProductType link
+resugarProductType :: Eq a => M.Expr a -> Maybe [ProductTypeField a]
+resugarProductType
     (M.Pi "Product" (M.Const M.Star) (M.Pi "MakeProduct" t0 "Product")) =
     go t0 0
   where
-    go (M.Pi x _A e) n = fmap (ProductTypeField x (resugar link _A):) (go e $! n')
+    go (M.Pi x _A e) n = fmap (ProductTypeField x (resugar _A):) (go e $! n')
       where
         n' = if x == "Product" then n + 1 else n
     go (M.Var (M.V "Product" n')) n | (n == n') = pure []
     go  _                         _             = empty
-resugarProductType _ _ = empty
+resugarProductType _ = empty
 
 {-| Convert a product type section to a Morte expression
 
@@ -470,7 +459,7 @@ resugarProductType _ _ = empty
 
 > {, Nat}  =>  forall (t : *) -> forall (Product : *) -> (t -> Nat -> Product) -> Product
 -}
-desugarProductTypeSection :: [ProductTypeSectionField Void] -> M.Expr
+desugarProductTypeSection :: Eq a => [ProductTypeSectionField a] -> M.Expr a
 desugarProductTypeSection fs0 = go fs0 id numEmpty
   where
     numEmpty = length [ () | EmptyTypeField <- fs0 ]
@@ -486,7 +475,7 @@ desugarProductTypeSection fs0 = go fs0 id numEmpty
         ptf' = ProductTypeField "_" (Var (M.V "t" n'))
         n'   = n - 1
 
-    shift = resugar static . M.shift numEmpty "t" . desugar
+    shift = resugar . M.shift numEmpty "t" . desugar
 
 {-| Convert a Morte expression back into a product type section
 
@@ -494,16 +483,15 @@ desugarProductTypeSection fs0 = go fs0 id numEmpty
 
 > forall (t : *) -> forall (Product : *) -> (t -> Nat -> Product) -> Product  =>  {, Nat}
 -}
-resugarProductTypeSection
-    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe [ProductTypeSectionField m]
-resugarProductTypeSection link e0 = go0 e0 0
+resugarProductTypeSection :: Eq a => M.Expr a -> Maybe [ProductTypeSectionField a]
+resugarProductTypeSection e0 = go0 e0 0
   where
     go0 (M.Lam "t" (M.Const M.Star) e) n = go0 e $! n + 1
     go0                             e  n = do
-        ptfs <- resugarProductType static e
+        ptfs <- resugarProductType e
         go1 ptfs id n
       where
-        shift = resugar link . M.shift (negate n) "t" . desugar
+        shift = resugar . M.shift (negate n) "t" . desugar
 
         go1 [] diff 0 = pure (diff [])
         go1 (ProductTypeField "_" (Var (M.V "t" i)):ptfs) diff n_ | n_' == i =
@@ -527,7 +515,7 @@ resugarProductTypeSection link e0 = go0 e0 0
 > →   λ(Nil : List)
 > →   Cons True (Cons False Nil)
 -}
-desugarList :: Expr Void -> [Expr Void] -> M.Expr
+desugarList :: Eq a => Expr a -> [Expr a] -> M.Expr a
 desugarList e0 ts0 =
     M.Lam "List" (M.Const Star)
         (M.Lam "Cons" (M.Pi "head" (desugar0 e0) (M.Pi "tail" "List" "List"))
@@ -540,8 +528,8 @@ desugarList e0 ts0 =
 
     desugar1 = M.shift 1 "List" . M.shift 1 "Cons" . M.shift 1 "Nil" . desugar
 
-resugarList :: (M.Expr -> Maybe m) -> M.Expr -> Maybe (Expr m, [Expr m])
-resugarList link
+resugarList :: Eq a => M.Expr a -> Maybe (Expr a, [Expr a])
+resugarList
     (M.Lam "List" (M.Const Star)
         (M.Lam "Cons"
             (M.Pi "head" e0
@@ -553,13 +541,13 @@ resugarList link
     go (M.App (M.App (M.Var (M.V "Cons" 0)) t) ts) = fmap (resugar1 t:) (go ts)
     go _ = empty
 
-    resugar0 = resugar link . M.shift (-1) "List"
+    resugar0 = resugar . M.shift (-1) "List"
     resugar1 =
-            resugar link
+            resugar
         .   M.shift (-1) "List"
         .   M.shift (-1) "Cons"
         .   M.shift (-1) "Nil"
-resugarList _ _ = empty
+resugarList _ = empty
 
 {-| Convert a list type into a Morte expression
 
@@ -571,7 +559,7 @@ resugarList _ _ = empty
 > →   ∀(Nil : List)
 > →   List
 -}
-desugarListType :: Expr Void -> M.Expr
+desugarListType :: Eq a => Expr a -> M.Expr a
 desugarListType t =
     M.Pi "List" (M.Const M.Star)
         (M.Pi "Cons" (M.Pi "head" (desugar0 t) (M.Pi "tail" "List" "List"))
@@ -589,8 +577,8 @@ desugarListType t =
 > →   List
 > =>  [t]
 -}
-resugarListType :: (M.Expr -> Maybe m) -> M.Expr -> Maybe (Expr m)
-resugarListType link
+resugarListType :: Eq a => M.Expr a -> Maybe (Expr a)
+resugarListType
     (M.Pi "List" (M.Const M.Star)
         (M.Pi "Cons"
             (M.Pi "head" e
@@ -598,8 +586,8 @@ resugarListType link
             (M.Pi "Nil" (M.Var (M.V "List" 0)) (M.Var (M.V "List" 0))) ) )
     = pure (resugar0 e)
   where
-    resugar0 = resugar link . M.shift (-1) "List"
-resugarListType _ _ = empty
+    resugar0 = resugar . M.shift (-1) "List"
+resugarListType _ = empty
 
 {-| Convert a list section into a Morte expression
 
@@ -612,7 +600,7 @@ resugarListType _ _ = empty
 > →   ∀(Nil : List)
 > →   List
 -}
-desugarListTypeSection :: ListTypeSectionField Void -> M.Expr
+desugarListTypeSection :: Eq a => ListTypeSectionField a -> M.Expr a
 desugarListTypeSection (ListTypeSectionField t)   = desugarListType t
 desugarListTypeSection  EmptyListTypeSectionField =
     M.Lam "t" (M.Const M.Star) (desugarListType "t")
@@ -628,14 +616,11 @@ desugarListTypeSection  EmptyListTypeSectionField =
 > →   List
 > =>  []
 -}
-resugarListTypeSection
-    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe (ListTypeSectionField m)
-resugarListTypeSection link
-    (M.Lam "t" (M.Const M.Star) e) = do
-        Var (M.V "t" 0) <- resugarListType link e
-        return EmptyListTypeSectionField
-resugarListTypeSection link e =
-    fmap ListTypeSectionField (resugarListType link e)
+resugarListTypeSection :: Eq a => M.Expr a -> Maybe (ListTypeSectionField a)
+resugarListTypeSection (M.Lam "t" (M.Const M.Star) e) = do
+    Var (M.V "t" 0) <- resugarListType e
+    return EmptyListTypeSectionField
+resugarListTypeSection e = fmap ListTypeSectionField (resugarListType e)
 
 {-| Convert a path into a Morte expression
 
@@ -658,10 +643,11 @@ resugarListTypeSection link e =
 > →   Step a b c f (Step b c c g (End c))
 -}
 desugarPath
-    ::  Expr Void
-    ->  [(Expr Void, Expr Void)]
-    ->  Expr Void
-    ->  M.Expr
+    ::  Eq a
+    =>  Expr a
+    ->  [(Expr a, Expr a)]
+    ->  Expr a
+    ->  M.Expr a
 desugarPath c0 oms0 o0 =
     M.Lam "Path"
         (M.Pi "a" (M.Const M.Star) (M.Pi "b" (M.Const M.Star) (M.Const M.Star)))
@@ -711,9 +697,8 @@ desugarPath c0 oms0 o0 =
 > →   Step a b c f (Step b c c g (End c))
 > =>  [. cat (|a|) f (|b|) g (|c|)]
 -}
+resugarPath :: Eq a => M.Expr a -> Maybe (Expr a, [(Expr a, Expr a)], Expr a)
 resugarPath
-    :: (M.Expr -> Maybe m) -> M.Expr -> Maybe (Expr m, [(Expr m, Expr m)], Expr m)
-resugarPath link
     (M.Lam "Path"
         (M.Pi "a" (M.Const M.Star) (M.Pi "b" (M.Const M.Star) (M.Const M.Star)))
         (M.Lam "Step"
@@ -744,9 +729,9 @@ resugarPath link
     let c0 = M.Lam "a" (M.Const M.Star) (M.Lam "b" (M.Const M.Star) cab)
     return (resugar0 c0, oms, resugar1 o0)
   where
-    resugar0 = resugar link . M.shift (-1) "Path"
+    resugar0 = resugar . M.shift (-1) "Path"
     resugar1 =
-            resugar link
+            resugar
         .   M.shift (-1) "Path"
         .   M.shift (-1) "Step"
         .   M.shift (-1) "End"
@@ -763,7 +748,7 @@ resugarPath link
         let m1 = resugar1 m1'
         return (((o1, m1):oms, o0), o1')
     go _ = empty
-resugarPath _ _ = empty
+resugarPath _ = empty
 
 {-| Convert a command (i.e. do-notation) into a Morte expression
 
@@ -788,7 +773,7 @@ resugarPath _ _ = empty
 >         Pure
 >     )
 -}
-desugarDo :: Expr Void -> [Bind Void] -> Bind Void -> M.Expr
+desugarDo :: Eq a => Expr a -> [Bind a] -> Bind a -> M.Expr a
 desugarDo m bs0 (Bind (Arg x0 _A0) e0) =
     M.Lam "Cmd" (M.Const M.Star)
         (M.Lam "Bind"
@@ -831,11 +816,8 @@ desugarDo m bs0 (Bind (Arg x0 _A0) e0) =
 >     )
 > =>  do m { x0 : _A0 <- e0; x1 : _A1 <- e1 }
 -}
+resugarDo :: Eq a => M.Expr a -> Maybe (Expr a, [Bind a], Bind a)
 resugarDo
-    :: (M.Expr -> Maybe m)
-    -> M.Expr
-    -> Maybe (Expr m, [Bind m], Bind m)
-resugarDo link
     (M.Lam "Cmd" (M.Const M.Star)
         (M.Lam "Bind"
             (M.Pi "b" (M.Const M.Star)
@@ -845,10 +827,10 @@ resugarDo link
                             (M.Var (M.V "Cmd" 0)) ) ) )
             (M.Lam "Pure" (M.Pi x0 _A0 (M.Var (M.V "Cmd" 0))) e0) ) ) = do
     (bs, b) <- go e0 0 0
-    let m_ = resugar link (M.Lam "b" (M.Const M.Star) mb)
+    let m_ = resugar (M.Lam "b" (M.Const M.Star) mb)
     return (m_, bs, b)
   where
-    _A0_ = resugar link _A0
+    _A0_ = resugar _A0
 
     go  (M.App
             (M.App (M.App (M.Var (M.V "Bind" numBind')) _A0') e0')
@@ -856,8 +838,8 @@ resugarDo link
         numPure
         numBind = do
         guard (_A0 == _A0' && numPure == numPure' && numBind == numBind')
-        let _A0'_ = resugar link _A0'
-        let e0'_  = resugar link e0'
+        let _A0'_ = resugar _A0'
+        let e0'_  = resugar e0'
         return ([], Bind (Arg x0 _A0_) e0'_)
     go  (M.App (M.App (M.App (M.Var (M.V "Bind" numBind')) _A) e)
             (M.Lam x _A' e') )
@@ -867,27 +849,11 @@ resugarDo link
         let numPure'' = if x == "Pure" then numPure + 1 else numPure
         let numBind'' = if x == "Bind" then numBind + 1 else numBind
         ~(bs, b) <- numPure'' `seq` numBind'' `seq` go e' numPure'' numBind''
-        let _A_ = resugar link _A
-        let e_  = resugar link e
+        let _A_ = resugar _A
+        let e_  = resugar e
         return (Bind (Arg x _A_) e_:bs, b)
     go _ _ _ = empty
-resugarDo _ _ = empty
-
-{-| Pass this to `resugar` if you wish to replace certain expressions with
-    external imports
-
-    In other words, if you call @resugar (dynamic h)@, then `resugar` will take
-    any expression that matches a key in @h@ and replace the matching expression
-    with the corresponding @FilePath@ value
--}
-dynamic :: [(M.Expr, FilePath)] -> M.Expr -> Maybe FilePath
-dynamic h e = lookup e h
-
-{-| Pass this to `resugar` if you don't want the result to contain any external
-    imports
--}
-static :: M.Expr -> Maybe m
-static _ = empty
+resugarDo _ = empty
 
 {-| `desugarLets` converts this:
 
@@ -909,7 +875,7 @@ static _ = empty
 > (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
 
 -}
-desugarLets :: [Let Void] -> Expr Void -> M.Expr
+desugarLets :: Eq a => [Let a] -> Expr a -> M.Expr a
 desugarLets lets e = apps
   where
     -- > (   \(f0 : forall (x00 : _A00) -> ... -> forall (x0j : _A0j) -> _B0)
@@ -939,8 +905,8 @@ desugarLets lets e = apps
         (reverse lets)
 
 -- | Convert a Morte expression back into a let expression
-resugarLets :: (M.Expr -> Maybe m) -> M.Expr -> Maybe ([Let m], Expr m)
-resugarLets link e0 = do
+resugarLets :: Eq a => M.Expr a -> Maybe ([Let a], Expr a)
+resugarLets e0 = do
     -- Require at least one `Let` to ensure productivity
     r@(_:_, _) <- go0 e0 []
     return r
@@ -954,24 +920,24 @@ resugarLets link e0 = do
         return (Let x args _A' rhs':lets, e')
     go1             e      []     = return ([], e_)
       where
-        e_ = resugar link e
+        e_ = resugar e
     go1             _      _      = empty
 
     go2 (M.Pi xL _AL eL) (M.Lam xR _AR eR)
         | xL == xR && _AL == _AR = (Arg xL _AL_:args, eL', eR')
           where
-            _AL_ = resugar link _AL
+            _AL_ = resugar _AL
             (args, eL', eR') = go2 eL eR
     go2 eL eR = ([], eL_, eR_)
       where
-        eL_ = resugar link eL
-        eR_ = resugar link eR
+        eL_ = resugar eL
+        eR_ = resugar eR
 
 -- | A type or data constructor
-data Cons = Cons
+data Cons a = Cons
     { consName :: Text
-    , consArgs :: [Arg Void]
-    , consType :: Expr Void
+    , consArgs :: [Arg a]
+    , consType :: Expr a
     }
 
 {-| This is the meat of the Boehm-Berarducci encoding which translates type
@@ -1002,24 +968,24 @@ data Cons = Cons
     > ->  \(MkPair : a -> b -> Pair)
     > ->  MkPair _@1 _
 -}
-desugarFamily :: Family Void -> [Let Void]
+desugarFamily :: Eq a => Family a -> [Let a]
 desugarFamily fam = typeLets ++ dataLets ++ foldLets
   where
-    universalArgs :: [Arg Void]
+--  universalArgs :: [Arg Void]
     universalArgs = familyGivens fam
 
-    universalVars :: [Expr Void]
+--  universalVars :: [Expr Void]
     universalVars = do
         Arg x _ <- familyGivens fam
         return (Var (M.V x 0))
         -- TODO: Fix this to avoid name collisions with universal variables
 
-    typeConstructors :: [Cons]
+--  typeConstructors :: [Cons]
     typeConstructors = do
         t <- familyTypes fam
         return (Cons (typeName t) [] (Const M.Star))
 
-    dataConstructors :: [Cons]
+--  dataConstructors :: [Cons]
     dataConstructors = do
         (_       , t, tsAfter) <- zippers (familyTypes fam)
         (dsBefore, d, _      ) <- zippers (typeDatas t)
@@ -1028,7 +994,7 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
         let typeVar = typeName t `isShadowedBy` (names1 ++ names2)
         return (Cons (dataName d) (dataArgs d) typeVar)
 
-    constructors :: [Cons]
+--  constructors :: [Cons]
     constructors = typeConstructors ++ dataConstructors
 
     makeRhs piOrLam con = go constructors
@@ -1036,7 +1002,7 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
         go ((Cons x args _A):stmts) = piOrLam x (pi args _A) (go stmts)
         go  []                      = con
 
-    typeLets, foldLets :: [Let Void]
+--  typeLets, foldLets :: [Let Void]
     (typeLets, foldLets) = unzip (do
         let folds = map typeFold (familyTypes fam)
         ((_, t, tsAfter), fold) <- zip (zippers typeConstructors) folds
@@ -1052,8 +1018,8 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
                ) )
 
     -- TODO: Enforce that argument types are `Var`s?
-    desugarType
-        :: Expr Void -> Maybe ([Arg Void], Expr Void, Expr Void)
+--  desugarType
+--      :: Expr Void -> Maybe ([Arg Void], Expr Void, Expr Void)
     desugarType (Pi x _A e      )   = do
         ~(args, f, f') <- desugarType e
         return (Arg x _A:args, f, f')
@@ -1072,12 +1038,12 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
         go1  []    _ _                   = empty
     desugarType _ = empty
 
-    consVars :: [Text] -> [Expr Void]
+--  consVars :: [Text] -> [Expr Void]
     consVars argNames = do
         (_, name, namesAfter) <- zippers (map consName constructors)
         return (name `isShadowedBy` (argNames ++ namesAfter))
 
-    dataLets :: [Let Void]
+--  dataLets :: [Let Void]
     dataLets = do
         (_, d, dsAfter) <- zippers dataConstructors
         let conVar  = consName d `isShadowedBy` map consName dsAfter
@@ -1112,19 +1078,19 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
         return (Let (consName d) universalArgs letType' letRhs')
 
 -- | Apply an expression to a list of arguments
-apply :: Expr m -> [Expr m] -> Expr m
+apply :: Expr a -> [Expr a] -> Expr a
 apply f as = foldr (flip App) f (reverse as)
 
 {-| Compute the correct DeBruijn index for a synthetic `Var` (`x`) by providing
     all variables bound in between when `x` is introduced and when `x` is used.
 -}
-isShadowedBy :: Text -> [Text] -> Expr m
+isShadowedBy :: Text -> [Text] -> Expr a
 x `isShadowedBy` vars = Var (M.V x (length (filter (== x) vars)))
 
-pi :: [Arg m] -> Expr m -> Expr m
+pi :: [Arg a] -> Expr a -> Expr a
 pi args e = foldr (\(Arg x _A) -> Pi x _A) e args
 
-lam :: [Arg m] -> Expr m -> Expr m
+lam :: [Arg a] -> Expr a -> Expr a
 lam args e = foldr (\(Arg x _A) -> Lam x _A) e args
 
 -- | > zippers [1, 2, 3] = [([], 1, [2, 3]), ([1], 2, [3]), ([2, 1], 3, [])]

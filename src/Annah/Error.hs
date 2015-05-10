@@ -17,58 +17,56 @@ import qualified Data.Text.Lazy as Text
 import Data.Text.Lazy.Builder (fromLazyText, toLazyText)
 import Data.Typeable (Typeable)
 import qualified Morte.Core as M
-import Turtle (FilePath)
-import Prelude hiding (FilePath)
 
 import Annah.Pretty (Builds(..))
 import Annah.Sugar (resugar)
 import Annah.Syntax (Expr)
 
-data TypeError m = TypeError
-    { context     :: Context m
-    , current     :: Expr m
-    , typeMessage :: TypeMessage m
+data TypeError = TypeError
+    { context     :: Context
+    , current     :: Expr M.X
+    , typeMessage :: TypeMessage
     } deriving (Typeable)
 
-instance Show (TypeError FilePath) where
+instance Show TypeError where
     show = unpack . prettyTypeError
 
-instance Exception (TypeError FilePath)
+instance Exception TypeError
 
-data TypeMessage m
+data TypeMessage
     = UnboundVariable
-    | InvalidInputType (Expr m)
-    | InvalidOutputType (Expr m)
+    | InvalidInputType (Expr M.X)
+    | InvalidOutputType (Expr M.X)
     | NotAFunction
-    | TypeMismatch (Expr m) (Expr m)
+    | TypeMismatch (Expr M.X) (Expr M.X)
     | Untyped M.Const
 
-newtype Context m = Context { getContext :: [(Text, Expr m)] }
+newtype Context = Context { getContext :: [(Text, Expr M.X)] }
 
-instance Show (TypeMessage FilePath) where
+instance Show TypeMessage where
     show = unpack . toLazyText . build
 
-resugarTypeError :: (M.Expr -> Maybe m) -> M.TypeError -> TypeError m
-resugarTypeError link (M.TypeError ctx curr msg) = TypeError
-    (resugarContext link ctx)
-    (resugar link curr)
-    (resugarTypeMessage link msg)
+resugarTypeError :: M.TypeError -> TypeError
+resugarTypeError (M.TypeError ctx curr msg) = TypeError
+    (resugarContext ctx)
+    (resugar curr)
+    (resugarTypeMessage msg)
 
-resugarTypeMessage :: (M.Expr -> Maybe m) -> M.TypeMessage -> TypeMessage m
-resugarTypeMessage _     M.UnboundVariable      = UnboundVariable
-resugarTypeMessage link (M.InvalidInputType  e) =
-    InvalidInputType  (resugar link e)
-resugarTypeMessage link (M.InvalidOutputType e) =
-    InvalidOutputType (resugar link e)
-resugarTypeMessage _     M.NotAFunction         = NotAFunction
-resugarTypeMessage link (M.TypeMismatch e1 e2 ) =
-    TypeMismatch (resugar link e1) (resugar link e2)
-resugarTypeMessage _    (M.Untyped c          ) = Untyped c
+resugarTypeMessage :: M.TypeMessage -> TypeMessage
+resugarTypeMessage  M.UnboundVariable      = UnboundVariable
+resugarTypeMessage (M.InvalidInputType  e) =
+    InvalidInputType  (resugar e)
+resugarTypeMessage (M.InvalidOutputType e) =
+    InvalidOutputType (resugar e)
+resugarTypeMessage  M.NotAFunction         = NotAFunction
+resugarTypeMessage (M.TypeMismatch e1 e2 ) =
+    TypeMismatch (resugar e1) (resugar e2)
+resugarTypeMessage (M.Untyped c          ) = Untyped c
 
-resugarContext :: (M.Expr -> Maybe m) -> M.Context -> Context m
-resugarContext link ctx = Context (do
+resugarContext :: M.Context -> Context
+resugarContext ctx = Context (do
     (txt, expr) <- ctx
-    return (txt, resugar link expr) )
+    return (txt, resugar expr) )
 
 instance Builds TypeError where
     build (TypeError ctx curr msg)
@@ -113,5 +111,5 @@ instance Builds Context where
       where
         buildKV (key, val) = fromLazyText key <> " : " <> build val
 
-prettyTypeError :: TypeError FilePath -> Text
+prettyTypeError :: TypeError -> Text
 prettyTypeError = toLazyText . build
