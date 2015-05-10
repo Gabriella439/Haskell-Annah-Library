@@ -17,8 +17,10 @@ import Data.Char (ord, digitToInt, isDigit)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
 import Data.Word (Word8)
+import Filesystem.Path.CurrentOS (FilePath, fromText)
 import Lens.Family.State.Strict ((.=), (+=))
 import Pipes (Producer, lift, yield)
+import Prelude hiding (FilePath)
 
 }
 
@@ -31,6 +33,7 @@ $fst   = [A-Za-z_]
 $label = [A-Za-z0-9_]
 $ascii = [\x00-\x7f] # [\x22]
 
+$nonwhite       = ~$white
 $whiteNoNewline = $white # \n
 
 $path = [$label \\\/\.]
@@ -61,8 +64,6 @@ tokens :-
     "|"                             { \_    -> yield Bar                       }
     ":"                             { \_    -> yield Colon                     }
     ";"                             { \_    -> yield Semicolon                 }
-    "#" $path* "(" $opchar+ ")"     { \text -> yield (File (Text.drop 1 text)) }
-    "#" $path+                      { \text -> yield (File (Text.drop 1 text)) }
     "@"                             { \_    -> yield At                        }
     "*"                             { \_    -> yield Star                      }
     "BOX" | "□"                     { \_    -> yield Box                       }
@@ -81,10 +82,19 @@ tokens :-
     $digit+ "to" $digit+            { \txt  -> yield (parseOf txt)             }
     $digit+                         { \text -> yield (Number (toInt text))     }
     $fst $label* | "(" $opchar+ ")" { \text -> yield (Label text)              }
+    "#https://" $nonwhite+          { \text -> yield (URL (toUrl text))        }
+    "#http://" $nonwhite+           { \text -> yield (URL (toUrl text))        }
+    "#" $nonwhite+                  { \text -> yield (File (toFile text))      }
 
 {
 toInt :: Text -> Int
 toInt = Text.foldl' (\x c -> 10 * x + digitToInt c) 0
+
+toUrl :: Text -> String
+toUrl = Text.unpack . Text.drop 1
+
+toFile :: Text -> FilePath
+toFile = fromText . Text.toStrict . Text.drop 1
 
 trim :: Text -> Text
 trim = Text.init . Text.tail
@@ -214,7 +224,8 @@ data Token
     | Of (Int, Int)
     | Label Text
     | Number Int
-    | File Text
+    | File FilePath
+    | URL String
     | EOF
     deriving (Show)
 }

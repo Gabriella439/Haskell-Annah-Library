@@ -12,13 +12,13 @@ module Annah.Error (
 
 import Control.Exception (Exception)
 import Data.Monoid (mempty, (<>))
+import Data.Text.Buildable (Buildable(..))
 import Data.Text.Lazy (Text, unpack)
 import qualified Data.Text.Lazy as Text
-import Data.Text.Lazy.Builder (fromLazyText, toLazyText)
+import Data.Text.Lazy.Builder (toLazyText)
 import Data.Typeable (Typeable)
 import qualified Morte.Core as M
 
-import Annah.Pretty (Builds(..))
 import Annah.Sugar (resugar)
 import Annah.Syntax (Expr)
 
@@ -29,7 +29,7 @@ data TypeError = TypeError
     } deriving (Typeable)
 
 instance Show TypeError where
-    show = unpack . prettyTypeError
+    show = unpack . toLazyText. build
 
 instance Exception TypeError
 
@@ -68,7 +68,7 @@ resugarContext ctx = Context (do
     (txt, expr) <- ctx
     return (txt, resugar expr) )
 
-instance Builds TypeError where
+instance Buildable TypeError where
     build (TypeError ctx curr msg)
         =   (   if Text.null (toLazyText ctx')
                 then mempty
@@ -80,7 +80,7 @@ instance Builds TypeError where
       where
         ctx' = build ctx
 
-instance Builds TypeMessage where
+instance Buildable TypeMessage where
     build  UnboundVariable           =
             "Error: Unbound variable\n"
     build (InvalidInputType expr)    =
@@ -99,17 +99,14 @@ instance Builds TypeMessage where
         <>  "Expected type: " <> build expr1 <> "\n"
         <>  "Argument type: " <> build expr2 <> "\n"
     build (Untyped c)                =
-            "Error: " <> M.buildConst c <> " has no type\n"
+            "Error: " <> build c <> " has no type\n"
 
-instance Builds Context where
+instance Buildable Context where
     build
-        =   fromLazyText
+        =   build
         .   Text.unlines
         .   map (toLazyText . buildKV)
         .   reverse
         .   getContext
       where
-        buildKV (key, val) = fromLazyText key <> " : " <> build val
-
-prettyTypeError :: TypeError -> Text
-prettyTypeError = toLazyText . build
+        buildKV (key, val) = build key <> " : " <> build val

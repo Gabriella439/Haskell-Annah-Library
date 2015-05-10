@@ -17,10 +17,8 @@ import Control.Monad (guard)
 import Data.Char (chr, ord)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
-import Data.Void (Void, absurd)
 import qualified Morte.Core as M
-import Turtle (FilePath)
-import Prelude hiding (FilePath, pi)
+import Prelude hiding (pi)
 
 import Annah.Syntax
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | This module exports all the types used to build Annah's syntax tree
 
 module Annah.Syntax (
@@ -19,8 +21,11 @@ module Annah.Syntax (
     , Expr(..)
     ) where
 
+import Data.Monoid (mconcat, (<>))
 import Data.String (IsString(..))
+import Data.Text.Buildable (Buildable(..))
 import Data.Text.Lazy (Text)
+import Data.Text.Lazy.Builder (Builder)
 import qualified Morte.Core as M
 
 {-| Argument for function or constructor definitions
@@ -32,6 +37,10 @@ data Arg m = Arg
     , argType :: Expr m
     }
 
+instance Buildable a => Buildable (Arg a) where
+    build (Arg "_" _A) =                            build _A
+    build (Arg  x  _A) = "(" <> build x <> " : " <> build _A <> ")"
+
 {-| Field of a product type
 
 > ProductTypeField x _A  ~  x : _A
@@ -41,10 +50,20 @@ data ProductTypeField m = ProductTypeField
     , productTypeType :: Expr m
     }
 
+instance Buildable a => Buildable (ProductTypeField a) where
+    build (ProductTypeField x _A) =
+        if x == "_"
+        then build _A
+        else build x <> " : " <> build _A
+
 -- | Field of a product type section
 data ProductTypeSectionField m
     = EmptyTypeField
     | TypeField (ProductTypeField m)
+
+instance Buildable a => Buildable (ProductTypeSectionField a) where
+    build (TypeField a   ) = build a
+    build  EmptyTypeField  = ""
 
 {-| Field of a product value
 
@@ -55,21 +74,37 @@ data ProductValueField m = ProductValueField
     , productValueFieldType :: Expr m
     }
 
+instance Buildable a => Buildable (ProductValueField a) where
+    build (ProductValueField a b) = build a <> " : " <> build b
+
 -- | Field of a product value section
 data ProductValueSectionField m
     = EmptyValueField
     | TypeValueField (Expr m)
     | ValueField (ProductValueField m)
 
+instance Buildable a => Buildable (ProductValueSectionField a) where
+    build (ValueField     a) = build a
+    build (TypeValueField t) = build t
+    build  EmptyValueField   = ""
+
 -- | Field of a sum type section
 data SumTypeSectionField m
     = EmptySumTypeField
     | SumTypeField (Expr m)
 
+instance Buildable a => Buildable (SumTypeSectionField a) where
+    build  EmptySumTypeField  = ""
+    build (SumTypeField f   ) = build f
+
 -- | Field of a list type section
 data ListTypeSectionField m
     = EmptyListTypeSectionField
     | ListTypeSectionField (Expr m)
+
+instance Buildable a => Buildable (ListTypeSectionField a) where
+    build  EmptyListTypeSectionField  = ""
+    build (ListTypeSectionField f   ) = build f
 
 {-|
 > Let f [a1, a2] _A rhs  ~  let f a1 a2 : _A = rhs
@@ -89,6 +124,12 @@ data Family m = Family
     , familyTypes  :: [Type m]
     }
 
+instance Buildable a => Buildable (Family a) where
+    build (Family gs ts)
+        =   "given "
+        <>  mconcat (map (\g -> build g <> " ") gs)
+        <>  mconcat (map build ts)
+
 {-|
 > Type t f [d1, d2]  ~  type t fold f d1 d2
 -}
@@ -98,6 +139,13 @@ data Type m = Type
     , typeDatas :: [Data m]
     }
 
+instance Buildable a => Buildable (Type a) where
+    build (Type t f ds)
+        =   "type "
+        <>  build t
+        <>  mconcat (map build ds)
+        <>  (if f == "_" then "" else " fold " <> build f <> " ")
+
 {-|
 > Data c [a1, a2]  ~  data c a1 a2
 -}
@@ -105,6 +153,13 @@ data Data m = Data
     { dataName :: Text
     , dataArgs :: [Arg m]
     }
+
+instance Buildable a => Buildable (Data a) where
+    build (Data d args)
+        =   "data "
+        <>  build d
+        <>  " "
+        <>  mconcat (map (\arg -> build arg <> " ") args)
 
 {-|
 > Bind arg e  ~  arg <- e;
@@ -114,6 +169,10 @@ data Bind m = Bind
     , bindRhs :: Expr m
     }
 
+
+instance Buildable a => Buildable (Bind a) where
+    build (Bind (Arg x _A) e) =
+        build x <> " : " <> build _A <> " <- " <> build e <> "; "
 -- | Syntax tree for expressions
 data Expr m
     -- | > Const c                         ~  c
@@ -157,3 +216,73 @@ data Expr m
 
 instance IsString (Expr m) where
     fromString str = Var (fromString str)
+
+instance Buildable a => Buildable (Expr a) where
+    build = go 0
+      where
+        go :: Buildable a => Int -> Expr a -> Builder
+        go prec e = case e of
+            Const c             -> build c
+            Var x               -> build x
+            Lam x _A b          -> quoteAbove 1 (
+                    "λ"
+                <>  "(" <> build x <> " : " <>  go 1 _A <>  ")"
+                <>  " → "
+                <>  go 1 b )
+            Pi  x _A b          -> quoteAbove 1 (
+                    (if x /= "_"
+                     then "∀(" <> build x <> " : " <> go 1 _A <> ")"
+                     else go 2 _A )
+                <>  " → "
+                <>  go 1 b )
+            App f a             -> quoteAbove 2 (go 2 f <> " " <> go 3 a)
+            Annot s t           -> quoteAbove 0 (go 2 s <> " : " <> go 1 t)
+            Lets ls e'          -> quoteAbove 1 (
+                mconcat (map build ls) <> "in " <> go 1 e' )
+            Fam f e'            -> quoteAbove 1 (build f <> "in " <> go 1 e')
+            Natural n           -> build n
+            ASCII   txt         -> "\"" <> build txt <> "\""
+            SumConstructor m n  -> build m <> "to" <> build n
+            SumType ts          ->
+                    "{0"
+                <>  mconcat (map (\t -> "|" <> build t) ts)
+                <>  "}"
+            ProductValue fields ->
+                    "<1"
+                <>  mconcat (map (\field -> "," <> build field) fields)
+                <>  ">"
+            ProductType args    ->
+                    "{1"
+                <>  mconcat (map (\arg -> "," <> build arg) args)
+                <>  "}"
+            List t as           ->
+                    "[nil " <> build t
+                <> mconcat (map (\a -> "," <> build a) as)
+                <>  "]"
+            ListType t          -> "[" <> build t <> "]"
+            Path c oms o0       ->
+                    "[id " <> build c
+                <> mconcat
+                    (map (\(o, m) -> " (|" <> build o <> "|) " <> build m) oms)
+                <> " (|" <> build o0 <> "|)]"
+            Do m bs b           ->
+                    "do " <> build m <> " { "
+                <>  mconcat (map build bs)
+                <>  build b
+                <>  "}"
+            Import p            -> build p
+          where
+            quoteAbove :: Int -> Builder -> Builder
+            quoteAbove n b = if prec > n then "(" <> b <> ")" else b
+
+instance Buildable a => Buildable (Let a) where
+    build (Let n args t r)
+        =   "let "
+        <>  build n
+        <>  " "
+        <>  mconcat (map (\arg -> build arg <> " ") args)
+        <>  ": "
+        <>  build t
+        <>  " = "
+        <>  build r
+        <>  " "

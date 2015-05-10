@@ -28,9 +28,8 @@ import qualified Data.Text.Lazy.IO as Text
 import Data.Typeable (Typeable)
 import Lens.Family.Stock (_1, _2)
 import Lens.Family.State.Strict ((.=), use, zoom)
+import Morte.Core (Path(..))
 import Pipes (Producer, hoist, lift, next)
-import Turtle (FilePath, fromText)
-import Prelude hiding (FilePath)
 
 import qualified Annah.Lexer as Lexer
 import Annah.Lexer (Token, Position)
@@ -45,53 +44,54 @@ import Annah.Syntax
 %error { parseError }
 
 %token
-    '(|'    { Lexer.OpenBanana        }
-    '|)'    { Lexer.CloseBanana       }
-    '('     { Lexer.OpenParen         }
-    ')'     { Lexer.CloseParen        }
-    '[nil'  { Lexer.OpenList          }
-    '[id'   { Lexer.OpenPath          }
-    '['     { Lexer.OpenBracket       }
-    ']'     { Lexer.CloseBracket      }
-    '{1'    { Lexer.OpenProductType   }
-    '{0'    { Lexer.OpenSumType       }
-    '{'     { Lexer.OpenBrace         }
-    '}'     { Lexer.CloseBrace        }
-    '<1'    { Lexer.OpenProductValue  }
-    '>'     { Lexer.CloseAngle        }
-    '.'     { Lexer.Period            }
-    ','     { Lexer.Comma             }
-    '|'     { Lexer.Bar               }
-    ':'     { Lexer.Colon             }
-    ';'     { Lexer.Semicolon         }
-    '@'     { Lexer.At                }
-    '*'     { Lexer.Star              }
-    'BOX'   { Lexer.Box               }
-    '->'    { Lexer.Arrow             }
-    '<-'    { Lexer.LArrow            }
-    '\\'    { Lexer.Lambda            }
-    '|~|'   { Lexer.Pi                }
-    'given' { Lexer.Given             }
-    'type'  { Lexer.Type              }
-    'fold'  { Lexer.Fold              }
-    'data'  { Lexer.Data              }
-    'let'   { Lexer.Let               }
-    '='     { Lexer.Equals            }
-    'in'    { Lexer.In                }
-    'do'    { Lexer.Do                }
-    of      { Lexer.Of $$             }
-    label   { Lexer.Label $$          }
-    number  { Lexer.Number $$         }
-    ascii   { Lexer.ASCII $$          }
-    file    { Lexer.File $$           }
+    '(|'    { Lexer.OpenBanana       }
+    '|)'    { Lexer.CloseBanana      }
+    '('     { Lexer.OpenParen        }
+    ')'     { Lexer.CloseParen       }
+    '[nil'  { Lexer.OpenList         }
+    '[id'   { Lexer.OpenPath         }
+    '['     { Lexer.OpenBracket      }
+    ']'     { Lexer.CloseBracket     }
+    '{1'    { Lexer.OpenProductType  }
+    '{0'    { Lexer.OpenSumType      }
+    '{'     { Lexer.OpenBrace        }
+    '}'     { Lexer.CloseBrace       }
+    '<1'    { Lexer.OpenProductValue }
+    '>'     { Lexer.CloseAngle       }
+    '.'     { Lexer.Period           }
+    ','     { Lexer.Comma            }
+    '|'     { Lexer.Bar              }
+    ':'     { Lexer.Colon            }
+    ';'     { Lexer.Semicolon        }
+    '@'     { Lexer.At               }
+    '*'     { Lexer.Star             }
+    'BOX'   { Lexer.Box              }
+    '->'    { Lexer.Arrow            }
+    '<-'    { Lexer.LArrow           }
+    '\\'    { Lexer.Lambda           }
+    '|~|'   { Lexer.Pi               }
+    'given' { Lexer.Given            }
+    'type'  { Lexer.Type             }
+    'fold'  { Lexer.Fold             }
+    'data'  { Lexer.Data             }
+    'let'   { Lexer.Let              }
+    '='     { Lexer.Equals           }
+    'in'    { Lexer.In               }
+    'do'    { Lexer.Do               }
+    of      { Lexer.Of $$            }
+    label   { Lexer.Label $$         }
+    number  { Lexer.Number $$        }
+    ascii   { Lexer.ASCII $$         }
+    file    { Lexer.File $$          }
+    url     { Lexer.URL $$           }
 
 %%
 
-Expr0 :: { Expr FilePath }
+Expr0 :: { Expr Path }
     : Expr1 ':' Expr0 { Annot $1 $3 }
     | Expr1           { $1          }
 
-Expr1 :: { Expr FilePath }
+Expr1 :: { Expr Path }
     : '\\'  '(' label ':' Expr1 ')' '->' Expr1 { Lam $3  $5 $8 }
     | '|~|' '(' label ':' Expr1 ')' '->' Expr1 { Pi  $3  $5 $8 }
     | Expr2 '->' Expr1                         { Pi  "_" $1 $3 }
@@ -103,15 +103,15 @@ VExpr  :: { Var }
     : label '@' number { V $1 $3 }
     | label            { V $1 0  }
 
-Expr2 :: { Expr FilePath }
+Expr2 :: { Expr Path }
     : Expr2 Expr3 { App $1 $2 }
     | Expr3       { $1        }
 
-Expr3 :: { Expr FilePath }
+Expr3 :: { Expr Path }
     : VExpr                       { Var $1                                   }
     | '*'                         { Const Star                               }
     | 'BOX'                       { Const Box                                }
-    | file                        { Import (fromText (Text.toStrict $1))     }
+    | Import                      { Import $1                                }
     | of                          { uncurry SumConstructor $1                }
     | number                      { Natural (fromIntegral $1)                }
     | ascii                       { ASCII $1                                 }
@@ -124,97 +124,97 @@ Expr3 :: { Expr FilePath }
     | 'do' Expr0 '{' Binds '}'    { let (init, last) = $4 in Do $2 init last }
     | '(' Expr0               ')' { $2                                       }
 
-Args :: { [Arg FilePath] }
+Args :: { [Arg Path] }
      : ArgsRev { reverse $1 }
 
-ArgsRev :: { [Arg FilePath] }
+ArgsRev :: { [Arg Path] }
     : ArgsRev Arg { $2 : $1 }
     |             { []      }
 
-Arg :: { Arg FilePath }
+Arg :: { Arg Path }
     : '(' label ':' Expr1 ')' { Arg $2  $4 }
     |               Expr3     { Arg "_" $1 }
 
-GivensRev :: { [Arg FilePath] }
+GivensRev :: { [Arg Path] }
     : GivensRev 'given' label ':' Expr0 { Arg $3 $5 : $1 }
     |                                   { []             }
 
-Givens :: { [Arg FilePath] }
+Givens :: { [Arg Path] }
     : GivensRev { reverse $1 }
 
-Data :: { Data FilePath }
+Data :: { Data Path }
     : 'data' label Args { Data $2 $3 }
 
-DatasRev :: { [Data FilePath] }
+DatasRev :: { [Data Path] }
     : DatasRev Data { $2 : $1 }
     |               { []      }
 
-Datas :: { [Data FilePath] }
+Datas :: { [Data Path] }
     : DatasRev { reverse $1 }
 
-Type :: { Type FilePath }
+Type :: { Type Path }
     : 'type' label Datas 'fold' label { Type $2 $5  $3 }
     | 'type' label Datas              { Type $2 "_" $3 }
 
-TypesRev :: { [Type FilePath] }
+TypesRev :: { [Type Path] }
     : TypesRev Type { $2 : $1 }
     |               { []      }
 
-Types :: { [Type FilePath] }
+Types :: { [Type Path] }
     : TypesRev { reverse $1 }
 
 Family :: { Family m }
     : Givens Types { Family $1 $2 }
 
-Let :: { Let FilePath }
+Let :: { Let Path }
     : 'let'  label Args ':' Expr0 '=' Expr1 { Let $2 $3 $5 $7 }
 
-LetsRev :: { [Let FilePath] }
+LetsRev :: { [Let Path] }
     : LetsRev Let { $2 : $1 }
     | Let         { [$1]    }
 
-Lets :: { [Let FilePath] }
+Lets :: { [Let Path] }
     : LetsRev { reverse $1 }
 
-ProductValueField :: { ProductValueSectionField FilePath }
+ProductValueField :: { ProductValueSectionField Path }
     : Expr1 ':' Expr0 { ValueField (ProductValueField $1 $3) }
     | Expr0           { TypeValueField $1                    }
     |                 { EmptyValueField                      }
 
-ProductValueFieldsRev :: { [ProductValueSectionField FilePath] }
+ProductValueFieldsRev :: { [ProductValueSectionField Path] }
     : ProductValueFieldsRev ',' ProductValueField { $3 : $1  }
     |                                             { []       }
 
-ProductValueFields :: { [ProductValueSectionField FilePath] }
+ProductValueFields :: { [ProductValueSectionField Path] }
     : ProductValueFieldsRev { reverse $1 }
 
-ProductTypeField :: { ProductTypeSectionField FilePath }
+ProductTypeField :: { ProductTypeSectionField Path }
     : label ':' Expr0 { TypeField (ProductTypeField $1  $3) }
     | Expr0           { TypeField (ProductTypeField "_" $1) }
     |                 { EmptyTypeField                      }
 
-ProductTypeFieldsRev :: { [ProductTypeSectionField FilePath] }
+ProductTypeFieldsRev :: { [ProductTypeSectionField Path] }
     : ProductTypeFieldsRev ',' ProductTypeField { $3 : $1  }
     |                                           { []       }
 
-ProductTypeFields :: { [ProductTypeSectionField FilePath] }
+ProductTypeFields :: { [ProductTypeSectionField Path] }
     : ProductTypeFieldsRev { reverse $1 }
 
-SumTypeFieldsRev :: { [SumTypeSectionField FilePath] }
+SumTypeFieldsRev :: { [SumTypeSectionField Path] }
     : SumTypeFieldsRev '|' SumTypeSectionField { $3 : $1 }
     |                                          { []      }
 
-SumTypeFields :: { [SumTypeSectionField FilePath] }
+SumTypeFields :: { [SumTypeSectionField Path] }
     : SumTypeFieldsRev { reverse $1 }
 
-SumTypeSectionField :: { SumTypeSectionField FilePath }
+SumTypeSectionField :: { SumTypeSectionField Path }
     : Expr0 { SumTypeField $1   }
     |       { EmptySumTypeField }
 
-ListFields :: { [Expr FilePath] }
+ListFields :: { [Expr Path] }
     : ListFieldsRev { reverse $1 }
 
-ListFieldsRev :: { [Expr FilePath] }
+ListFieldsRev :: { [Expr Path] }
     : ListFieldsRev ',' Expr0 { $3 : $1 }
     |                         { []      }
 
@@ -222,19 +222,23 @@ ListTypeField :: { ListTypeSectionField m }
     : Expr0 { ListTypeSectionField $1   }
     |       { EmptyListTypeSectionField }
 
-PathFields :: { ([(Expr FilePath, Expr FilePath)], Expr FilePath) }
+PathFields :: { ([(Expr Path, Expr Path)], Expr Path) }
     : Object Expr0 PathFields { let ~(oms, o) = $3 in (($1, $2):oms, o) }
     | Object                  { ([], $1)                                }
 
-Object :: { Expr FilePath }
+Object :: { Expr Path }
     : '(|' Expr0 '|)' { $2 }
 
-Bind :: { Bind FilePath }
+Bind :: { Bind Path }
     : label ':' Expr0 '<-' Expr0 ';' { Bind (Arg $1 $3) $5 }
 
-Binds :: { ([Bind FilePath], Bind FilePath) }
+Binds :: { ([Bind Path], Bind Path) }
     : Bind Binds { let ~(init, last) = $2 in ($1:init, last) }
     | Bind       { ([], $1)                                  }
+
+Import :: { Path }
+    : file { File $1 }
+    | url  { URL  $1 }
 
 {
 -- | The specific parsing error
@@ -277,7 +281,7 @@ parseError :: Token -> Lex a
 parseError token = throwError (Parsing token)
 
 -- | Parse an `Expr` from `Text` or return a `ParseError` if parsing fails
-exprFromText :: Text -> Either ParseError (Expr FilePath)
+exprFromText :: Text -> Either ParseError (Expr Path)
 exprFromText text = case runState (runErrorT parseExpr) initialStatus of
     (x, (position, _)) -> case x of
         Left  e    -> Left (ParseError position e)

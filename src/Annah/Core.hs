@@ -34,11 +34,9 @@ module Annah.Core (
     -- * Core functions
     -- $core
     , exprFromText
-    , loadExpr
     , desugar
     , resugarTypeError
     , resugar
-    , prettyExpr
 
     -- * Re-exports
     , Identity
@@ -47,9 +45,7 @@ module Annah.Core (
 import Data.Functor.Identity (Identity)
 
 import Annah.Error
-import Annah.Import
 import Annah.Parser
-import Annah.Pretty
 import Annah.Sugar
 import Annah.Syntax
 
