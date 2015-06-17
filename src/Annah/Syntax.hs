@@ -31,7 +31,8 @@ import qualified Morte.Core as M
 
 {-| Argument for function or constructor definitions
 
-> Arg x _A  ~  (x : _A)
+> Arg "_" _A  ~       _A
+> Arg  x  _A  ~  (x : _A)
 -}
 data Arg m = Arg
     { argName :: Text
@@ -44,7 +45,8 @@ instance Buildable a => Buildable (Arg a) where
 
 {-| Field of a product type
 
-> ProductTypeField x _A  ~  x : _A
+> ProductTypeField  x  _A  ~  x : _A
+> ProductTypeField "_" _A  ~      _A
 -}
 data ProductTypeField m = ProductTypeField
     { productTypeName :: Text
@@ -126,6 +128,7 @@ data Family m = Family
     }
 
 instance Buildable a => Buildable (Family a) where
+    build (Family [] ts) = mconcat (map build ts)
     build (Family gs ts)
         =   "given "
         <>  mconcat (map (\g -> build g <> " ") gs)
@@ -170,21 +173,20 @@ data Bind m = Bind
     , bindRhs :: Expr m
     }
 
-
 instance Buildable a => Buildable (Bind a) where
     build (Bind (Arg x _A) e) =
         build x <> " : " <> build _A <> " <- " <> build e <> "; "
+
 -- | Syntax tree for expressions
 data Expr m
     -- | > Const c                         ~  c
     = Const M.Const
     -- | > Var (V x 0)                     ~  x
-    --   > Var (V x 0)                     ~  x
+    --   > Var (V x n)                     ~  x@n
     | Var M.Var
     -- | > Lam x     _A  b                 ~  λ(x : _A) →  b
     | Lam Text (Expr m) (Expr m)
     -- | > Pi x      _A _B                 ~  ∀(x : _A) → _B
-    --   > Pi unused _A _B                 ~        _A  → _B
     | Pi  Text (Expr m) (Expr m)
     -- | > App f a                         ~  f a
     | App (Expr m) (Expr m)
@@ -192,10 +194,11 @@ data Expr m
     | Annot (Expr m) (Expr m)
     -- | > Lets [l1, l2] e                 ~  l1 l2 in e
     | Lets [Let m] (Expr m)
+    -- | > Family f e                      ~  f in e
     | Fam (Family m) (Expr m)
     -- | > Nat n                           ~  n
     | Natural Integer
-    -- | > ASCII str                       ~  str
+    -- | > ASCII txt                       ~  txt
     | ASCII Text
     -- | > ProductValue [f1, f2]           ~  <1,f1,f2>
     | ProductValue [ProductValueSectionField m]
