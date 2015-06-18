@@ -509,7 +509,7 @@ resugarProductTypeSection e0 = go0 e0 0
 
     Example:
 
-> [* Bool, True, False]
+> [nil Bool, True, False]
 > =>  λ(List : *)
 > →   λ(Cons : ∀(head : Bool}) → ∀(tail : List) → List)
 > →   λ(Nil : List)
@@ -528,6 +528,16 @@ desugarList e0 ts0 =
 
     desugar1 = M.shift 1 "List" . M.shift 1 "Cons" . M.shift 1 "Nil" . desugar
 
+{-| Convert a Morte expression back into a list
+
+    Example:
+
+>     λ(List : *)
+> →   λ(Cons : ∀(head : Bool}) → ∀(tail : List) → List)
+> →   λ(Nil : List)
+> →   Cons True (Cons False Nil)
+> =>  [nil Bool, True, False]
+-}
 resugarList :: Eq a => M.Expr a -> Maybe (Expr a, [Expr a])
 resugarList
     (M.Lam "List" (M.Const Star)
