@@ -25,21 +25,30 @@ fmapL _ (Right a) = Right a
 data Mode = Desugar | Resugar | Compile
 
 mode :: Parser Mode
-mode =  subparser (command "desugar" (info (pure Desugar)
+mode =  subparser
+        (   command "desugar" (info (pure Desugar)
             (   fullDesc
             <>  header "annah - A strongly typed, purely functional language"
             <>  progDesc "Desugar an Annah program into a Morte program"
-            ) ))
-    <|> subparser (command "resugar" (info (pure Resugar)
+            ) )
+        <>  metavar "desugar"
+        )
+    <|> subparser
+        (command "resugar" (info (pure Resugar)
             (   fullDesc
             <>  header "annah - A strongly typed, purely functional language"
             <>  progDesc "Resugar a Morte program into an Annah program"
-            ) ))
-    <|> subparser (command "compile" (info (pure Compile)
+            ) )
+        <>  metavar "resugar"
+        )
+    <|> subparser
+        (command "compile" (info (pure Compile)
             (   fullDesc
             <>  header "annah - A strongly typed, purely functional language"
             <>  progDesc "Compile an Annah program"
-            ) ))
+            ) )
+        <>  metavar "compile"
+        )
 
 main :: IO ()
 main = do
