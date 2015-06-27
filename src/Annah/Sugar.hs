@@ -25,25 +25,25 @@ import Annah.Syntax
 
 -- | Convert an Annah expression to a Morte expression
 desugar :: Eq a => Expr a -> M.Expr a
-desugar (Const c            ) = M.Const c
-desugar (Var v              ) = M.Var   v
-desugar (Lam x _A  b        ) = M.Lam x (desugar _A) (desugar  b)
-desugar (Pi  x _A _B        ) = M.Pi  x (desugar _A) (desugar _B)
-desugar (App f a            ) = M.App (desugar f) (desugar a)
-desugar (Import p           ) = M.Import p
-desugar (Annot a _A         ) = desugar (Lets [Let "x" [] _A a] "x")
-desugar (Lets ls e          ) = desugarLets  ls               e
-desugar (Fam f e            ) = desugarLets (desugarFamily f) e
-desugar (Natural n          ) = desugarNat n
-desugar (ASCII txt          ) = desugarASCII txt
-desugar (SumConstructor m n ) = desugarSumConstructor m n
-desugar (SumType ts         ) = desugarSumTypeSection ts
-desugar (ProductValue fs    ) = desugarProductValueSection fs
-desugar (ProductType  as    ) = desugarProductTypeSection as
-desugar (List t es          ) = desugarList t es
-desugar (ListType f         ) = desugarListTypeSection f
-desugar (Path t oms o       ) = desugarPath t oms o
-desugar (Do m bs b          ) = desugarDo m bs b
+desugar (Const c           ) = M.Const c
+desugar (Var v             ) = M.Var   v
+desugar (Lam x _A  b       ) = M.Lam x (desugar _A) (desugar  b)
+desugar (Pi  x _A _B       ) = M.Pi  x (desugar _A) (desugar _B)
+desugar (App f a           ) = M.App (desugar f) (desugar a)
+desugar (Import p          ) = M.Import p
+desugar (Annot a _A        ) = desugar (Lets [Let "x" [] _A a] "x")
+desugar (Lets ls e         ) = desugarLets  ls               e
+desugar (Fam f e           ) = desugarLets (desugarFamily f) e
+desugar (Natural n         ) = desugarNat n
+desugar (ASCII txt         ) = desugarASCII txt
+desugar (SumConstructor m n) = desugarSumConstructor m n
+desugar (SumType ts        ) = desugarSumTypeSection ts
+desugar (ProductValue fs   ) = desugarProductValueSection fs
+desugar (ProductType  as   ) = desugarProductTypeSection as
+desugar (List t es         ) = desugarList t es
+desugar (ListType f        ) = desugarListTypeSection f
+desugar (Path t oms o      ) = desugarPath t oms o
+desugar (Do m bs b         ) = desugarDo m bs b
 
 -- | Convert a Morte expression to an Annah expression
 resugar :: Eq a => M.Expr a -> Expr a
