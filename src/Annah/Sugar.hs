@@ -37,28 +37,28 @@ desugar (Fam f e           ) = desugarLets (desugarFamily f) e
 desugar (Natural n         ) = desugarNat n
 desugar (ASCII txt         ) = desugarASCII txt
 desugar (SumConstructor m n) = desugarSumConstructor m n
-desugar (SumType ts        ) = desugarSumTypeSection ts
-desugar (ProductValue fs   ) = desugarProductValueSection fs
-desugar (ProductType  as   ) = desugarProductTypeSection as
+desugar (SumType ts        ) = desugarSumType ts
+desugar (ProductValue fs   ) = desugarProductValue fs
+desugar (ProductType  as   ) = desugarProductType as
 desugar (List t es         ) = desugarList t es
-desugar (ListType f        ) = desugarListTypeSection f
+desugar (ListType f        ) = desugarListType f
 desugar (Path t oms o      ) = desugarPath t oms o
 desugar (Do m bs b         ) = desugarDo m bs b
 
 -- | Convert a Morte expression to an Annah expression
 resugar :: Eq a => M.Expr a -> Expr a
 resugar e
-    | Just e' <-  fmap Natural      (resugarNat                 e)
-              <|> fmap lets         (resugarLets                e)
-              <|> fmap ProductValue (resugarProductValueSection e)
-              <|> fmap ProductType  (resugarProductTypeSection  e)
-              <|> fmap ASCII        (resugarASCII               e)
-              <|> fmap sc           (resugarSumConstructor      e)
-              <|> fmap list         (resugarList                e)
-              <|> fmap ListType     (resugarListTypeSection     e)
-              <|> fmap path         (resugarPath                e)
-              <|> fmap cmd          (resugarDo                  e)
-              <|> fmap SumType      (resugarSumTypeSection      e)
+    | Just e' <-  fmap Natural      (resugarNat            e)
+              <|> fmap lets         (resugarLets           e)
+              <|> fmap ProductValue (resugarProductValue   e)
+              <|> fmap ProductType  (resugarProductType    e)
+              <|> fmap ASCII        (resugarASCII          e)
+              <|> fmap sc           (resugarSumConstructor e)
+              <|> fmap list         (resugarList           e)
+              <|> fmap ListType     (resugarListType       e)
+              <|> fmap path         (resugarPath           e)
+              <|> fmap cmd          (resugarDo             e)
+              <|> fmap SumType      (resugarSumType        e)
     = e'
   where
     lets (x, y)    = Lets           x y
@@ -249,41 +249,6 @@ resugarSumType (M.Pi "Sum" (M.Const M.Star) e0) = go id e0 0
     go _ _ _ = empty
 resugarSumType _ = empty
 
--- | Convert a sum type section to a Morte expression
-desugarSumTypeSection :: Eq a => [SumTypeSectionField a] -> M.Expr a
-desugarSumTypeSection fs0 = go fs0 id n0
-  where
-    n0 = length [ () | EmptySumTypeField <- fs0 ]
-
-    go  []                    diff _ = desugarSumType (diff [])
-    go (EmptySumTypeField:fs) diff n =
-        M.Lam "t" (M.Const M.Star) (go fs (diff . (t:)) $! n')
-      where
-        n' = n - 1
-        t  = Var (M.V "t" n')
-    go (SumTypeField    t:fs) diff n = go fs (diff . (shift t:)) n
-      where
-        shift = resugar . M.shift n0 "t" . desugar
-
--- | Convert a Morte expression back into a sum type section
-resugarSumTypeSection :: Eq a => M.Expr a -> Maybe [SumTypeSectionField a]
-resugarSumTypeSection e0 = go0 e0 0
-  where
-    go0 (M.Lam "t" (M.Const M.Star) e) n0 = go0 e $! n0 + 1
-    go0                             e  n0 = do
-        fs <- resugarSumType e
-        go1 fs n0
-      where
-        go1  []                  0           = pure []
-        go1 (Var (M.V "t" i):fs) m | i == m' =
-            fmap (EmptySumTypeField:) (go1 fs m')
-          where
-            m' = m - 1
-        go1 (f:fs) m = fmap (SumTypeField (shift f):) (go1 fs m)
-          where
-            shift = resugar . M.shift (negate n0) "t" . desugar
-        go1 _ _ = empty
-
 {-| Convert product values to Morte expressions
 
     Example:
@@ -333,107 +298,6 @@ resugarProductValue
     shiftBoth = M.shift (-1) "Product" . M.shift (-1) "MakeProduct"
 resugarProductValue _ = empty
 
-{-| Convert product value sections to Morte expressions
-
-    Example:
-
-> (,1 : Nat,Bool)
-> =>      \(t : *) -> -> \(f : t) -> \(f : Bool)
->     ->  \(Product : *) -> \(MakeProduct : t -> Nat -> Bool -> Product)
->     ->  MakeProduct f@1 1 f
--}
-desugarProductValueSection :: Eq a => [ProductValueSectionField a] -> M.Expr a
-desugarProductValueSection fs0 = go fs0 id id id numBoth numEmpties
-  where
-    numTypes   = length [ () | TypeValueField _ <- fs0 ]
-    numEmpties = length [ () | EmptyValueField  <- fs0 ]
-    numBoth    = numTypes + numEmpties
-
-    shift =
-        resugar . M.shift numBoth "f" . M.shift numEmpties "t" . desugar
-
-    go  []                  diffFs diffL1 diffL2 _ _ =
-        diffL1 (diffL2 (desugarProductValue (diffFs [])))
-    go (ValueField    f:fs) diffFs diffL1 diffL2 m n =
-        go fs (diffFs . (f':)) diffL1 diffL2 m n
-      where
-        ProductValueField e t = f
-        f' = ProductValueField (shift e) (shift t)
-    go (TypeValueField t:fs) diffFs diffL1 diffL2 m n = m' `seq`
-        go fs (diffFs . (f':)) diffL1 (diffL2 . l2) m' n
-      where
-        m' = m - 1
-        t' = shift t
-        f' = ProductValueField (Var (M.V "f" m')) t'
-        l2 = M.Lam "f" (desugar t')
-    go (EmptyValueField :fs) diffFs diffL1 diffL2 m n = m' `seq` n' `seq`
-        go fs (diffFs . (f':)) (diffL1 . l1) (diffL2 . l2) m' n'
-      where
-        m' = m - 1
-        n' = n - 1
-        f' = ProductValueField (Var (M.V "f" m')) (Var (M.V "t" n'))
-        l1 = M.Lam "t" (M.Const M.Star)
-        l2 = M.Lam "f" (M.Var (M.V "t" n'))
-
-{-| Convert Morte expressions back into product value sections
-
-    Example:
-
->     \(t : *) -> -> \(f : t) -> \(f : Bool)
-> ->  \(Product : *) -> \(MakeProduct : t -> Nat -> Bool -> Product)
-> ->  MakeProduct f@1 1 f
-> =>  (,1 : Nat,Bool)
--}
-resugarProductValueSection :: Eq a => M.Expr a -> Maybe [ProductValueSectionField a]
-resugarProductValueSection e0 = go0 e0 0
-  where
-    go0 (M.Lam "t" (M.Const Star) e) i = go0 e $! i + 1
-    go0                           e  i = go1 e id i i 0
-
-    go1 (M.Lam "f" (M.Var (M.V "t" j)) e) diff n i  m | i' == j = m' `seq` i' `seq`
-        go1 e diff' n i' m'
-      where
-        diff' = diff . (EmptyValueField:)
-        i' = i - 1
-        m' = m + 1
-    go1 (M.Lam "f"  t                  e) diff n i  m           = m' `seq`
-        go1 e diff' n i  m'
-      where
-        diff' = diff . (TypeValueField (resugar t):)
-        m' = m + 1
-    go1                                e  diff n 0  m           = do
-        pvfs <- resugarProductValue e
-        go2 pvfs (diff []) m n id
-      where
-        shift = resugar . M.shift (negate m) "f" . M.shift (negate n) "t" . desugar
-
-        go2  [] [] 0 0 diff_ = pure (diff_ [])
-        go2 (ProductValueField (Var (M.V "f" i)) (Var (M.V "t" j)):pvfs)
-            (EmptyValueField                                      :pvss)
-            m_ n_ diff_
-            | i == m_' && j == n_' = m_' `seq` n_' `seq`
-                go2 pvfs pvss m_' n_' diff_'
-          where
-            m_' = m_ - 1
-            n_' = n_ - 1
-            diff_' = diff_ . (EmptyValueField:)
-        go2 (ProductValueField (Var (M.V "f" i))  t               :pvfs)
-            (TypeValueField                       t'              :pvss)
-            m_ n_ diff_
-            | i == m_' && desugar t == desugar t' = m_' `seq`
-                go2 pvfs pvss m_' n_ diff_'
-          where
-            m_' = m_ - 1
-            diff_' = diff_ . (TypeValueField (resugar (desugar t')):)
-        go2 (pvf:pvfs) pvss m_ n_ diff_ = go2 pvfs pvss m_ n_ diff_'
-          where
-            ProductValueField e' t' = pvf
-            pvf' = ProductValueField (shift e') (shift t')
-            diff_' = diff_ . (ValueField pvf':)
-        go2 _ _ _ _ _ = empty
-
-    go1                                _  _    _ _  _      = empty
-
 {-| Convert a product type to a Morte expression
 
     Example:
@@ -466,58 +330,6 @@ resugarProductType
     go (M.Var (M.V "Product" n')) n | (n == n') = pure []
     go  _                         _             = empty
 resugarProductType _ = empty
-
-{-| Convert a product type section to a Morte expression
-
-    Example:
-
-> {, Nat}  =>  forall (t : *) -> forall (Product : *) -> (t -> Nat -> Product) -> Product
--}
-desugarProductTypeSection :: Eq a => [ProductTypeSectionField a] -> M.Expr a
-desugarProductTypeSection fs0 = go fs0 id numEmpty
-  where
-    numEmpty = length [ () | EmptyTypeField <- fs0 ]
-
-    go [] diff _ = desugarProductType (diff [])
-    go (TypeField  ptf:fs) diff n = go fs (diff . (ptf':)) n
-      where
-        ProductTypeField x t = ptf
-        ptf' = ProductTypeField x (shift t)
-    go (EmptyTypeField:fs) diff n =
-        M.Lam "t" (M.Const M.Star) (go fs (diff . (ptf':)) $! n')
-      where
-        ptf' = ProductTypeField "_" (Var (M.V "t" n'))
-        n'   = n - 1
-
-    shift = resugar . M.shift numEmpty "t" . desugar
-
-{-| Convert a Morte expression back into a product type section
-
-    Example:
-
-> forall (t : *) -> forall (Product : *) -> (t -> Nat -> Product) -> Product  =>  {, Nat}
--}
-resugarProductTypeSection :: Eq a => M.Expr a -> Maybe [ProductTypeSectionField a]
-resugarProductTypeSection e0 = go0 e0 0
-  where
-    go0 (M.Lam "t" (M.Const M.Star) e) n = go0 e $! n + 1
-    go0                             e  n = do
-        ptfs <- resugarProductType e
-        go1 ptfs id n
-      where
-        shift = resugar . M.shift (negate n) "t" . desugar
-
-        go1 [] diff 0 = pure (diff [])
-        go1 (ProductTypeField "_" (Var (M.V "t" i)):ptfs) diff n_ | n_' == i =
-            go1 ptfs diff' n_'
-          where
-            diff' = diff . (EmptyTypeField:)
-            n_' = n_ - 1
-        go1 (ProductTypeField  x   t              :ptfs) diff n_ = go1 ptfs diff' n_
-          where
-            ptf = ProductTypeField x (shift t)
-            diff' = diff . (TypeField ptf:)
-        go1  _                                           _    _ = empty
 
 {-| Convert a list into a Morte expression
 
@@ -612,39 +424,6 @@ resugarListType
   where
     resugar0 = resugar . M.shift (-1) "List"
 resugarListType _ = empty
-
-{-| Convert a list section into a Morte expression
-
-    Example:
-
-> []
-> =>  λ(t : *)
-> →   ∀(List : *)
-> →   ∀(Cons : ∀(head : t) → ∀(tail : List) → List)
-> →   ∀(Nil : List)
-> →   List
--}
-desugarListTypeSection :: Eq a => ListTypeSectionField a -> M.Expr a
-desugarListTypeSection (ListTypeSectionField t)   = desugarListType t
-desugarListTypeSection  EmptyListTypeSectionField =
-    M.Lam "t" (M.Const M.Star) (desugarListType "t")
-
-{-| Convert a Morte expression back into a list type section
-
-    Example:
-
->     λ(t : *)
-> →   ∀(List : *)
-> →   ∀(Cons : ∀(head : t) → ∀(tail : List) → List)
-> →   ∀(Nil : List)
-> →   List
-> =>  []
--}
-resugarListTypeSection :: Eq a => M.Expr a -> Maybe (ListTypeSectionField a)
-resugarListTypeSection (M.Lam "t" (M.Const M.Star) e) = do
-    Var (M.V "t" 0) <- resugarListType e
-    return EmptyListTypeSectionField
-resugarListTypeSection e = fmap ListTypeSectionField (resugarListType e)
 
 {-| Convert a path into a Morte expression
 

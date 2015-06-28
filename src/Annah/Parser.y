@@ -120,12 +120,12 @@ Expr3 :: { Expr Path }
     | '{0' SumTypeFields      '}' { SumType      $2                          }
     | '[nil' Expr0 ListFields ']' { List $2 $3                               }
     | '[id'  Expr0 PathFields ']' { let ~(oms, o) = $3 in Path $2 oms o      }
-    | '['  ListTypeField      ']' { ListType $2                              }
+    | '['    Expr0            ']' { ListType $2                              }
     | 'do' Expr0 '{' Binds '}'    { let (init, last) = $4 in Do $2 init last }
     | '(' Expr0               ')' { $2                                       }
 
 Args :: { [Arg Path] }
-     : ArgsRev { reverse $1 }
+    : ArgsRev { reverse $1 }
 
 ArgsRev :: { [Arg Path] }
     : ArgsRev Arg { $2 : $1 }
@@ -176,40 +176,33 @@ LetsRev :: { [Let Path] }
 Lets :: { [Let Path] }
     : LetsRev { reverse $1 }
 
-ProductValueField :: { ProductValueSectionField Path }
-    : Expr1 ':' Expr0 { ValueField (ProductValueField $1 $3) }
-    | Expr0           { TypeValueField $1                    }
-    |                 { EmptyValueField                      }
+ProductValueField :: { ProductValueField Path }
+    : Expr1 ':' Expr0 { ProductValueField $1 $3 }
 
-ProductValueFieldsRev :: { [ProductValueSectionField Path] }
+ProductValueFieldsRev :: { [ProductValueField Path] }
     : ProductValueFieldsRev ',' ProductValueField { $3 : $1  }
     |                                             { []       }
 
-ProductValueFields :: { [ProductValueSectionField Path] }
+ProductValueFields :: { [ProductValueField Path] }
     : ProductValueFieldsRev { reverse $1 }
 
-ProductTypeField :: { ProductTypeSectionField Path }
-    : label ':' Expr0 { TypeField (ProductTypeField $1  $3) }
-    | Expr0           { TypeField (ProductTypeField "_" $1) }
-    |                 { EmptyTypeField                      }
+ProductTypeField :: { ProductTypeField Path }
+    : label ':' Expr0 { ProductTypeField $1  $3 }
+    | Expr0           { ProductTypeField "_" $1 }
 
-ProductTypeFieldsRev :: { [ProductTypeSectionField Path] }
+ProductTypeFieldsRev :: { [ProductTypeField Path] }
     : ProductTypeFieldsRev ',' ProductTypeField { $3 : $1  }
     |                                           { []       }
 
-ProductTypeFields :: { [ProductTypeSectionField Path] }
+ProductTypeFields :: { [ProductTypeField Path] }
     : ProductTypeFieldsRev { reverse $1 }
 
-SumTypeFieldsRev :: { [SumTypeSectionField Path] }
-    : SumTypeFieldsRev '|' SumTypeSectionField { $3 : $1 }
-    |                                          { []      }
+SumTypeFieldsRev :: { [Expr Path] }
+    : SumTypeFieldsRev '|' Expr0 { $3 : $1 }
+    |                           { []      }
 
-SumTypeFields :: { [SumTypeSectionField Path] }
+SumTypeFields :: { [Expr Path] }
     : SumTypeFieldsRev { reverse $1 }
-
-SumTypeSectionField :: { SumTypeSectionField Path }
-    : Expr0 { SumTypeField $1   }
-    |       { EmptySumTypeField }
 
 ListFields :: { [Expr Path] }
     : ListFieldsRev { reverse $1 }
@@ -217,10 +210,6 @@ ListFields :: { [Expr Path] }
 ListFieldsRev :: { [Expr Path] }
     : ListFieldsRev ',' Expr0 { $3 : $1 }
     |                         { []      }
-
-ListTypeField :: { ListTypeSectionField m }
-    : Expr0 { ListTypeSectionField $1   }
-    |       { EmptyListTypeSectionField }
 
 PathFields :: { ([(Expr Path, Expr Path)], Expr Path) }
     : Object Expr0 PathFields { let ~(oms, o) = $3 in (($1, $2):oms, o) }

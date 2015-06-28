@@ -9,11 +9,7 @@ module Annah.Syntax (
     , M.Const(..)
     , Arg(..)
     , ProductTypeField(..)
-    , ProductTypeSectionField(..)
     , ProductValueField(..)
-    , ProductValueSectionField(..)
-    , SumTypeSectionField(..)
-    , ListTypeSectionField(..)
     , Let(..)
     , Data(..)
     , Type(..)
@@ -59,15 +55,6 @@ instance Buildable a => Buildable (ProductTypeField a) where
         then build _A
         else build x <> " : " <> build _A
 
--- | Field of a product type section
-data ProductTypeSectionField m
-    = EmptyTypeField
-    | TypeField (ProductTypeField m)
-
-instance Buildable a => Buildable (ProductTypeSectionField a) where
-    build (TypeField a   ) = build a
-    build  EmptyTypeField  = ""
-
 {-| Field of a product value
 
 > ProductValueField a _A  ~  a : _A
@@ -79,35 +66,6 @@ data ProductValueField m = ProductValueField
 
 instance Buildable a => Buildable (ProductValueField a) where
     build (ProductValueField a b) = build a <> " : " <> build b
-
--- | Field of a product value section
-data ProductValueSectionField m
-    = EmptyValueField
-    | TypeValueField (Expr m)
-    | ValueField (ProductValueField m)
-
-instance Buildable a => Buildable (ProductValueSectionField a) where
-    build (ValueField     a) = build a
-    build (TypeValueField t) = build t
-    build  EmptyValueField   = ""
-
--- | Field of a sum type section
-data SumTypeSectionField m
-    = EmptySumTypeField
-    | SumTypeField (Expr m)
-
-instance Buildable a => Buildable (SumTypeSectionField a) where
-    build  EmptySumTypeField  = ""
-    build (SumTypeField f   ) = build f
-
--- | Field of a list type section
-data ListTypeSectionField m
-    = EmptyListTypeSectionField
-    | ListTypeSectionField (Expr m)
-
-instance Buildable a => Buildable (ListTypeSectionField a) where
-    build  EmptyListTypeSectionField  = ""
-    build (ListTypeSectionField f   ) = build f
 
 {-|
 > Let f [a1, a2] _A rhs  ~  let f a1 a2 : _A = rhs
@@ -201,17 +159,17 @@ data Expr m
     -- | > ASCII txt                       ~  txt
     | ASCII Text
     -- | > ProductValue [f1, f2]           ~  <1,f1,f2>
-    | ProductValue [ProductValueSectionField m]
+    | ProductValue [ProductValueField m]
     -- | > ProductType [f1, f2]            ~  {1,f1,f2}
-    | ProductType [ProductTypeSectionField m]
+    | ProductType [ProductTypeField m]
     -- | > SumConstructor i j              ~  itoj
     | SumConstructor Int Int
     -- | > SumType [t1, t2]                ~  {0|t1|t2}
-    | SumType [SumTypeSectionField m]
+    | SumType [Expr m]
     -- | > List t [x, y, z]                ~  [nil t,x,y,z]
     | List (Expr m) [Expr m]
     -- | > ListType t                      ~  [t]
-    | ListType (ListTypeSectionField m)
+    | ListType (Expr m)
     -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [id c (|o1|) m1 (|o2|) m2 (|o3|)]
     | Path (Expr m) [(Expr m, Expr m)] (Expr m)
     -- | > Do m [b1, b2] b3                ~  do m { b1 b2 b3 }
