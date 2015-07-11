@@ -2,15 +2,13 @@
 {-# LANGUAGE PatternGuards     #-}
 {-# OPTIONS_GHC -Wall #-}
 
-{-| This module contains all logic for desugaring Annah expressions to Morte and
-    resugaring Morte expressions back to Annah.  I call this desugaring because
-    Morte is a subset of Annah.
+{-| This module contains all logic for desugaring Annah expressions to Morte.
+    I call this desugaring because Morte is a subset of Annah.
 -}
 
 module Annah.Sugar (
     -- * Sugar
       desugar
-    , resugar
     ) where
 
 import Control.Applicative (pure, empty, (<|>))
@@ -45,34 +43,6 @@ desugar (ListType f        ) = desugarListType f
 desugar (Path t oms o      ) = desugarPath t oms o
 desugar (Do m bs b         ) = desugarDo m bs b
 
--- | Convert a Morte expression to an Annah expression
-resugar :: Eq a => M.Expr a -> Expr a
-resugar e
-    | Just e' <-  fmap Natural      (resugarNat            e)
-              <|> fmap lets         (resugarLets           e)
-              <|> fmap ProductValue (resugarProductValue   e)
-              <|> fmap ProductType  (resugarProductType    e)
-              <|> fmap ASCII        (resugarASCII          e)
-              <|> fmap sc           (resugarSumConstructor e)
-              <|> fmap list         (resugarList           e)
-              <|> fmap ListType     (resugarListType       e)
-              <|> fmap path         (resugarPath           e)
-              <|> fmap cmd          (resugarDo             e)
-              <|> fmap SumType      (resugarSumType        e)
-    = e'
-  where
-    lets (x, y)    = Lets           x y
-    sc   (x, y)    = SumConstructor x y
-    list (x, y)    = List           x y
-    path (x, y, z) = Path           x y z
-    cmd  (x, y, z) = Do             x y z
-resugar (M.Const c    ) = Const c
-resugar (M.Var v      ) = Var v
-resugar (M.Lam x _A  b) = Lam x (resugar _A) (resugar  b)
-resugar (M.Pi  x _A _B) = Pi  x (resugar _A) (resugar _B)
-resugar (M.App f a    ) = App (resugar f) (resugar a)
-resugar (M.Import p   ) = Import p
-
 data Bin = Zero | One Bin_
 
 data Bin_ = Nil_ | Zero_ Bin_ | One_ Bin_
@@ -94,14 +64,6 @@ integerToBin n0 = go0 n0
     append diffBin_  Nil_        = diffBin_ Nil_
     append diffBin_ (Zero_ bin_) = Zero_ (append diffBin_ bin_)
     append diffBin_ (One_  bin_) = One_ (append diffBin_  bin_)
-
-binToInteger :: Bin -> Integer
-binToInteger  Zero       = 0
-binToInteger (One bin_0) = go bin_0 1
-  where
-    go  Nil_        n = n
-    go (Zero_ bin_) n = go bin_ $! 2 * n
-    go (One_  bin_) n = go bin_ $! 2 * n + 1
 
 -- | Convert a numeric literal to a Morte expression
 desugarNat :: Integer -> M.Expr a
@@ -130,49 +92,6 @@ desugarNat n0 =
     go1 (Zero_ bin_) = M.App "Zero_" (go1 bin_)
     go1 (One_  bin_) = M.App "One_"  (go1 bin_)
 
--- | Convert a Morte expression back into a numeric literal
-resugarNat :: M.Expr a -> Maybe Integer
-resugarNat
-    (M.Lam "Bin" (M.Const M.Star)
-        (M.Lam "Zero" (M.Var (M.V "Bin" 0))
-            (M.Lam "One"
-                (M.Pi "_"
-                    (M.Pi "Bin_" (M.Const M.Star)
-                        (M.Pi "Nil_" (M.Var (M.V "Bin_" 0))
-                            (M.Pi "Zero_"
-                                (M.Pi "_"
-                                    (M.Var (M.V "Bin_" 0))
-                                    (M.Var (M.V "Bin_" 0))
-                                )
-                                (M.Pi "One_"
-                                    (M.Pi "_"
-                                        (M.Var (M.V "Bin_" 0))
-                                        (M.Var (M.V "Bin_" 0))
-                                    )
-                                    (M.Var (M.V "Bin_" 0)) ) ) ) )
-                    (M.Var (M.V "Bin" 0)) )
-                e0 ) ) ) = do
-    bs <- go0 e0
-    return (binToInteger bs)
-  where
-    go0 (M.Var (M.V "Zero" 0))          = pure Zero
-    go0 (M.App (M.Var (M.V "One" 0))
-            (M.Lam "Bin_" (M.Const M.Star)
-                (M.Lam "Nil_" (M.Var (M.V "Bin_" 0))
-                    (M.Lam "Zero_"
-                        (M.Pi "_" (M.Var (M.V "Bin_" 0)) (M.Var (M.V "Bin_" 0)))
-                        (M.Lam "One_"
-                            (M.Pi "_" (M.Var (M.V "Bin_" 0))
-                                (M.Var (M.V "Bin_" 0)) )
-                            e ) ) ) ) ) = fmap One (go1 e)
-    go0 _ = empty
-
-    go1 (M.Var (M.V "Nil_" 0))            = pure Nil_
-    go1 (M.App (M.Var (M.V "Zero_" 0)) e) = fmap Zero_ (go1 e)
-    go1 (M.App (M.Var (M.V "One_"  0)) e) = fmap One_  (go1 e)
-    go1 _ = empty
-resugarNat _ = empty
-
 -- | Convert an ASCII literal to a Morte expression
 desugarASCII :: Text -> M.Expr a
 desugarASCII txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
@@ -182,20 +101,6 @@ desugarASCII txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
 
     cons c t = M.App (M.Var (M.V "C" (ord c))) t
     nil      = "N"
-
--- | Convert a Morte expression back into an ASCII literal
-resugarASCII :: Eq a => M.Expr a -> Maybe Text
-resugarASCII (M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" e0)) =
-    fmap Text.pack (go0 e0 (0 :: Int))
-  where
-    go0 (M.Lam "C" (M.Pi "_" "S" "S") e) n | n < 128 = go0 e $! n + 1
-    go0 e 128                                        = go1 e
-    go0 _ _                                          = empty
-
-    go1 (M.App (M.Var (M.V "C" n)) e) = fmap (chr n:) (go1 e)
-    go1 (M.Var (M.V "N" 0))           = pure []
-    go1  _                            = empty
-resugarASCII _ = empty
 
 -- | Convert a sum constructor to a Morte expression
 desugarSumConstructor :: Int -> Int -> M.Expr a
@@ -212,23 +117,6 @@ desugarSumConstructor m0 n0 = go0 1
                 (go1 $! n + 1)
         | otherwise = M.App (M.Var (M.V "MkSum" (n0 - m0))) "x"
 
--- | Convert a Morte expression back into a sum constructor
-resugarSumConstructor :: Eq a => M.Expr a -> Maybe (Int, Int)
-resugarSumConstructor e0 = go0 e0 0
-  where
-    go0 (M.Lam "t" (M.Const M.Star) e) n = go0 e $! n + 1
-    go0 (M.Lam "x" (M.Var (M.V "t" i))
-            (M.Lam "Sum" (M.Const M.Star) e)) n0 = go1 e 1
-      where
-        m0 = n0 - i
-
-        go1 (M.Lam "MkSum" (M.Pi "x" (M.Var (M.V "t" j)) "Sum") e') n
-            | j == n0 - n  = go1 e' $! n + 1
-        go1 (M.App (M.Var (M.V "MkSum" j)) (M.Var (M.V "x" 0))) _
-            | j == n0 - m0 = pure (m0, n0)
-        go1 _ _ = empty
-    go0 _ _ = empty
-
 -- | Convert a sum type to a Morte expression
 desugarSumType :: Eq a => [Expr a] -> M.Expr a
 desugarSumType ts0 = M.Pi "Sum" (M.Const M.Star) (go ts0 0)
@@ -237,17 +125,6 @@ desugarSumType ts0 = M.Pi "Sum" (M.Const M.Star) (go ts0 0)
       where
         t' = (M.shift 1 "Sum" . M.shift n "MkSum" . desugar) t
     go  []    _ = "Sum"
-
--- | Convert a Morte expression back into a sum type
-resugarSumType :: Eq a => M.Expr a -> Maybe [Expr a]
-resugarSumType (M.Pi "Sum" (M.Const M.Star) e0) = go id e0 0
-  where
-    go diff (M.Pi "MkSum" (M.Pi "x" t "Sum") e) n = go (diff . (t':)) e $! n + 1
-      where
-        t' = (resugar . M.shift (-1) "Sum" . M.shift (negate n) "MkSum") t
-    go diff (M.Var (M.V "Sum" 0))               _ = pure (diff [])
-    go _ _ _ = empty
-resugarSumType _ = empty
 
 {-| Convert product values to Morte expressions
 
@@ -271,33 +148,6 @@ desugarProductValue fs0 =
     shiftOne  = M.shift 1 "Product"
     shiftBoth = M.shift 1 "Product" . M.shift 1 "MakeProduct"
 
-{-| Convert Morte expressions back into product values
-
-    Example:
-
-> \(Product : *) -> \(MakeProduct : Bool -> Nat -> Product) -> MakeProduct True 1
-> =>  (True : Bool, 1 : Nat)
--}
-resugarProductValue :: Eq a => M.Expr a -> Maybe [ProductValueField a]
-resugarProductValue
-    (M.Lam "Product" (M.Const M.Star) (M.Lam "MakeProduct" t0 e0)) = do
-        es <- fmap reverse (go0 e0)
-        ts <- go1 t0
-        guard (length es == length ts)
-        return (zipWith ProductValueField es ts)
-  where
-    go0 (M.App e a)                   = fmap (resugar (shiftBoth a):) (go0 e)
-    go0 (M.Var (M.V "MakeProduct" _)) = pure []
-    go0  _                            = empty
-
-    go1 (M.Pi "_" t e)            = fmap (resugar (shiftOne t):) (go1 e)
-    go1 (M.Var (M.V "Product" _)) = pure []
-    go1  _                        = empty
-
-    shiftOne  = M.shift (-1) "Product"
-    shiftBoth = M.shift (-1) "Product" . M.shift (-1) "MakeProduct"
-resugarProductValue _ = empty
-
 {-| Convert a product type to a Morte expression
 
     Example:
@@ -312,24 +162,6 @@ desugarProductType args0 =
       where
         n' = if x == "Product" then n + 1 else n
     go  []                          n = M.Var (M.V "Product" n)
-
-{-| Convert a Morte expression back into a product type
-
-    Example:
-
-> forall (Product : *) -> (Bool -> Nat -> Product) -> Product  =>  {Bool, Nat}
--}
-resugarProductType :: Eq a => M.Expr a -> Maybe [ProductTypeField a]
-resugarProductType
-    (M.Pi "Product" (M.Const M.Star) (M.Pi "MakeProduct" t0 "Product")) =
-    go t0 0
-  where
-    go (M.Pi x _A e) n = fmap (ProductTypeField x (resugar _A):) (go e $! n')
-      where
-        n' = if x == "Product" then n + 1 else n
-    go (M.Var (M.V "Product" n')) n | (n == n') = pure []
-    go  _                         _             = empty
-resugarProductType _ = empty
 
 {-| Convert a list into a Morte expression
 
@@ -354,37 +186,6 @@ desugarList e0 ts0 =
 
     desugar1 = M.shift 1 "List" . M.shift 1 "Cons" . M.shift 1 "Nil" . desugar
 
-{-| Convert a Morte expression back into a list
-
-    Example:
-
->     λ(List : *)
-> →   λ(Cons : ∀(head : Bool}) → ∀(tail : List) → List)
-> →   λ(Nil : List)
-> →   Cons True (Cons False Nil)
-> =>  [nil Bool, True, False]
--}
-resugarList :: Eq a => M.Expr a -> Maybe (Expr a, [Expr a])
-resugarList
-    (M.Lam "List" (M.Const Star)
-        (M.Lam "Cons"
-            (M.Pi "head" e0
-                (M.Pi "tail" (M.Var (M.V "List" 0)) (M.Var (M.V "List" 0))) )
-            (M.Lam "Nil" (M.Var (M.V "List" 0)) ts0) ) )
-    = fmap ((,) (resugar0 e0)) (go ts0)
-  where
-    go (M.Var (M.V "Nil" 0))                       = pure []
-    go (M.App (M.App (M.Var (M.V "Cons" 0)) t) ts) = fmap (resugar1 t:) (go ts)
-    go _ = empty
-
-    resugar0 = resugar . M.shift (-1) "List"
-    resugar1 =
-            resugar
-        .   M.shift (-1) "List"
-        .   M.shift (-1) "Cons"
-        .   M.shift (-1) "Nil"
-resugarList _ = empty
-
 {-| Convert a list type into a Morte expression
 
     Example:
@@ -402,28 +203,6 @@ desugarListType t =
             (M.Pi "Nil" "List" "List") )
   where
     desugar0 = M.shift 1 "List" . desugar
-
-{-| Convert a Morte expression back into a list type
-
-    Example:
-
->     ∀(List : *)
-> →   ∀(Cons : ∀(head : t) → ∀(tail : List) → List)
-> →   ∀(Nil : List)
-> →   List
-> =>  [t]
--}
-resugarListType :: Eq a => M.Expr a -> Maybe (Expr a)
-resugarListType
-    (M.Pi "List" (M.Const M.Star)
-        (M.Pi "Cons"
-            (M.Pi "head" e
-                (M.Pi "tail" (M.Var (M.V "List" 0)) (M.Var (M.V "List" 0))) )
-            (M.Pi "Nil" (M.Var (M.V "List" 0)) (M.Var (M.V "List" 0))) ) )
-    = pure (resugar0 e)
-  where
-    resugar0 = resugar . M.shift (-1) "List"
-resugarListType _ = empty
 
 {-| Convert a path into a Morte expression
 
@@ -483,76 +262,6 @@ desugarPath c0 oms0 o0 =
         o2' = desugar1 o2
         m1' = desugar1 m1
 
-{-| Convert a Morte expression back into a path
-
-    Example:
-
->     λ(Path : ∀(a : *) → ∀(b : *) → *)
-> →   λ(  Step
->     :   ∀(a : *)
->     →   ∀(b : *)
->     →   ∀(c : *)
->     →   ∀(head : cat a b)
->     →   ∀(tail : Path b c)
->     →   Path a c
->     )
-> →   λ(End : ∀(a : *) → Path a a)
-> →   Step a b c f (Step b c c g (End c))
-> =>  [. cat (|a|) f (|b|) g (|c|)]
--}
-resugarPath :: Eq a => M.Expr a -> Maybe (Expr a, [(Expr a, Expr a)], Expr a)
-resugarPath
-    (M.Lam "Path"
-        (M.Pi "a" (M.Const M.Star) (M.Pi "b" (M.Const M.Star) (M.Const M.Star)))
-        (M.Lam "Step"
-            (M.Pi "a" (M.Const M.Star)
-                (M.Pi "b" (M.Const M.Star)
-                    (M.Pi "c" (M.Const M.Star)
-                        (M.Pi "head"
-                            cab
-                            (M.Pi "tail"
-                                (M.App
-                                    (M.App
-                                        (M.Var (M.V "Path" 0))
-                                        (M.Var (M.V "b" 0)) )
-                                    (M.Var (M.V "c" 0)) )
-                                (M.App
-                                    (M.App
-                                        (M.Var (M.V "Path" 0))
-                                        (M.Var (M.V "a" 0)) )
-                                    (M.Var (M.V "c" 0)) ) ) ) ) ) )
-            (M.Lam "End"
-                (M.Pi "a"
-                    (M.Const M.Star)
-                    (M.App
-                        (M.App (M.Var (M.V "Path" 0)) (M.Var (M.V "a" 0)))
-                        (M.Var (M.V "a" 0)) ) )
-                e0 ) ) ) = do
-    ((oms, o0), _) <- go e0
-    let c0 = M.Lam "a" (M.Const M.Star) (M.Lam "b" (M.Const M.Star) cab)
-    return (resugar0 c0, oms, resugar1 o0)
-  where
-    resugar0 = resugar . M.shift (-1) "Path"
-    resugar1 =
-            resugar
-        .   M.shift (-1) "Path"
-        .   M.shift (-1) "Step"
-        .   M.shift (-1) "End"
-
-    go (M.App (M.Var (M.V "End" 0)) o0') = return (([], o0'), o0')
-    go (M.App
-           (M.App
-               (M.App (M.App (M.App (M.Var (M.V "Step" 0)) o1') o2') o0')
-               m1' )
-           e) = do
-        ((oms, o0), o2) <- go e
-        guard (o0 == o0' && o2 == o2')
-        let o1 = resugar1 o1'
-        let m1 = resugar1 m1'
-        return (((o1, m1):oms, o0), o1')
-    go _ = empty
-resugarPath _ = empty
-
 {-| Convert a command (i.e. do-notation) into a Morte expression
 
     For the experts, this encodes the do-notation using what the Haskell world
@@ -600,63 +309,6 @@ desugarDo m bs0 (Bind (Arg x0 _A0) e0) =
       where
         numBind' = if x == "Bind" then numBind + 1 else numBind
         numPure' = if x == "Pure" then numPure + 1 else numPure
-
-{-| Convert a Morte expression back into a command (i.e. do-notation)
-
-    Example:
-
->     λ(Cmd : *)
-> →   λ(Bind : ∀(b : *) → m b → (b → Cmd) → Cmd)
-> →   λ(Pure : ∀(x1 : _A1) → Cmd)
-> →   Bind
->     _A0
->     e0
->     (   λ(x0 : _A0)
->     →   Bind
->         _A1
->         e1
->         Pure
->     )
-> =>  do m { x0 : _A0 <- e0; x1 : _A1 <- e1 }
--}
-resugarDo :: Eq a => M.Expr a -> Maybe (Expr a, [Bind a], Bind a)
-resugarDo
-    (M.Lam "Cmd" (M.Const M.Star)
-        (M.Lam "Bind"
-            (M.Pi "b" (M.Const M.Star)
-                (M.Pi "_" mb
-                    (M.Pi "_"
-                        (M.Pi "_" (M.Var (M.V "b" 0)) (M.Var (M.V "Cmd" 0)))
-                            (M.Var (M.V "Cmd" 0)) ) ) )
-            (M.Lam "Pure" (M.Pi x0 _A0 (M.Var (M.V "Cmd" 0))) e0) ) ) = do
-    (bs, b) <- go e0 0 0
-    let m_ = resugar (M.Lam "b" (M.Const M.Star) mb)
-    return (m_, bs, b)
-  where
-    _A0_ = resugar _A0
-
-    go  (M.App
-            (M.App (M.App (M.Var (M.V "Bind" numBind')) _A0') e0')
-            (M.Var (M.V "Pure" numPure')) )
-        numPure
-        numBind = do
-        guard (_A0 == _A0' && numPure == numPure' && numBind == numBind')
-        let _A0'_ = resugar _A0'
-        let e0'_  = resugar e0'
-        return ([], Bind (Arg x0 _A0_) e0'_)
-    go  (M.App (M.App (M.App (M.Var (M.V "Bind" numBind')) _A) e)
-            (M.Lam x _A' e') )
-        numPure
-        numBind = do
-        guard (_A == _A' && numBind == numBind')
-        let numPure'' = if x == "Pure" then numPure + 1 else numPure
-        let numBind'' = if x == "Bind" then numBind + 1 else numBind
-        ~(bs, b) <- numPure'' `seq` numBind'' `seq` go e' numPure'' numBind''
-        let _A_ = resugar _A
-        let e_  = resugar e
-        return (Bind (Arg x _A_) e_:bs, b)
-    go _ _ _ = empty
-resugarDo _ = empty
 
 {-| `desugarLets` converts this:
 
@@ -706,35 +358,6 @@ desugarLets lets e = apps
             M.App rest (desugar (lam args bn)) )
         lams
         (reverse lets)
-
--- | Convert a Morte expression back into a let expression
-resugarLets :: Eq a => M.Expr a -> Maybe ([Let a], Expr a)
-resugarLets e0 = do
-    -- Require at least one `Let` to ensure productivity
-    r@(_:_, _) <- go0 e0 []
-    return r
-  where
-    go0 (M.App rest rhs) rhss = go0 rest (rhs:rhss)
-    go0  e               rhss = go1 e rhss
-
-    go1 (M.Lam x _A e) (rhs:rhss) = do
-        ~(lets, e') <- go1 e rhss
-        let (args, _A', rhs') = go2 _A rhs
-        return (Let x args _A' rhs':lets, e')
-    go1             e      []     = return ([], e_)
-      where
-        e_ = resugar e
-    go1             _      _      = empty
-
-    go2 (M.Pi xL _AL eL) (M.Lam xR _AR eR)
-        | xL == xR && _AL == _AR = (Arg xL _AL_:args, eL', eR')
-          where
-            _AL_ = resugar _AL
-            (args, eL', eR') = go2 eL eR
-    go2 eL eR = ([], eL_, eR_)
-      where
-        eL_ = resugar eL
-        eR_ = resugar eR
 
 -- | A type or data constructor
 data Cons a = Cons

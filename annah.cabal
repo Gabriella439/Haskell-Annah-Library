@@ -32,7 +32,6 @@ Library
         transformers         >= 0.2.0.0  && < 0.5
     Exposed-Modules:
         Annah.Core,
-        Annah.Error,
         Annah.Lexer,
         Annah.Parser,
         Annah.Sugar,

@@ -36,8 +36,6 @@ module Annah.Core (
     -- $core
     , exprFromText
     , desugar
-    , resugarTypeError
-    , resugar
 
     -- * Re-exports
     , Identity
@@ -45,7 +43,6 @@ module Annah.Core (
 
 import Data.Functor.Identity (Identity)
 
-import Annah.Error
 import Annah.Parser
 import Annah.Sugar
 import Annah.Syntax
@@ -63,11 +60,5 @@ import qualified Morte.Core as M
 
     * You type-check the Morte expression using `M.typeOf`
 
-    * If there is a type error, resugar the type error using `resugarTypeError`
-
     * You `M.normalize` the Morte expression
-
-    * You `resugar` the Morte expression back to Annah
-
-    * You pretty-print the Annah expression using `prettyExpr`
 -}
