@@ -13,7 +13,6 @@ module Annah.Desugar (
 
 import Control.Applicative (pure, empty)
 import Data.Char (ord)
-import Data.Monoid ((<>))
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
 import qualified Morte.Core as M
