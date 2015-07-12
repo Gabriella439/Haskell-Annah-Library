@@ -44,8 +44,6 @@ import Annah.Syntax
 %error { parseError }
 
 %token
-    '(|'    { Lexer.OpenBanana       }
-    '|)'    { Lexer.CloseBanana      }
     '('     { Lexer.OpenParen        }
     ')'     { Lexer.CloseParen       }
     '{'     { Lexer.OpenBrace        }
@@ -176,7 +174,7 @@ PathFields :: { ([(Expr Path, Expr Path)], Expr Path) }
     | Object                  { ([], $1)                                }
 
 Object :: { Expr Path }
-    : '(|' Expr0 '|)' { $2 }
+    : '{' Expr0 '}' { $2 }
 
 Bind :: { Bind Path }
     : label ':' Expr0 '<-' Expr0 ';' { Bind (Arg $1 $3) $5 }

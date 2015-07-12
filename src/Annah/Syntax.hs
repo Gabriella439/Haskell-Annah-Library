@@ -98,7 +98,7 @@ data Expr m
     | ASCII Text
     -- | > List t [x, y, z]                ~  [nil t,x,y,z]
     | List (Expr m) [Expr m]
-    -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [id c (|o1|) m1 (|o2|) m2 (|o3|)]
+    -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [id c {o1} m1 {o2} m2 {o3}]
     | Path (Expr m) [(Expr m, Expr m)] (Expr m)
     -- | > Do m [b1, b2] b3                ~  do m { b1 b2 b3 }
     | Do (Expr m) [Bind m] (Bind m)

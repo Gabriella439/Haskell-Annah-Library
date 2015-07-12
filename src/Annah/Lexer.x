@@ -45,8 +45,6 @@ tokens :-
                                         line   += 1
                                         column .= 0 )                          }
     "--".*                          ;
-    "(|"                            { \_    -> yield OpenBanana                }
-    "|)"                            { \_    -> yield CloseBanana               }
     "("                             { \_    -> yield OpenParen                 }
     ")"                             { \_    -> yield CloseParen                }
     "{"                             { \_    -> yield OpenBrace                 }
@@ -173,9 +171,7 @@ lexExpr text = go (AlexInput '\n' [] text)
 
 -- | Token type, used to communicate between the lexer and parser
 data Token
-    = OpenBanana
-    | CloseBanana
-    | OpenParen
+    = OpenParen
     | CloseParen
     | OpenBrace
     | CloseBrace
