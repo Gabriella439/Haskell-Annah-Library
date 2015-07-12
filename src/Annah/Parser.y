@@ -50,7 +50,6 @@ import Annah.Syntax
     ')'     { Lexer.CloseParen       }
     '[nil'  { Lexer.OpenList         }
     '[id'   { Lexer.OpenPath         }
-    '['     { Lexer.OpenBracket      }
     ']'     { Lexer.CloseBracket     }
     '{1'    { Lexer.OpenProductType  }
     '{0'    { Lexer.OpenSumType      }
@@ -120,7 +119,6 @@ Expr3 :: { Expr Path }
     | '{0' SumTypeFields      '}' { SumType      $2                          }
     | '[nil' Expr0 ListFields ']' { List $2 $3                               }
     | '[id'  Expr0 PathFields ']' { let ~(oms, o) = $3 in Path $2 oms o      }
-    | '['    Expr0            ']' { ListType $2                              }
     | 'do' Expr0 '{' Binds '}'    { let (init, last) = $4 in Do $2 init last }
     | '(' Expr0               ')' { $2                                       }
 

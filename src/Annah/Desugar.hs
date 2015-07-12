@@ -38,7 +38,6 @@ desugar (SumType ts        ) = desugarSumType ts
 desugar (ProductValue fs   ) = desugarProductValue fs
 desugar (ProductType  as   ) = desugarProductType as
 desugar (List t es         ) = desugarList t es
-desugar (ListType f        ) = desugarListType f
 desugar (Path t oms o      ) = desugarPath t oms o
 desugar (Do m bs b         ) = desugarDo m bs b
 
@@ -184,24 +183,6 @@ desugarList e0 ts0 =
     desugar0 = M.shift 1 "List" . desugar
 
     desugar1 = M.shift 1 "List" . M.shift 1 "Cons" . M.shift 1 "Nil" . desugar
-
-{-| Convert a list type into a Morte expression
-
-    Example:
-
-> [t]
-> =>  ∀(List : *)
-> →   ∀(Cons : ∀(head : t) → ∀(tail : List) → List)
-> →   ∀(Nil : List)
-> →   List
--}
-desugarListType :: Eq a => Expr a -> M.Expr a
-desugarListType t =
-    M.Pi "List" (M.Const M.Star)
-        (M.Pi "Cons" (M.Pi "head" (desugar0 t) (M.Pi "tail" "List" "List"))
-            (M.Pi "Nil" "List" "List") )
-  where
-    desugar0 = M.shift 1 "List" . desugar
 
 {-| Convert a path into a Morte expression
 
