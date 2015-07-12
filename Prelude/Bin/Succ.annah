@@ -1,0 +1,38 @@
+type S1
+data MkS1 #Bool #Bin/Bin_
+fold foldS1
+in
+
+let Succ (bin : #Bin ) : #Bin = bin
+    #Bin
+    (#Bin/One #Bin/Nil_ )
+    (\(bin_ : #Bin/Bin_ ) ->
+        let x : S1 = bin_
+            S1
+            (MkS1 #Bool/True #Bin/Nil_ )
+            (\(t : S1) -> foldS1 t
+                S1
+                (\(b : #Bool ) -> \(bin_ : #Bin/Bin_ ) -> b
+                    S1
+                    (MkS1 #Bool/False (#Bin/One_  bin_))
+                    (MkS1 #Bool/False (#Bin/Zero_ bin_))
+                )
+            )
+            (\(t : S1) -> foldS1 t
+                S1
+                (\(b : #Bool ) -> \(bin_ : #Bin/Bin_ ) -> b
+                    S1
+                    (MkS1 #Bool/True  (#Bin/Zero_ bin_))
+                    (MkS1 #Bool/False (#Bin/One_  bin_))
+                )
+            )
+        in  foldS1 x
+            #Bin
+            (\(b : #Bool ) -> \(bin_ : #Bin/Bin_ ) -> b
+                #Bin
+                (#Bin/One (#Bin/Zero_ bin_))
+                (          #Bin/One   bin_ )
+            )
+    )
+
+in Succ

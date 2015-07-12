@@ -1,12 +1,1 @@
-type Bin_
-data Nil_
-data Zero_ Bin_
-data One_  Bin_
-in
-
-type Bin
-data Zero
-data One Bin_
-in
-
-Zero
+(λ(Bin_ : *) → λ(Nil_ : Bin_) → λ(Zero_ : Bin_ → Bin_) → λ(One_ : Bin_ → Bin_) → λ(_ : ∀(x : Bin_) → ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → (λ(Bin : *) → λ(Zero : Bin) → λ(One : Bin_ → Bin) → λ(_ : ∀(x : Bin) → ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : Bin_ → Bin) → Bin) → Zero) (∀(Bin : *) → ∀(Zero : Bin) → ∀(One : Bin_ → Bin) → Bin) (λ(Bin : *) → λ(Zero : Bin) → λ(One : Bin_ → Bin) → Zero) (λ(_ : Bin_) → λ(Bin : *) → λ(Zero : Bin) → λ(One : Bin_ → Bin) → One _) (λ(x : ∀(Bin : *) → ∀(Zero : Bin) → ∀(One : Bin_ → Bin) → Bin) → x)) (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) (λ(Bin_ : *) → λ(Nil_ : Bin_) → λ(Zero_ : Bin_ → Bin_) → λ(One_ : Bin_ → Bin_) → Nil_) (λ(_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → λ(Bin_ : *) → λ(Nil_ : Bin_) → λ(Zero_ : Bin_ → Bin_) → λ(One_ : Bin_ → Bin_) → Zero_ (_ Bin_ Nil_ Zero_ One_)) (λ(_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → λ(Bin_ : *) → λ(Nil_ : Bin_) → λ(Zero_ : Bin_ → Bin_) → λ(One_ : Bin_ → Bin_) → One_ (_ Bin_ Nil_ Zero_ One_)) (λ(x : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → x)

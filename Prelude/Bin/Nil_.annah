@@ -1,0 +1,12 @@
+type Bin_
+data Nil_
+data Zero_ Bin_
+data One_  Bin_
+in
+
+type Bin
+data Zero
+data One Bin_
+in
+
+Nil_
