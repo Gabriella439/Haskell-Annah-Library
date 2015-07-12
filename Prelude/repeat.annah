@@ -1,0 +1,3 @@
+let repeat (a : *) (n : #Bin ) (x : a) : #List a =
+    #Bin/foldNat n (#List a) (#List/Cons a x) (#List/Nil a)
+in  repeat

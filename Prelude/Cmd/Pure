@@ -1,6 +1,1 @@
-given f : * -> *
-given a : *
-type Cmd
-data Bind (b : *) (f b) (b -> Cmd)
-data Pure (r : a)
-in   Pure
+λ(f : * → *) → λ(a : *) → λ(r : a) → λ(Cmd : *) → λ(Bind : ∀(b : *) → f b → (b → Cmd) → Cmd) → λ(Pure : ∀(r : a) → Cmd) → Pure r

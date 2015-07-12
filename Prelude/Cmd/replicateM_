@@ -1,3 +1,1 @@
-let replicateM_ (m : * -> *) (n : #Bin) (cmd : #Cmd m {1}) : #Cmd m {1} =
-    #Cmd/sequence_ m (#repeat (#Cmd m {1}) n cmd)
-in  replicateM_
+λ(m : * → *) → λ(n : #Bin ) → λ(cmd : #Cmd  m #Prod0 ) → #Cmd/sequence_  m (#repeat  (#Cmd  m #Prod0 ) n cmd)

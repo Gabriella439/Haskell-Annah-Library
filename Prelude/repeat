@@ -1,2 +1,1 @@
-let repeat (a : *) (n : #Nat ) (x : a) : [a] = n [a] (#Cons a x) (#Nil a)
-in  repeat
+λ(a : *) → λ(n : #Bin ) → λ(x : a) → #Bin/foldNat  n (#List  a) (#List/Cons  a x) (#List/Nil  a)

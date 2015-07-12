@@ -1,7 +1,1 @@
-let (>>=) (a : *) (b : *) (m : * -> *) (cmd : #Cmd m a) (f : a -> #Cmd m b)
-    : #Cmd m b
-    =   cmd
-        (#Cmd m b)
-        (\(t : *) -> \(x : m t) -> \(f : t -> #Cmd m b) -> #Cmd/Bind m b t x f)
-        f
-in  (>>=)
+λ(a : *) → λ(b : *) → λ(m : * → *) → λ(cmd : #Cmd  m a) → cmd (#Cmd  m b) (#Cmd/Bind  m b)

@@ -1,0 +1,37 @@
+let foldNat (bin : #Bin ) (Nat : *) (Succ : Nat -> Nat) (Zero : Nat) : Nat =
+
+    type S
+    data MakeS (Nat -> Nat) Nat
+    fold foldS
+    in
+
+    bin
+    Nat
+    Zero
+    (   \(  x
+        :   forall (Bin_ : *)
+        ->  forall (Nil_ : Bin_)
+        ->  forall (Zero_ : Bin_ -> Bin_)
+        ->  forall (One_ : Bin_ -> Bin_)
+        ->  Bin_
+        )
+    ->  let s : S =
+            x
+            S
+            (MakeS Succ Zero)
+            (\(s : S) -> foldS s
+                S
+                (\(place : Nat -> Nat) -> \(total : Nat) ->
+                    MakeS (\(n : Nat) -> place (place n)) total
+                )
+            )
+            (\(s : S) -> foldS s
+                S
+                (\(place : Nat -> Nat) -> \(total : Nat) ->
+                    MakeS (\(n : Nat) -> place (place n)) (place total)
+                )
+            )
+        in  foldS s Nat (\(place : Nat -> Nat) -> \(total : Nat) -> place total)
+    )
+
+in foldNat

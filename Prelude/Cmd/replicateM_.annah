@@ -1,0 +1,4 @@
+let replicateM_ (m : * -> *) (n : #Bin ) (cmd : #Cmd m #Prod0 )
+  : #Cmd m #Prod0
+  = #Cmd/sequence_ m (#repeat (#Cmd m #Prod0 ) n cmd)
+in  replicateM_
