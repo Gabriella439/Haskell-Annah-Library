@@ -78,11 +78,11 @@ import Annah.Syntax
 
 %%
 
-Expr0 :: { Expr Path }
+Expr0 :: { Expr }
     : Expr1 ':' Expr0 { Annot $1 $3 }
     | Expr1           { $1          }
 
-Expr1 :: { Expr Path }
+Expr1 :: { Expr }
     : '\\'  '(' label ':' Expr1 ')' '->' Expr1 { Lam $3  $5 $8 }
     | '|~|' '(' label ':' Expr1 ')' '->' Expr1 { Pi  $3  $5 $8 }
     | Expr2 '->' Expr1                         { Pi  "_" $1 $3 }
@@ -94,11 +94,11 @@ VExpr  :: { Var }
     : label '@' number { V $1 $3 }
     | label            { V $1 0  }
 
-Expr2 :: { Expr Path }
+Expr2 :: { Expr }
     : Expr2 Expr3 { App $1 $2 }
     | Expr3       { $1        }
 
-Expr3 :: { Expr Path }
+Expr3 :: { Expr }
     : VExpr                       { Var $1                                   }
     | '*'                         { Const Star                               }
     | 'BOX'                       { Const Box                                }
@@ -110,76 +110,76 @@ Expr3 :: { Expr Path }
     | 'do' Expr0 '{' Binds '}'    { let (init, last) = $4 in Do $2 init last }
     | '(' Expr0               ')' { $2                                       }
 
-Args :: { [Arg Path] }
+Args :: { [Arg] }
     : ArgsRev { reverse $1 }
 
-ArgsRev :: { [Arg Path] }
+ArgsRev :: { [Arg] }
     : ArgsRev Arg { $2 : $1 }
     |             { []      }
 
-Arg :: { Arg Path }
+Arg :: { Arg }
     : '(' label ':' Expr1 ')' { Arg $2  $4 }
     |               Expr3     { Arg "_" $1 }
 
-GivensRev :: { [Arg Path] }
+GivensRev :: { [Arg] }
     : GivensRev 'given' label ':' Expr0 { Arg $3 $5 : $1 }
     |                                   { []             }
 
-Givens :: { [Arg Path] }
+Givens :: { [Arg] }
     : GivensRev { reverse $1 }
 
-Data :: { Data Path }
+Data :: { Data }
     : 'data' label Args { Data $2 $3 }
 
-DatasRev :: { [Data Path] }
+DatasRev :: { [Data] }
     : DatasRev Data { $2 : $1 }
     |               { []      }
 
-Datas :: { [Data Path] }
+Datas :: { [Data] }
     : DatasRev { reverse $1 }
 
-Type :: { Type Path }
+Type :: { Type }
     : 'type' label Datas 'fold' label { Type $2 $5  $3 }
     | 'type' label Datas              { Type $2 "_" $3 }
 
-TypesRev :: { [Type Path] }
+TypesRev :: { [Type] }
     : TypesRev Type { $2 : $1 }
     |               { []      }
 
-Types :: { [Type Path] }
+Types :: { [Type] }
     : TypesRev { reverse $1 }
 
-Family :: { Family m }
+Family :: { Family }
     : Givens Types { Family $1 $2 }
 
-Let :: { Let Path }
+Let :: { Let }
     : 'let'  label Args ':' Expr0 '=' Expr1 { Let $2 $3 $5 $7 }
 
-LetsRev :: { [Let Path] }
+LetsRev :: { [Let] }
     : LetsRev Let { $2 : $1 }
     | Let         { [$1]    }
 
-Lets :: { [Let Path] }
+Lets :: { [Let] }
     : LetsRev { reverse $1 }
 
-ListFields :: { [Expr Path] }
+ListFields :: { [Expr] }
     : ListFieldsRev { reverse $1 }
 
-ListFieldsRev :: { [Expr Path] }
+ListFieldsRev :: { [Expr] }
     : ListFieldsRev ',' Expr0 { $3 : $1 }
     |                         { []      }
 
-PathFields :: { ([(Expr Path, Expr Path)], Expr Path) }
+PathFields :: { ([(Expr, Expr)], Expr) }
     : Object Expr0 PathFields { let ~(oms, o) = $3 in (($1, $2):oms, o) }
     | Object                  { ([], $1)                                }
 
-Object :: { Expr Path }
+Object :: { Expr }
     : '{' Expr0 '}' { $2 }
 
-Bind :: { Bind Path }
+Bind :: { Bind }
     : label ':' Expr0 '<-' Expr0 ';' { Bind (Arg $1 $3) $5 }
 
-Binds :: { ([Bind Path], Bind Path) }
+Binds :: { ([Bind], Bind) }
     : Bind Binds { let ~(init, last) = $2 in ($1:init, last) }
     | Bind       { ([], $1)                                  }
 
@@ -228,7 +228,7 @@ parseError :: Token -> Lex a
 parseError token = throwError (Parsing token)
 
 -- | Parse an `Expr` from `Text` or return a `ParseError` if parsing fails
-exprFromText :: Text -> Either ParseError (Expr Path)
+exprFromText :: Text -> Either ParseError Expr
 exprFromText text = case runState (runErrorT parseExpr) initialStatus of
     (x, (position, _)) -> case x of
         Left  e    -> Left (ParseError position e)

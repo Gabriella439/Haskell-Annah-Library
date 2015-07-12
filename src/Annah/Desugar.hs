@@ -21,7 +21,7 @@ import Prelude hiding (pi)
 import Annah.Syntax
 
 -- | Convert an Annah expression to a Morte expression
-desugar :: Eq a => Expr a -> M.Expr a
+desugar :: Expr -> M.Expr M.Path
 desugar (Const c           ) = M.Const c
 desugar (Var v             ) = M.Var   v
 desugar (Lam x _A  b       ) = M.Lam x (desugar _A) (desugar  b)
@@ -60,7 +60,7 @@ integerToBin n0 = go0 n0
     append diffBin_ (One_  bin_) = One_ (append diffBin_  bin_)
 
 -- | Convert a numeric literal to a Morte expression
-desugarNat :: Integer -> M.Expr a
+desugarNat :: Integer -> M.Expr M.Path
 desugarNat n0 =
     M.Lam "Bin" (M.Const M.Star)
         (M.Lam "Zero" "Bin"
@@ -87,7 +87,7 @@ desugarNat n0 =
     go1 (One_  bin_) = M.App "One_"  (go1 bin_)
 
 -- | Convert an ASCII literal to a Morte expression
-desugarASCII :: Text -> M.Expr a
+desugarASCII :: Text -> M.Expr M.Path
 desugarASCII txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
   where
     go n | n < 128   = M.Lam "C" (M.Pi "_" "S" "S") (go $! n + 1)
@@ -106,7 +106,7 @@ desugarASCII txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
 > →   λ(Nil : List)
 > →   Cons True (Cons False Nil)
 -}
-desugarList :: Eq a => Expr a -> [Expr a] -> M.Expr a
+desugarList :: Expr -> [Expr] -> M.Expr M.Path
 desugarList e0 ts0 =
     M.Lam "List" (M.Const Star)
         (M.Lam "Cons" (M.Pi "head" (desugar0 e0) (M.Pi "tail" "List" "List"))
@@ -140,11 +140,10 @@ desugarList e0 ts0 =
 > →   Step a b c f (Step b c c g (End c))
 -}
 desugarPath
-    ::  Eq a
-    =>  Expr a
-    ->  [(Expr a, Expr a)]
-    ->  Expr a
-    ->  M.Expr a
+    ::  Expr
+    ->  [(Expr, Expr)]
+    ->  Expr
+    ->  M.Expr M.Path
 desugarPath c0 oms0 o0 =
     M.Lam "Path"
         (M.Pi "a" (M.Const M.Star) (M.Pi "b" (M.Const M.Star) (M.Const M.Star)))
@@ -200,7 +199,7 @@ desugarPath c0 oms0 o0 =
 >         Pure
 >     )
 -}
-desugarDo :: Eq a => Expr a -> [Bind a] -> Bind a -> M.Expr a
+desugarDo :: Expr -> [Bind] -> Bind -> M.Expr M.Path
 desugarDo m bs0 (Bind (Arg x0 _A0) e0) =
     M.Lam "Cmd" (M.Const M.Star)
         (M.Lam "Bind"
@@ -245,7 +244,7 @@ desugarDo m bs0 (Bind (Arg x0 _A0) e0) =
 > (\(xi0 : _Ai0) -> ... -> \(xij : _Aij) -> bi)
 
 -}
-desugarLets :: Eq a => [Let a] -> Expr a -> M.Expr a
+desugarLets :: [Let] -> Expr -> M.Expr M.Path
 desugarLets lets e = apps
   where
     -- > (   \(f0 : forall (x00 : _A00) -> ... -> forall (x0j : _A0j) -> _B0)
@@ -275,10 +274,10 @@ desugarLets lets e = apps
         (reverse lets)
 
 -- | A type or data constructor
-data Cons a = Cons
+data Cons = Cons
     { consName :: Text
-    , consArgs :: [Arg a]
-    , consType :: Expr a
+    , consArgs :: [Arg]
+    , consType :: Expr
     }
 
 {-| This is the meat of the Boehm-Berarducci encoding which translates type
@@ -309,24 +308,24 @@ data Cons a = Cons
     > ->  \(MakePair : a -> b -> Pair)
     > ->  MakePair _@1 _
 -}
-desugarFamily :: Eq a => Family a -> [Let a]
+desugarFamily :: Family -> [Let]
 desugarFamily fam = typeLets ++ dataLets ++ foldLets
   where
---  universalArgs :: [Arg Void]
+    universalArgs :: [Arg]
     universalArgs = familyGivens fam
 
---  universalVars :: [Expr Void]
+    universalVars :: [Expr]
     universalVars = do
         Arg x _ <- familyGivens fam
         return (Var (M.V x 0))
         -- TODO: Fix this to avoid name collisions with universal variables
 
---  typeConstructors :: [Cons]
+    typeConstructors :: [Cons]
     typeConstructors = do
         t <- familyTypes fam
         return (Cons (typeName t) [] (Const M.Star))
 
---  dataConstructors :: [Cons]
+    dataConstructors :: [Cons]
     dataConstructors = do
         (_       , t, tsAfter) <- zippers (familyTypes fam)
         (dsBefore, d, _      ) <- zippers (typeDatas t)
@@ -335,7 +334,7 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
         let typeVar = typeName t `isShadowedBy` (names1 ++ names2)
         return (Cons (dataName d) (dataArgs d) typeVar)
 
---  constructors :: [Cons]
+    constructors :: [Cons]
     constructors = typeConstructors ++ dataConstructors
 
     makeRhs piOrLam con = go constructors
@@ -343,7 +342,7 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
         go ((Cons x args _A):stmts) = piOrLam x (pi args _A) (go stmts)
         go  []                      = con
 
---  typeLets, foldLets :: [Let Void]
+    typeLets, foldLets :: [Let]
     (typeLets, foldLets) = unzip (do
         let folds = map typeFold (familyTypes fam)
         ((_, t, tsAfter), fold) <- zip (zippers typeConstructors) folds
@@ -359,8 +358,7 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
                ) )
 
     -- TODO: Enforce that argument types are `Var`s?
---  desugarType
---      :: Expr Void -> Maybe ([Arg Void], Expr Void, Expr Void)
+    desugarType :: Expr -> Maybe ([Arg], Expr, Expr)
     desugarType (Pi x _A e      )   = do
         ~(args, f, f') <- desugarType e
         return (Arg x _A:args, f, f')
@@ -379,12 +377,12 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
         go1  []    _ _                   = empty
     desugarType _ = empty
 
---  consVars :: [Text] -> [Expr Void]
+    consVars :: [Text] -> [Expr]
     consVars argNames = do
         (_, name, namesAfter) <- zippers (map consName constructors)
         return (name `isShadowedBy` (argNames ++ namesAfter))
 
---  dataLets :: [Let Void]
+    dataLets :: [Let]
     dataLets = do
         (_, d, dsAfter) <- zippers dataConstructors
         let conVar  = consName d `isShadowedBy` map consName dsAfter
@@ -419,19 +417,19 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
         return (Let (consName d) universalArgs letType' letRhs')
 
 -- | Apply an expression to a list of arguments
-apply :: Expr a -> [Expr a] -> Expr a
+apply :: Expr -> [Expr] -> Expr
 apply f as = foldr (flip App) f (reverse as)
 
 {-| Compute the correct DeBruijn index for a synthetic `Var` (`x`) by providing
     all variables bound in between when `x` is introduced and when `x` is used.
 -}
-isShadowedBy :: Text -> [Text] -> Expr a
+isShadowedBy :: Text -> [Text] -> Expr
 x `isShadowedBy` vars = Var (M.V x (length (filter (== x) vars)))
 
-pi :: [Arg a] -> Expr a -> Expr a
+pi :: [Arg] -> Expr -> Expr
 pi args e = foldr (\(Arg x _A) -> Pi x _A) e args
 
-lam :: [Arg a] -> Expr a -> Expr a
+lam :: [Arg] -> Expr -> Expr
 lam args e = foldr (\(Arg x _A) -> Lam x _A) e args
 
 -- | > zippers [1, 2, 3] = [([], 1, [2, 3]), ([1], 2, [3]), ([2, 1], 3, [])]

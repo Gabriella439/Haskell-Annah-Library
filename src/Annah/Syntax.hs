@@ -25,84 +25,84 @@ import qualified Morte.Core as M
 > Arg "_" _A  ~       _A
 > Arg  x  _A  ~  (x : _A)
 -}
-data Arg m = Arg
+data Arg = Arg
     { argName :: Text
-    , argType :: Expr m
+    , argType :: Expr
     }
 
 {-|
 > Let f [a1, a2] _A rhs  ~  let f a1 a2 : _A = rhs
 -}
-data Let m = Let
+data Let = Let
     { letName :: Text
-    , letArgs :: [Arg m]
-    , letType :: Expr m
-    , letRhs  :: Expr m
+    , letArgs :: [Arg]
+    , letType :: Expr
+    , letRhs  :: Expr
     }
 
 {-|
 > Family [g1, g2] ts = given g1 g2 ts
 -}
-data Family m = Family
-    { familyGivens :: [Arg m]
-    , familyTypes  :: [Type m]
+data Family = Family
+    { familyGivens :: [Arg]
+    , familyTypes  :: [Type]
     }
 
 {-|
 > Type t f [d1, d2]  ~  type t d1 d2 fold f
 -}
-data Type m = Type
+data Type = Type
     { typeName  :: Text
     , typeFold  :: Text
-    , typeDatas :: [Data m]
+    , typeDatas :: [Data]
     }
 
 {-|
 > Data c [a1, a2]  ~  data c a1 a2
 -}
-data Data m = Data
+data Data = Data
     { dataName :: Text
-    , dataArgs :: [Arg m]
+    , dataArgs :: [Arg]
     }
 
 {-|
 > Bind arg e  ~  arg <- e;
 -}
-data Bind m = Bind
-    { bindLhs :: Arg m
-    , bindRhs :: Expr m
+data Bind = Bind
+    { bindLhs :: Arg
+    , bindRhs :: Expr
     }
 
 -- | Syntax tree for expressions
-data Expr m
+data Expr
     -- | > Const c                         ~  c
     = Const M.Const
     -- | > Var (V x 0)                     ~  x
     --   > Var (V x n)                     ~  x@n
     | Var M.Var
     -- | > Lam x     _A  b                 ~  λ(x : _A) →  b
-    | Lam Text (Expr m) (Expr m)
+    | Lam Text Expr Expr
     -- | > Pi x      _A _B                 ~  ∀(x : _A) → _B
-    | Pi  Text (Expr m) (Expr m)
+    | Pi  Text Expr Expr
     -- | > App f a                         ~  f a
-    | App (Expr m) (Expr m)
+    | App Expr Expr
     -- | > Annot a _A                      ~  a : _A
-    | Annot (Expr m) (Expr m)
+    | Annot Expr Expr
     -- | > Lets [l1, l2] e                 ~  l1 l2 in e
-    | Lets [Let m] (Expr m)
+    | Lets [Let] Expr
     -- | > Family f e                      ~  f in e
-    | Fam (Family m) (Expr m)
+    | Fam Family Expr
     -- | > Nat n                           ~  n
     | Natural Integer
     -- | > ASCII txt                       ~  txt
     | ASCII Text
     -- | > List t [x, y, z]                ~  [nil t,x,y,z]
-    | List (Expr m) [Expr m]
+    | List Expr [Expr]
     -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [id c {o1} m1 {o2} m2 {o3}]
-    | Path (Expr m) [(Expr m, Expr m)] (Expr m)
+    | Path Expr [(Expr, Expr)] Expr
     -- | > Do m [b1, b2] b3                ~  do m { b1 b2 b3 }
-    | Do (Expr m) [Bind m] (Bind m)
-    | Import m
+    | Do Expr [Bind] Bind
+    | Import M.Path
 
-instance IsString (Expr m) where
+instance IsString Expr where
     fromString str = Var (fromString str)
