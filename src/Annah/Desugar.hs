@@ -33,10 +33,6 @@ desugar (Lets ls e         ) = desugarLets  ls               e
 desugar (Fam f e           ) = desugarLets (desugarFamily f) e
 desugar (Natural n         ) = desugarNat n
 desugar (ASCII txt         ) = desugarASCII txt
-desugar (SumConstructor m n) = desugarSumConstructor m n
-desugar (SumType ts        ) = desugarSumType ts
-desugar (ProductValue fs   ) = desugarProductValue fs
-desugar (ProductType  as   ) = desugarProductType as
 desugar (List t es         ) = desugarList t es
 desugar (Path t oms o      ) = desugarPath t oms o
 desugar (Do m bs b         ) = desugarDo m bs b
@@ -99,67 +95,6 @@ desugarASCII txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
 
     cons c t = M.App (M.Var (M.V "C" (ord c))) t
     nil      = "N"
-
--- | Convert a sum constructor to a Morte expression
-desugarSumConstructor :: Int -> Int -> M.Expr a
-desugarSumConstructor m0 n0 = go0 1
-  where
-    go0 n | n <= n0   = M.Lam "t" (M.Const M.Star) (go0 $! n + 1)
-          | otherwise =
-              M.Lam "x" (M.Var (M.V "t" (n0 - m0)))
-                  (M.Lam "Sum" (M.Const M.Star) (go1 1))
-
-    go1 n
-        | n <= n0   =
-            M.Lam "MkSum" (M.Pi "x" (M.Var (M.V "t" (n0 - n))) "Sum")
-                (go1 $! n + 1)
-        | otherwise = M.App (M.Var (M.V "MkSum" (n0 - m0))) "x"
-
--- | Convert a sum type to a Morte expression
-desugarSumType :: Eq a => [Expr a] -> M.Expr a
-desugarSumType ts0 = M.Pi "Sum" (M.Const M.Star) (go ts0 0)
-  where
-    go (t:ts) n = M.Pi "MkSum" (M.Pi "x" t' "Sum") (go ts $! n + 1)
-      where
-        t' = (M.shift 1 "Sum" . M.shift n "MkSum" . desugar) t
-    go  []    _ = "Sum"
-
-{-| Convert product values to Morte expressions
-
-    Example:
-
-> (True : Bool, 1 : Nat)
-> =>  \(Product : *) -> \(MakeProduct : Bool -> Nat -> Product) -> MakeProduct True 1
--}
-desugarProductValue :: Eq a => [ProductValueField a] -> M.Expr a
-desugarProductValue fs0 =
-    M.Lam "Product" (M.Const M.Star)
-        (M.Lam "MakeProduct" (go0 fs0) (go1 (reverse fs0)))
-  where
-    go0 (ProductValueField _ t:fs) = M.Pi "_" (shiftOne (desugar t)) (go0 fs)
-    go0  []                        = "Product"
-
-    go1 (ProductValueField f _:fs) = M.App (go1 fs) (shiftBoth (desugar f))
-    go1  []                        = "MakeProduct"
-
-    -- Avoid name collisions if the user names anything `Product` or `MakeProduct`
-    shiftOne  = M.shift 1 "Product"
-    shiftBoth = M.shift 1 "Product" . M.shift 1 "MakeProduct"
-
-{-| Convert a product type to a Morte expression
-
-    Example:
-
-> {Bool, Nat}  =>  forall (Product : *) -> (Bool -> Nat -> Product) -> Product
--}
-desugarProductType :: Eq a => [ProductTypeField a] -> M.Expr a
-desugarProductType args0 =
-    M.Pi "Product" (M.Const M.Star) (M.Pi "MakeProduct" (go args0 0) "Product")
-  where
-    go (ProductTypeField x _A:args) n = M.Pi x (desugar _A) (go args $! n')
-      where
-        n' = if x == "Product" then n + 1 else n
-    go  []                          n = M.Var (M.V "Product" n)
 
 {-| Convert a list into a Morte expression
 

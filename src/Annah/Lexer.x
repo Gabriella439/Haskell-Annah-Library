@@ -49,18 +49,13 @@ tokens :-
     "|)"                            { \_    -> yield CloseBanana               }
     "("                             { \_    -> yield OpenParen                 }
     ")"                             { \_    -> yield CloseParen                }
+    "{"                             { \_    -> yield OpenBrace                 }
+    "}"                             { \_    -> yield CloseBrace                }
     "[nil"                          { \_    -> yield OpenList                  }
     "[id"                           { \_    -> yield OpenPath                  }
     "]"                             { \_    -> yield CloseBracket              }
-    "{1"                            { \_    -> yield OpenProductType           }
-    "{0"                            { \_    -> yield OpenSumType               }
-    "{"                             { \_    -> yield OpenBrace                 }
-    "}"                             { \_    -> yield CloseBrace                }
-    "<1"                            { \_    -> yield OpenProductValue          }
-    ">"                             { \_    -> yield CloseAngle                }
     \" $ascii* \"                   { \text -> yield (ASCII (trim text))       }
     ","                             { \_    -> yield Comma                     }
-    "|"                             { \_    -> yield Bar                       }
     ":"                             { \_    -> yield Colon                     }
     ";"                             { \_    -> yield Semicolon                 }
     "@"                             { \_    -> yield At                        }
@@ -78,7 +73,6 @@ tokens :-
     "="                             { \_    -> yield Equals                    }
     "in"                            { \_    -> yield In                        }
     "do"                            { \_    -> yield Do                        }
-    $digit+ "of" $digit+            { \txt  -> yield (parseOf txt)             }
     $digit+                         { \text -> yield (Number (toInt text))     }
     $fst $label* | "(" $opchar+ ")" { \text -> yield (Label text)              }
     "#https://" $nonwhite+          { \text -> yield (URL (toUrl text))        }
@@ -97,12 +91,6 @@ toFile = fromText . Text.toStrict . Text.drop 1
 
 trim :: Text -> Text
 trim = Text.init . Text.tail
-
-parseOf :: Text -> Token
-parseOf txt =
-    let (prefix, txt'  ) = Text.span  isDigit txt
-        ("of"  , suffix) = Text.break isDigit txt'
-    in  Of (toInt prefix, toInt suffix)
 
 -- This was lifted almost intact from the @alex@ source code
 encode :: Char -> (Word8, [Word8])
@@ -189,19 +177,14 @@ data Token
     | CloseBanana
     | OpenParen
     | CloseParen
+    | OpenBrace
+    | CloseBrace
     | OpenList
     | OpenPath
     | CloseBracket
-    | OpenProductType
-    | OpenSumType
-    | OpenBrace
-    | CloseBrace
-    | OpenProductValue
-    | CloseAngle
     | ASCII Text
     | Period
     | Comma
-    | Bar
     | Colon
     | Semicolon
     | At
@@ -219,7 +202,6 @@ data Token
     | Equals
     | In
     | Do
-    | Of (Int, Int)
     | Label Text
     | Number Int
     | File FilePath

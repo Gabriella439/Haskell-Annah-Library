@@ -8,8 +8,6 @@ module Annah.Syntax (
       M.Var(..)
     , M.Const(..)
     , Arg(..)
-    , ProductTypeField(..)
-    , ProductValueField(..)
     , Let(..)
     , Data(..)
     , Type(..)
@@ -30,25 +28,6 @@ import qualified Morte.Core as M
 data Arg m = Arg
     { argName :: Text
     , argType :: Expr m
-    }
-
-{-| Field of a product type
-
-> ProductTypeField  x  _A  ~  x : _A
-> ProductTypeField "_" _A  ~      _A
--}
-data ProductTypeField m = ProductTypeField
-    { productTypeName :: Text
-    , productTypeType :: Expr m
-    }
-
-{-| Field of a product value
-
-> ProductValueField a _A  ~  a : _A
--}
-data ProductValueField m = ProductValueField
-    { productValueFieldExpr :: Expr m
-    , productValueFieldType :: Expr m
     }
 
 {-|
@@ -117,14 +96,6 @@ data Expr m
     | Natural Integer
     -- | > ASCII txt                       ~  txt
     | ASCII Text
-    -- | > ProductValue [f1, f2]           ~  <1,f1,f2>
-    | ProductValue [ProductValueField m]
-    -- | > ProductType [f1, f2]            ~  {1,f1,f2}
-    | ProductType [ProductTypeField m]
-    -- | > SumConstructor i j              ~  iofj
-    | SumConstructor Int Int
-    -- | > SumType [t1, t2]                ~  {0|t1|t2}
-    | SumType [Expr m]
     -- | > List t [x, y, z]                ~  [nil t,x,y,z]
     | List (Expr m) [Expr m]
     -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [id c (|o1|) m1 (|o2|) m2 (|o3|)]

@@ -48,18 +48,13 @@ import Annah.Syntax
     '|)'    { Lexer.CloseBanana      }
     '('     { Lexer.OpenParen        }
     ')'     { Lexer.CloseParen       }
+    '{'     { Lexer.OpenBrace        }
+    '}'     { Lexer.CloseBrace       }
     '[nil'  { Lexer.OpenList         }
     '[id'   { Lexer.OpenPath         }
     ']'     { Lexer.CloseBracket     }
-    '{1'    { Lexer.OpenProductType  }
-    '{0'    { Lexer.OpenSumType      }
-    '{'     { Lexer.OpenBrace        }
-    '}'     { Lexer.CloseBrace       }
-    '<1'    { Lexer.OpenProductValue }
-    '>'     { Lexer.CloseAngle       }
     '.'     { Lexer.Period           }
     ','     { Lexer.Comma            }
-    '|'     { Lexer.Bar              }
     ':'     { Lexer.Colon            }
     ';'     { Lexer.Semicolon        }
     '@'     { Lexer.At               }
@@ -77,7 +72,6 @@ import Annah.Syntax
     '='     { Lexer.Equals           }
     'in'    { Lexer.In               }
     'do'    { Lexer.Do               }
-    of      { Lexer.Of $$            }
     label   { Lexer.Label $$         }
     number  { Lexer.Number $$        }
     ascii   { Lexer.ASCII $$         }
@@ -111,12 +105,8 @@ Expr3 :: { Expr Path }
     | '*'                         { Const Star                               }
     | 'BOX'                       { Const Box                                }
     | Import                      { Import $1                                }
-    | of                          { uncurry SumConstructor $1                }
     | number                      { Natural (fromIntegral $1)                }
     | ascii                       { ASCII $1                                 }
-    | '<1' ProductValueFields '>' { ProductValue $2                          }
-    | '{1' ProductTypeFields  '}' { ProductType  $2                          }
-    | '{0' SumTypeFields      '}' { SumType      $2                          }
     | '[nil' Expr0 ListFields ']' { List $2 $3                               }
     | '[id'  Expr0 PathFields ']' { let ~(oms, o) = $3 in Path $2 oms o      }
     | 'do' Expr0 '{' Binds '}'    { let (init, last) = $4 in Do $2 init last }
@@ -173,34 +163,6 @@ LetsRev :: { [Let Path] }
 
 Lets :: { [Let Path] }
     : LetsRev { reverse $1 }
-
-ProductValueField :: { ProductValueField Path }
-    : Expr1 ':' Expr0 { ProductValueField $1 $3 }
-
-ProductValueFieldsRev :: { [ProductValueField Path] }
-    : ProductValueFieldsRev ',' ProductValueField { $3 : $1  }
-    |                                             { []       }
-
-ProductValueFields :: { [ProductValueField Path] }
-    : ProductValueFieldsRev { reverse $1 }
-
-ProductTypeField :: { ProductTypeField Path }
-    : label ':' Expr0 { ProductTypeField $1  $3 }
-    | Expr0           { ProductTypeField "_" $1 }
-
-ProductTypeFieldsRev :: { [ProductTypeField Path] }
-    : ProductTypeFieldsRev ',' ProductTypeField { $3 : $1  }
-    |                                           { []       }
-
-ProductTypeFields :: { [ProductTypeField Path] }
-    : ProductTypeFieldsRev { reverse $1 }
-
-SumTypeFieldsRev :: { [Expr Path] }
-    : SumTypeFieldsRev '|' Expr0 { $3 : $1 }
-    |                           { []      }
-
-SumTypeFields :: { [Expr Path] }
-    : SumTypeFieldsRev { reverse $1 }
 
 ListFields :: { [Expr Path] }
     : ListFieldsRev { reverse $1 }
