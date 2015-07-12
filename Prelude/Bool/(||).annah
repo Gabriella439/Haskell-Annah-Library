@@ -1,0 +1,2 @@
+let (||) (b1 : #Bool ) (b2 : #Bool ) : #Bool = b1 #Bool #Bool/True b2
+in  (||)
