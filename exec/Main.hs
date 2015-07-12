@@ -8,9 +8,14 @@ import Control.Exception (Exception, throwIO)
 import Data.Monoid (mempty)
 import Data.Text.Lazy (fromStrict)
 import qualified Data.Text.Lazy.IO as Text
-import qualified Morte.Core as Morte
+import qualified Morte.Core   as Morte
+import qualified Morte.Import as Morte
 import Options.Applicative
 import System.IO (stderr)
+
+throws :: Exception e => Either e a -> IO a
+throws (Left  e) = throwIO e
+throws (Right r) = return r
 
 main :: IO ()
 main = do
@@ -21,10 +26,13 @@ main = do
                      \Morte.  Use this compiler to desugar Annah code to Morte \
                      \code."
         )
-
     txt <- Text.getContents
-    case Annah.exprFromText txt of
-        Left e -> throwIO e
-        Right ae -> do
-            let me = Annah.desugar ae
-            Text.putStrLn (Morte.pretty me)
+    ae  <- throws (Annah.exprFromText txt)
+    let me = Annah.desugar ae
+    -- Only statically link the Morte expression for type-checking
+    me' <- Morte.load me
+    mt  <- throws (Morte.typeOf me')
+    Text.hPutStrLn stderr (Morte.pretty (Morte.normalize mt))
+    Text.hPutStrLn stderr mempty
+    -- Return the dynamically linked Morte expression
+    Text.putStrLn (Morte.pretty (Morte.normalize me))
