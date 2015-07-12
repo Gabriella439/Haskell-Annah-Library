@@ -6,14 +6,14 @@
     I call this desugaring because Morte is a subset of Annah.
 -}
 
-module Annah.Sugar (
+module Annah.Desugar (
     -- * Sugar
       desugar
     ) where
 
-import Control.Applicative (pure, empty, (<|>))
-import Control.Monad (guard)
-import Data.Char (chr, ord)
+import Control.Applicative (pure, empty)
+import Data.Char (ord)
+import Data.Monoid ((<>))
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
 import qualified Morte.Core as M
@@ -381,8 +381,8 @@ data Cons a = Cons
     > given b : *
     > type Pair
     > fold pair
-    > data MkPair a b
-    > in   MkPair
+    > data MakePair a b
+    > in   MakePair
 
     ... which compiles to:
 
@@ -391,8 +391,8 @@ data Cons a = Cons
     > ->  \(_ : a)
     > ->  \(_ : b)
     > ->  \(Pair : *)
-    > ->  \(MkPair : a -> b -> Pair)
-    > ->  MkPair _@1 _
+    > ->  \(MakePair : a -> b -> Pair)
+    > ->  MakePair _@1 _
 -}
 desugarFamily :: Eq a => Family a -> [Let a]
 desugarFamily fam = typeLets ++ dataLets ++ foldLets

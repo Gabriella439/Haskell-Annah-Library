@@ -32,9 +32,9 @@ Library
         transformers         >= 0.2.0.0  && < 0.5
     Exposed-Modules:
         Annah.Core,
+        Annah.Desugar,
         Annah.Lexer,
         Annah.Parser,
-        Annah.Sugar,
         Annah.Syntax
 --      Annah.Tutorial
     Build-Tools: alex, happy

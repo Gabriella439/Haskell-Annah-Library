@@ -93,7 +93,7 @@ instance Buildable a => Buildable (Family a) where
         <>  mconcat (map build ts)
 
 {-|
-> Type t f [d1, d2]  ~  type t fold f d1 d2
+> Type t f [d1, d2]  ~  type t d1 d2 fold f
 -}
 data Type m = Type
     { typeName  :: Text
@@ -162,7 +162,7 @@ data Expr m
     | ProductValue [ProductValueField m]
     -- | > ProductType [f1, f2]            ~  {1,f1,f2}
     | ProductType [ProductTypeField m]
-    -- | > SumConstructor i j              ~  itoj
+    -- | > SumConstructor i j              ~  iofj
     | SumConstructor Int Int
     -- | > SumType [t1, t2]                ~  {0|t1|t2}
     | SumType [Expr m]

@@ -2,9 +2,9 @@
 {-# OPTIONS_GHC -Wall -fno-warn-unused-imports #-}
 
 {-| This module contains the core machinery for the Annah language, which is a
-    medium-level distributed language built on top of Morte.
+    medium-level language that desugars to Morte.
 
-    The main high-level features that Annah does not provide compare to Haskell
+    The main high-level features that Annah does not provide compared to Haskell
     are:
 
     * type classes
@@ -12,14 +12,8 @@
     * type inference
 
     You cannot type-check or normalize Annah expressions directly.  Instead,
-    you:
-    
-    * `desugar` Annah expressions to Morte,
-
-    * type-check / normalize the Morte expressions using `M.typeOf` and
-      `M.normalize`, and
-
-    * `resugar` the Morte expressions back to Annah.
+    you `desugar` Annah expressions to Morte, and then type-check or normalize
+    the Morte expressions using `M.typeOf` and `M.normalize`.
 
     Annah does everything through Morte for two reasons:
 
@@ -37,14 +31,10 @@ module Annah.Core (
     , exprFromText
     , desugar
 
-    -- * Re-exports
-    , Identity
     ) where
 
-import Data.Functor.Identity (Identity)
-
 import Annah.Parser
-import Annah.Sugar
+import Annah.Desugar
 import Annah.Syntax
 
 import qualified Morte.Core as M
@@ -53,8 +43,6 @@ import qualified Morte.Core as M
     The typical workflow is:
 
     * You parse a `Text` source using `exprFromText`
-
-    * You load all external imports using `loadExpr`
 
     * You `desugar` the Annah expression to Morte
 

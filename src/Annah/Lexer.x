@@ -79,7 +79,7 @@ tokens :-
     "="                             { \_    -> yield Equals                    }
     "in"                            { \_    -> yield In                        }
     "do"                            { \_    -> yield Do                        }
-    $digit+ "to" $digit+            { \txt  -> yield (parseOf txt)             }
+    $digit+ "of" $digit+            { \txt  -> yield (parseOf txt)             }
     $digit+                         { \text -> yield (Number (toInt text))     }
     $fst $label* | "(" $opchar+ ")" { \text -> yield (Label text)              }
     "#https://" $nonwhite+          { \text -> yield (URL (toUrl text))        }
@@ -102,7 +102,7 @@ trim = Text.init . Text.tail
 parseOf :: Text -> Token
 parseOf txt =
     let (prefix, txt'  ) = Text.span  isDigit txt
-        ("to"  , suffix) = Text.break isDigit txt'
+        ("of"  , suffix) = Text.break isDigit txt'
     in  Of (toInt prefix, toInt suffix)
 
 -- This was lifted almost intact from the @alex@ source code
