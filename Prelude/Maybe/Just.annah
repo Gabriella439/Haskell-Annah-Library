@@ -1,5 +1,5 @@
 given a : *
 type Maybe
 data Nothing
-data Just a
+data Just (_Just : a)
 in Just

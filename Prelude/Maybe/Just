@@ -1,0 +1,1 @@
+λ(a : *) → λ(_Just : a) → λ(Maybe : *) → λ(Nothing : Maybe) → λ(Just : ∀(_Just : a) → Maybe) → Just _Just
