@@ -44,7 +44,7 @@ data Let = Let
 > Family [g1, g2] ts = given g1 g2 ts
 -}
 data Family = Family
-    { familyGivens :: [Arg]
+    { familyGivens :: [Text]
     , familyTypes  :: [Type]
     }
 

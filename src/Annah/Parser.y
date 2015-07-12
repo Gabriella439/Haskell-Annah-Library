@@ -121,12 +121,12 @@ Arg :: { Arg }
     : '(' label ':' Expr1 ')' { Arg $2  $4 }
     |               Expr3     { Arg "_" $1 }
 
-GivensRev :: { [Arg] }
-    : GivensRev 'given' label ':' Expr0 { Arg $3 $5 : $1 }
-    |                                   { []             }
+GivensRev :: { [Text] }
+    : GivensRev label { $2 : $1 }
+    |                 { []      }
 
-Givens :: { [Arg] }
-    : GivensRev { reverse $1 }
+Givens :: { [Text] }
+    : 'given' GivensRev { reverse $2 }
 
 Data :: { Data }
     : 'data' label Args { Data $2 $3 }

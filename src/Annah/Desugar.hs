@@ -312,11 +312,13 @@ desugarFamily :: Family -> [Let]
 desugarFamily fam = typeLets ++ dataLets ++ foldLets
   where
     universalArgs :: [Arg]
-    universalArgs = familyGivens fam
+    universalArgs = do
+        txt <- familyGivens fam
+        return (Arg txt (Const M.Star))
 
     universalVars :: [Expr]
     universalVars = do
-        Arg x _ <- familyGivens fam
+        x <- familyGivens fam
         return (Var (M.V x 0))
         -- TODO: Fix this to avoid name collisions with universal variables
 
