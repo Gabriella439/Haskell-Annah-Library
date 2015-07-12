@@ -1,2 +1,1 @@
-let Monoid (m : *) : * = [m] -> m
-in  Monoid
+λ(m : *) → #List  m → m
