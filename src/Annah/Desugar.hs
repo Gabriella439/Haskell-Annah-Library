@@ -308,17 +308,12 @@ data Cons = Cons
     > ->  \(MakePair : a -> b -> Pair)
     > ->  MakePair _@1 _
 -}
-desugarFamily :: [Text] -> [Type] -> [Let]
-desugarFamily familyGivens familyTypes = typeLets ++ dataLets ++ foldLets
+desugarFamily :: [Arg] -> [Type] -> [Let]
+desugarFamily universalArgs familyTypes = typeLets ++ dataLets ++ foldLets
   where
-    universalArgs :: [Arg]
-    universalArgs = do
-        txt <- familyGivens
-        return (Arg txt (Const M.Star))
-
     universalVars :: [Expr]
     universalVars = do
-        x <- familyGivens
+        Arg x _ <- universalArgs
         return (Var (M.V x 0))
         -- TODO: Fix this to avoid name collisions with universal variables
 

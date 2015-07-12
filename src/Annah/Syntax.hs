@@ -82,7 +82,7 @@ data Expr
     -- | > Lets [l1, l2] e                 ~  l1 l2 in e
     | Lets [Let] Expr
     -- | > Family f e                      ~  f in e
-    | Family [Text] [Type] Expr
+    | Family [Arg] [Type] Expr
     -- | > Nat n                           ~  n
     | Natural Integer
     -- | > ASCII txt                       ~  txt
