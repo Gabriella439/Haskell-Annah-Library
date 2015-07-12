@@ -30,7 +30,7 @@ desugar (App f a           ) = M.App (desugar f) (desugar a)
 desugar (Import p          ) = M.Import p
 desugar (Annot a _A        ) = desugar (Lets [Let "x" [] _A a] "x")
 desugar (Lets ls e         ) = desugarLets  ls               e
-desugar (Fam f e           ) = desugarLets (desugarFamily f) e
+desugar (Family as ts e    ) = desugarLets (desugarFamily as ts) e
 desugar (Natural n         ) = desugarNat n
 desugar (ASCII txt         ) = desugarASCII txt
 desugar (List t es         ) = desugarList t es
@@ -308,28 +308,28 @@ data Cons = Cons
     > ->  \(MakePair : a -> b -> Pair)
     > ->  MakePair _@1 _
 -}
-desugarFamily :: Family -> [Let]
-desugarFamily fam = typeLets ++ dataLets ++ foldLets
+desugarFamily :: [Text] -> [Type] -> [Let]
+desugarFamily familyGivens familyTypes = typeLets ++ dataLets ++ foldLets
   where
     universalArgs :: [Arg]
     universalArgs = do
-        txt <- familyGivens fam
+        txt <- familyGivens
         return (Arg txt (Const M.Star))
 
     universalVars :: [Expr]
     universalVars = do
-        x <- familyGivens fam
+        x <- familyGivens
         return (Var (M.V x 0))
         -- TODO: Fix this to avoid name collisions with universal variables
 
     typeConstructors :: [Cons]
     typeConstructors = do
-        t <- familyTypes fam
+        t <- familyTypes
         return (Cons (typeName t) [] (Const M.Star))
 
     dataConstructors :: [Cons]
     dataConstructors = do
-        (_       , t, tsAfter) <- zippers (familyTypes fam)
+        (_       , t, tsAfter) <- zippers familyTypes
         (dsBefore, d, _      ) <- zippers (typeDatas t)
         let names1  = map typeName tsAfter
         let names2  = map dataName dsBefore
@@ -346,7 +346,7 @@ desugarFamily fam = typeLets ++ dataLets ++ foldLets
 
     typeLets, foldLets :: [Let]
     (typeLets, foldLets) = unzip (do
-        let folds = map typeFold (familyTypes fam)
+        let folds = map typeFold familyTypes
         ((_, t, tsAfter), fold) <- zip (zippers typeConstructors) folds
         let names1    = map consName tsAfter
         let names2    = map consName dataConstructors

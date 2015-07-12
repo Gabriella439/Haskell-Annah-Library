@@ -11,7 +11,6 @@ module Annah.Syntax (
     , Let(..)
     , Data(..)
     , Type(..)
-    , Family(..)
     , Bind(..)
     , Expr(..)
     ) where
@@ -38,14 +37,6 @@ data Let = Let
     , letArgs :: [Arg]
     , letType :: Expr
     , letRhs  :: Expr
-    }
-
-{-|
-> Family [g1, g2] ts = given g1 g2 ts
--}
-data Family = Family
-    { familyGivens :: [Text]
-    , familyTypes  :: [Type]
     }
 
 {-|
@@ -91,7 +82,7 @@ data Expr
     -- | > Lets [l1, l2] e                 ~  l1 l2 in e
     | Lets [Let] Expr
     -- | > Family f e                      ~  f in e
-    | Fam Family Expr
+    | Family [Text] [Type] Expr
     -- | > Nat n                           ~  n
     | Natural Integer
     -- | > ASCII txt                       ~  txt

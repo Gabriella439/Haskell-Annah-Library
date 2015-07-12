@@ -83,12 +83,12 @@ Expr0 :: { Expr }
     | Expr1           { $1          }
 
 Expr1 :: { Expr }
-    : '\\'  '(' label ':' Expr1 ')' '->' Expr1 { Lam $3  $5 $8 }
-    | '|~|' '(' label ':' Expr1 ')' '->' Expr1 { Pi  $3  $5 $8 }
-    | Expr2 '->' Expr1                         { Pi  "_" $1 $3 }
-    | Family 'in' Expr1                        { Fam  $1 $3    }
-    | Lets   'in' Expr1                        { Lets $1 $3    }
-    | Expr2                                    { $1            }
+    : '\\'  '(' label ':' Expr1 ')' '->' Expr1 { Lam $3  $5 $8   }
+    | '|~|' '(' label ':' Expr1 ')' '->' Expr1 { Pi  $3  $5 $8   }
+    | Expr2 '->' Expr1                         { Pi  "_" $1 $3   }
+    | Givens Types 'in' Expr1                  { Family $1 $2 $4 }
+    | Lets   'in' Expr1                        { Lets $1 $3      }
+    | Expr2                                    { $1              }
 
 VExpr  :: { Var }
     : label '@' number { V $1 $3 }
@@ -148,9 +148,6 @@ TypesRev :: { [Type] }
 
 Types :: { [Type] }
     : TypesRev { reverse $1 }
-
-Family :: { Family }
-    : Givens Types { Family $1 $2 }
 
 Let :: { Let }
     : 'let'  label Args ':' Expr0 '=' Expr1 { Let $2 $3 $5 $7 }
