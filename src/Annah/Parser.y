@@ -127,6 +127,7 @@ GivensRev :: { [Text] }
 
 Givens :: { [Text] }
     : 'given' GivensRev { reverse $2 }
+    |                   { []         }
 
 Data :: { Data }
     : 'data' label Args { Data $2 $3 }
