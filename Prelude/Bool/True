@@ -1,1 +1,1 @@
-(λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → λ(_ : ∀(x : Bool) → ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → True) (∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True) (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False) (λ(x : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → x)
+λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True
