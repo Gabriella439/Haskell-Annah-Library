@@ -1,0 +1,2 @@
+let or : #Monoid #Bool = \(xs : #List #Bool ) -> xs #Bool #Bool/(||) #Bool/False
+in  or

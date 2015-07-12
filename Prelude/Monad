@@ -1,2 +1,1 @@
-let Monad (m : * -> *) : * = forall (a : *) -> #Cmd m a -> m a
-in  Monad
+λ(m : * → *) → ∀(a : *) → #Cmd  m a → m a

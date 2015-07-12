@@ -1,3 +1,1 @@
-let Category (cat : * -> * -> *) : * =
-    forall (a : *) -> forall (b : *) -> #Path cat a b -> cat a b
-in  Category
+λ(cat : * → * → *) → ∀(a : *) → ∀(b : *) → #Path  cat a b → cat a b

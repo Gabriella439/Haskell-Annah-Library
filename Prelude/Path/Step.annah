@@ -1,0 +1,20 @@
+let Step
+    (f : * -> * -> *)
+    (a : *)
+    (b : *)
+    (c : *)
+    (head : f a b)
+    (tail : #Path f b c)
+    : #Path f a c =
+        \(Path : forall (a : *) -> forall (c : *) -> *)
+    ->  \(  Step
+        :   forall (a : *)
+        ->  forall (b : *)
+        ->  forall (c : *)
+        ->  forall (head : f a b)
+        ->  forall (tail : Path b c)
+        ->  Path a c
+        )
+    ->  \(End : forall (a : *) -> Path a a)
+    ->  Step a b c head (tail Path Step End)
+in  Step

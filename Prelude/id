@@ -1,2 +1,1 @@
-let id (a : *) (x : a) : a = x
-in  id
+λ(a : *) → λ(x : a) → x
