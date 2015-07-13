@@ -1,0 +1,134 @@
+type S1
+data MkS1 (carry : #Bool ) (bits : #Bin/Bin_ )
+fold foldS1
+in
+
+-- The result of `succ` is intentionally missing the first `One` bit.  The
+-- reason why is that a `Bin` greater than 0 is isomorphic to `Bin_` if you omit
+-- the initial `One`.  There is a step in the implementation of `plus` that
+-- requires proving that the result of `succ` is greater than `0` but if you
+-- include the initial `One` that information is lost.
+let succ (bin : #Bin ) : #Bin/Bin_ = bin
+    #Bin/Bin_
+    #Bin/Nil_
+    (\(bin_ : #Bin/Bin_ ) ->
+        let x : S1 = bin_
+            S1
+            (MkS1 #Bool/True #Bin/Nil_ )
+            (\(t : S1) -> foldS1 t
+                S1
+                (\(carry : #Bool ) -> \(bits : #Bin/Bin_ ) -> carry
+                    S1
+                    (MkS1 #Bool/False (#Bin/One_  bits))
+                    (MkS1 #Bool/False (#Bin/Zero_ bits))
+                )
+            )
+            (\(t : S1) -> foldS1 t
+                S1
+                (\(carry : #Bool ) -> \(bits : #Bin/Bin_ ) -> carry
+                    S1
+                    (MkS1 #Bool/True  (#Bin/Zero_ bits))
+                    (MkS1 #Bool/False (#Bin/One_  bits))
+                )
+            )
+        in  foldS1 x
+            #Bin/Bin_
+            (\(carry : #Bool ) -> \(bits : #Bin/Bin_ ) -> carry
+                #Bin/Bin_
+                (#Bin/Zero_ bits)
+                bits
+            )
+    )
+in
+
+type Unsnoc
+data Empty
+data NonEmpty #Bin #Bool
+fold foldUnsnoc
+in
+
+type Unsnoc_
+data Empty_
+data NonEmpty_ #Bin/Bin_ #Bool
+fold foldUnsnoc_
+in
+
+-- Split off the last bit of a `Bin`, returning a `Nothing` if the `Bin` is
+-- `Zero`
+let unsnoc (bin : #Bin ) : Unsnoc = bin
+    Unsnoc
+    Empty
+    (\(n : #Bin/Bin_ ) ->
+        let x : Unsnoc_ = n
+            Unsnoc_
+            Empty_
+            (\(m : Unsnoc_) -> foldUnsnoc_ m
+                Unsnoc_
+                (NonEmpty_ #Bin/Nil_ #Bool/False )
+                (\(n : #Bin/Bin_ ) -> \(b : #Bool ) ->
+                    NonEmpty_ (#Bin/Zero_ n) b
+                )
+            )
+            (\(m : Unsnoc_) -> foldUnsnoc_ m
+                Unsnoc_
+                (NonEmpty_ #Bin/Nil_ #Bool/True )
+                (\(n : #Bin/Bin_ ) -> \(b : #Bool ) ->
+                    NonEmpty_ (#Bin/One_ n) b
+                )
+            )
+        in  foldUnsnoc_ x
+            Unsnoc
+            (NonEmpty #Bin/Zero #Bool/True )
+            (\(n : #Bin/Bin_ ) -> \(b : #Bool ) ->
+                NonEmpty (#Bin/One n) b
+            )
+    )
+in
+
+type S2
+data MkS2 #Bin #Bin/Bin_
+fold foldS2
+in
+
+    \(b1 : #Bin )
+->  \(b2 : #Bin )
+->  b1
+    #Bin
+    b2
+    (\(n : #Bin/Bin_ ) ->
+        let x : S2 = n
+            S2
+            (MkS2 b2 #Bin/Nil_ )
+            -- Add `Zero` with the last bit of `carry`
+            (\(t : S2) -> foldS2 t
+                S2
+                (\(carry : #Bin ) -> \(accum: #Bin/Bin_ ) -> foldUnsnoc (unsnoc carry)
+                    S2
+                    (MkS2 #Bin/Zero (#Bin/Zero_ accum))
+
+                    (\(bin : #Bin ) -> \(b : #Bool ) -> b
+                        S2
+                        (MkS2 bin (#Bin/One_  accum))
+                        (MkS2 bin (#Bin/Zero_ accum))
+                    )
+                )
+            )
+            -- Add `One` with the last bit of `carry`
+            (\(t : S2) -> foldS2 t
+                S2
+                (\(carry : #Bin ) -> \(accum: #Bin/Bin_ ) -> foldUnsnoc (unsnoc carry)
+                    S2
+                    (MkS2 #Bin/Zero (#Bin/One_ accum))
+                    (\(bin : #Bin ) -> \(b : #Bool ) -> b
+                        S2
+                        (MkS2 (#Bin/One (succ bin)) (#Bin/Zero_ accum))
+                        (MkS2  bin                  (#Bin/One_  accum))
+                    )
+                )
+            )
+        in  foldS2 x
+            #Bin
+            (\(carry : #Bin ) -> \(accum : #Bin/Bin_ ) ->
+                #Bin/One (succ carry #Bin/Bin_ accum #Bin/Zero_ #Bin/One_ )
+            )
+    )
