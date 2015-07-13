@@ -1,0 +1,6 @@
+let comp : #Category #(->) =
+        \(a : *)
+    ->  \(b : *)
+    ->  \(p : #Path #(->) a b)
+    ->  p #(->) #(->)/(>>>) #(->)/id
+in  comp

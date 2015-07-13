@@ -1,6 +1,0 @@
-let compose : #Category #(->) =
-        \(a : *)
-    ->  \(b : *)
-    ->  \(p : #Path #(->) a b)
-    ->  p #(->) #(|) #id
-in  compose
