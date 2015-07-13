@@ -1,0 +1,19 @@
+let unzip (a : *) (b : *) (abs : #List (#Prod2 a b))
+  : #Prod2 (#List a) (#List b) =
+    abs
+    (#Prod2 (#List a) (#List b))
+    (\(ab : #Prod2 a b) -> \(asbs : #Prod2 (#List a) (#List b)) -> ab
+        (#Prod2 (#List a) (#List b))
+        (\(x : a) -> \(y : b) -> asbs
+            (#Prod2 (#List a) (#List b))
+            (\(as : #List a) -> \(bs : #List b) ->
+                #Prod2/Make
+                (#List a)
+                (#List b)
+                (#List/Cons a x as)
+                (#List/Cons b y bs)
+            )
+        )
+    )
+    (#Prod2/Make (#List a) (#List b) [nil a] [nil b])
+in  unzip

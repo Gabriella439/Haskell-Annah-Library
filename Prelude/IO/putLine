@@ -1,3 +1,1 @@
-let putLine (str : #ASCII ) : #IO {1} =
-    #IO/PutLine_ {1} str (#IO/Pure_ {1} <1>)
-in  putLine
+λ(str : #ASCII ) → #IO/PutLine_  #Prod0  str (#IO/Pure_  #Prod0  #Prod0/Make )

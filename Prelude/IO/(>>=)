@@ -1,17 +1,1 @@
-given a : *
-type IO
-data PutLine_ (str : #ASCII ) IO
-data GetLine_ (#ASCII -> IO)
-data Pure_ (r : a)
-fold foldIO
-in
-
-let (>>=) (a : *) (b : *) (m : IO a) (f : a -> IO b) : IO b =
-    foldIO a
-        m
-        (IO b)
-        (PutLine_ b)
-        (GetLine_ b)
-        (\(r : a) -> foldIO b (f r) (IO b) (PutLine_ b) (GetLine_ b) (Pure_ b))
-
-in (>>=)
+λ(a : *) → λ(b : *) → λ(m : ∀(IO : *) → ∀(PutLine_ : ∀(str : #ASCII ) → IO → IO) → ∀(GetLine_ : (#ASCII  → IO) → IO) → ∀(Pure_ : ∀(r : a) → IO) → IO) → λ(f : a → ∀(IO : *) → ∀(PutLine_ : ∀(str : #ASCII ) → IO → IO) → ∀(GetLine_ : (#ASCII  → IO) → IO) → ∀(Pure_ : ∀(r : b) → IO) → IO) → m (∀(IO : *) → ∀(PutLine_ : ∀(str : #ASCII ) → IO → IO) → ∀(GetLine_ : (#ASCII  → IO) → IO) → ∀(Pure_ : ∀(r : b) → IO) → IO) (λ(str : #ASCII ) → λ(_ : ∀(IO : *) → ∀(PutLine_ : ∀(str : #ASCII ) → IO → IO) → ∀(GetLine_ : (#ASCII  → IO) → IO) → ∀(Pure_ : ∀(r : b) → IO) → IO) → λ(IO : *) → λ(PutLine_ : ∀(str : #ASCII ) → IO → IO) → λ(GetLine_ : (#ASCII  → IO) → IO) → λ(Pure_ : ∀(r : b) → IO) → PutLine_ str (_ IO PutLine_ GetLine_ Pure_)) (λ(_ : #ASCII  → ∀(IO : *) → ∀(PutLine_ : ∀(str : #ASCII ) → IO → IO) → ∀(GetLine_ : (#ASCII  → IO) → IO) → ∀(Pure_ : ∀(r : b) → IO) → IO) → λ(IO : *) → λ(PutLine_ : ∀(str : #ASCII ) → IO → IO) → λ(GetLine_ : (#ASCII  → IO) → IO) → λ(Pure_ : ∀(r : b) → IO) → GetLine_ (λ(_ : #ASCII ) → _@1 _ IO PutLine_ GetLine_ Pure_)) (λ(r : a) → f r (∀(IO : *) → ∀(PutLine_ : ∀(str : #ASCII ) → IO → IO) → ∀(GetLine_ : (#ASCII  → IO) → IO) → ∀(Pure_ : ∀(r : b) → IO) → IO) (λ(str : #ASCII ) → λ(_ : ∀(IO : *) → ∀(PutLine_ : ∀(str : #ASCII ) → IO → IO) → ∀(GetLine_ : (#ASCII  → IO) → IO) → ∀(Pure_ : ∀(r : b) → IO) → IO) → λ(IO : *) → λ(PutLine_ : ∀(str : #ASCII ) → IO → IO) → λ(GetLine_ : (#ASCII  → IO) → IO) → λ(Pure_ : ∀(r : b) → IO) → PutLine_ str (_ IO PutLine_ GetLine_ Pure_)) (λ(_ : #ASCII  → ∀(IO : *) → ∀(PutLine_ : ∀(str : #ASCII ) → IO → IO) → ∀(GetLine_ : (#ASCII  → IO) → IO) → ∀(Pure_ : ∀(r : b) → IO) → IO) → λ(IO : *) → λ(PutLine_ : ∀(str : #ASCII ) → IO → IO) → λ(GetLine_ : (#ASCII  → IO) → IO) → λ(Pure_ : ∀(r : b) → IO) → GetLine_ (λ(_ : #ASCII ) → _@1 _ IO PutLine_ GetLine_ Pure_)) (λ(r : b) → λ(IO : *) → λ(PutLine_ : ∀(str : #ASCII ) → IO → IO) → λ(GetLine_ : (#ASCII  → IO) → IO) → λ(Pure_ : ∀(r : b) → IO) → Pure_ r))

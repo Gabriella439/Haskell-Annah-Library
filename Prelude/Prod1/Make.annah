@@ -1,0 +1,4 @@
+given a : *
+type Prod1
+data Make (_1 : a)
+in Make

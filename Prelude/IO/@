@@ -1,0 +1,1 @@
+λ(a : *) → ∀(IO : *) → ∀(PutLine_ : ∀(str : #ASCII ) → IO → IO) → ∀(GetLine_ : (#ASCII  → IO) → IO) → ∀(Pure_ : ∀(r : a) → IO) → IO

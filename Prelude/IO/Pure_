@@ -1,7 +1,1 @@
-given a : *
-type IO
-data PutLine_ (str : #ASCII ) IO
-data GetLine_ (#ASCII -> IO)
-data Pure_ (r : a)
-in
-Pure_
+λ(a : *) → λ(r : a) → λ(IO : *) → λ(PutLine_ : ∀(str : #ASCII ) → IO → IO) → λ(GetLine_ : (#ASCII  → IO) → IO) → λ(Pure_ : ∀(r : a) → IO) → Pure_ r

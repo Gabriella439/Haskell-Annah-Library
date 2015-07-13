@@ -1,0 +1,7 @@
+given a : *
+type IO
+data PutLine_ (str : #ASCII ) IO
+data GetLine_ (#ASCII -> IO)
+data Pure_ (r : a)
+in
+PutLine_
