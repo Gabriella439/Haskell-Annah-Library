@@ -1,2 +1,0 @@
-let sum : #Monoid #Bin = \(xs : [#Bin ]) -> xs #Bin #(+) 0
-in  sum
