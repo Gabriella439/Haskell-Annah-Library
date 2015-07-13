@@ -158,8 +158,17 @@ desugarPath c0 oms0 o0 =
                 (M.Pi "a" (M.Const M.Star) (M.App (M.App "Path" "a") "a"))
                 (go oms0) ) )
   where
-    desugar0 = M.shift 1 "Path" . desugar
-    desugar1 = M.shift 1 "Path" . M.shift 1 "Step" . M.shift 1 "End" . desugar
+    desugar0
+        =   M.shift 1 "Path"
+        .   M.shift 1 "a"
+        .   M.shift 1 "b"
+        .   M.shift 1 "c"
+        .   desugar
+    desugar1
+        =   M.shift 1 "Path"
+        .   M.shift 1 "Step"
+        .   M.shift 1 "End"
+        .   desugar
 
     go []                         = M.App "End" (desugar1 o0)
     go [(o1, m1)]                 =
@@ -294,7 +303,6 @@ data Cons = Cons
     > given a : *
     > given b : *
     > type Pair
-    > fold pair
     > data MakePair a b
     > in   MakePair
 
