@@ -2,7 +2,8 @@
 
 module Main where
 
-import qualified Annah.Core as Annah
+import qualified Annah.Core   as Annah
+import qualified Annah.Parser as Annah
 import Control.Applicative ((<|>))
 import Control.Exception (Exception, throwIO)
 import Data.Monoid (mempty)

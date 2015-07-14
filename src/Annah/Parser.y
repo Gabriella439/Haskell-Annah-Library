@@ -33,7 +33,7 @@ import Pipes (Producer, hoist, lift, next)
 
 import qualified Annah.Lexer as Lexer
 import Annah.Lexer (Token, Position)
-import Annah.Syntax
+import Annah.Core
 
 }
 
