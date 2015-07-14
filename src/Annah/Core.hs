@@ -77,12 +77,12 @@ data Let = Let
     }
 
 {-|
-> Type t f [d1, d2]  ~  type t d1 d2 fold f
+> Type t [d1, d2] f  ~  type t d1 d2 fold f
 -}
 data Type = Type
     { typeName  :: Text
-    , typeFold  :: Text
     , typeDatas :: [Data]
+    , typeFold  :: Text
     }
 
 {-|

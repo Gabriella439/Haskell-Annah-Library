@@ -139,8 +139,8 @@ Datas :: { [Data] }
     : DatasRev { reverse $1 }
 
 Type :: { Type }
-    : 'type' label Datas 'fold' label { Type $2 $5  $3 }
-    | 'type' label Datas              { Type $2 "_" $3 }
+    : 'type' label Datas 'fold' label { Type $2 $3 $5  }
+    | 'type' label Datas              { Type $2 $3 "_" }
 
 TypesRev :: { [Type] }
     : TypesRev Type { $2 : $1 }
