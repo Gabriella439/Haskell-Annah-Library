@@ -1,0 +1,6 @@
+let (+) (a : *) (as1 : #List a) (as2 : #List a) : #List a =
+        \(List : *)
+    ->  \(Cons : a -> List -> List)
+    ->  \(Nil : List)
+    ->  as1 List Cons (as2 List Cons Nil)
+in (+)

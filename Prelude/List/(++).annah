@@ -1,3 +1,0 @@
-let (++) (a : *) (as1 : #List a) (as2 : #List a) : #List a =
-    as1 (#List a) (#List/Cons a) as2
-in (++)
