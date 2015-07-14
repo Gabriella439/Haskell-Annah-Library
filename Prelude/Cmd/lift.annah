@@ -1,0 +1,2 @@
+let lift (f : * -> *) (a : *) (m : f a) : #Cmd f a = do f { _ : a <- m; }
+in  lift

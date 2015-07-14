@@ -1,0 +1,15 @@
+let embed
+    (f : * -> *)
+    (g : * -> *)
+    (k : forall (a : *) -> f a -> #Cmd g a)
+    (a : *)
+    (x : #Cmd f a)
+    : #Cmd g a
+    =   \(Cmd : *)
+    ->  \(Bind : forall (b : *) -> g b -> (b -> Cmd) -> Cmd)
+    ->  \(Pure : a -> Cmd)
+    ->  x
+        Cmd
+        (\(b : *) -> \(m : f b) -> \(j : b -> Cmd) -> k b m Cmd Bind j)
+        Pure
+in  embed
