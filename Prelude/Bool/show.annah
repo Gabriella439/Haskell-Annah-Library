@@ -1,0 +1,2 @@
+let show (b : #Bool ) : #ASCII = b #ASCII "#Bool/True" "#Bool/False"
+in  show
