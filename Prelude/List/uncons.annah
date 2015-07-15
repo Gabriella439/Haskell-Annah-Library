@@ -1,0 +1,19 @@
+let uncons (a : *) (xs : #List a) : #Maybe (#Prod2 a (#List a)) =
+    xs
+    (#Maybe (#Prod2 a (#List a)))
+    (\(y : a) -> \(r : #Maybe (#Prod2 a (#List a))) ->
+        r
+        (#Maybe (#Prod2 a (#List a)))
+        (#Maybe/Just (#Prod2 a (#List a)) (#Prod2/Make a (#List a) y [nil a]))
+        (\(p : #Prod2 a (#List a)) ->
+            p
+            (#Maybe (#Prod2 a (#List a)))
+            (\(z : a) -> \(zs : #List a) ->
+                #Maybe/Just
+                (#Prod2 a (#List a))
+                (#Prod2/Make a (#List a) y (#List/Cons a z zs))
+            )
+        )
+    )
+    (#Maybe/Nothing (#Prod2 a (#List a)))
+in  uncons

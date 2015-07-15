@@ -1,0 +1,3 @@
+let intercalate (a : *) (xs : #List a) (xss : #List (#List a)) : #List a =
+    #List/concat a (#List/intersperse (#List a) xs xss)
+in  intercalate

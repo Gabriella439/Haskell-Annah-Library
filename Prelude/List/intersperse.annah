@@ -1,0 +1,15 @@
+let intersperse (a : *) (x : a) (xs : #List a) : #List a =
+    #List/uncons a xs
+    (#List a)
+    [nil a]
+    (\(p : #Prod2 a (#List a)) ->
+        p
+        (#List a)
+        (\(head : a) -> \(tail : #List a) ->
+            #List/Cons
+            a
+            head
+            (#List/run a (do #List { y : a <- tail; _ : a <- [nil a, x, y]; }))
+        )
+    )
+in  intersperse
