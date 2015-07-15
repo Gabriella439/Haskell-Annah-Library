@@ -30,4 +30,10 @@ main = do
     txt <- Text.getContents
     ae  <- throws (Annah.exprFromText txt)
     let me = Annah.desugar ae
+    -- Only statically link the Morte expression for type-checking
+    me' <- Morte.load me
+    mt  <- throws (Morte.typeOf me')
+    Text.hPutStrLn stderr (Morte.pretty (Morte.normalize mt))
+    Text.hPutStrLn stderr mempty
+    -- Return the dynamically linked Morte expression
     Text.putStrLn (Morte.pretty (Morte.normalize me))
