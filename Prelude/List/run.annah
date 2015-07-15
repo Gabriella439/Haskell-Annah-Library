@@ -1,0 +1,5 @@
+let run: #Monad #List
+    =   \(a : *)
+    ->  \(m : #Cmd #List a)
+    ->  m (#List a) (\(b : *) -> #List/(>>=) b a) (#List/pure a)
+in  run

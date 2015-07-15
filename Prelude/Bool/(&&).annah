@@ -1,2 +1,2 @@
-let and (b1 : #Bool ) (b2 : #Bool ) : #Bool = b1 #Bool b2 #Bool/False
-in  and
+let (&&) (b1 : #Bool ) (b2 : #Bool ) : #Bool = b1 #Bool b2 #Bool/False
+in  (&&)

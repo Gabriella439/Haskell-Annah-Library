@@ -1,0 +1,1 @@
+λ(a : *) → λ(m : #Cmd  #List  a) → m (#List  a) (λ(b : *) → #List/(>>=)  b a) (#List/pure  a)

@@ -1,0 +1,3 @@
+let join (m : * -> *) (monad : #Monad m) (a : *) (x : m (m a)) : m a
+    =   monad a (do m { y : m a <- x; _ : a <- y; })
+in  join
