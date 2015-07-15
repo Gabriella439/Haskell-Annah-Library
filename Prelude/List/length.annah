@@ -1,0 +1,6 @@
+let length (a : *) (xs : #List a) : #Bin =
+    xs
+    #Bin
+    (\(_ : a) -> \(r : #Bin ) -> #Bin/succ r)
+    0
+in  length

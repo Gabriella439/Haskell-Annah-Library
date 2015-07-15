@@ -1,0 +1,11 @@
+let init (a : *) (xs : #List a) : #Maybe (#List a) =
+    xs
+    (#Maybe (#List a))
+    (\(x : a) -> \(r : #Maybe (#List a)) ->
+        r
+        (#Maybe (#List a))
+        (#Maybe/Just (#List a) [nil a])
+        (\(ys : #List a) -> #Maybe/Just (#List a) (#List/Cons a x ys))
+    )
+    (#Maybe/Nothing (#List a))
+in  init
