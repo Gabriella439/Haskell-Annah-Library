@@ -1,0 +1,1 @@
+λ(a : *) → λ(xs : #List  a) → xs (#List  a) (λ(y : a) → λ(ys : #List  a) → #List/(++)  a ys (#List/pure  a y)) (λ(List : *) → λ(Cons : ∀(head : a) → ∀(tail : List) → List) → λ(Nil : List) → Nil)

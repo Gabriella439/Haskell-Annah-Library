@@ -1,0 +1,16 @@
+let show (bin : #Bin ) : #ASCII =
+    let str : #ASCII = bin
+            #ASCII
+            "0"
+            (\(bin_ : #Bin/Bin_ ) ->
+                #ASCII/(++)
+                "1"
+                (   bin_
+                    #ASCII
+                    ""
+                    (#ASCII/(++) "0")
+                    (#ASCII/(++) "1")
+                )
+            )
+    in #ASCII/(++) str "b"
+in  show
