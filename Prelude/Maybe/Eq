@@ -1,0 +1,1 @@
+λ(a : *) → λ(eqA : #Eq  a) → λ(mx1 : #Maybe  a) → λ(mx2 : #Maybe  a) → mx1 #Bool  (mx2 #Bool  #Bool/True  (λ(_ : a) → #Bool/False )) (λ(x1 : a) → mx2 #Bool  #Bool/False  (eqA x1))
