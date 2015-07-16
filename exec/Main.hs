@@ -32,6 +32,6 @@ main = do
     let me = Annah.desugar ae
     -- Only statically link the Morte expression for type-checking
     me' <- Morte.load me
-    mt  <- throws (Morte.typeOf (Morte.normalize me'))
+    mt  <- throws (Morte.typeOf me')
     -- Return the dynamically linked Morte expression
     Text.putStrLn (Morte.pretty (Morte.normalize me))
