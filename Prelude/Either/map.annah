@@ -1,6 +1,0 @@
-let map (a : *) (b : *) (c : *) (f : b -> c) (e : #Either a b) : #Either a c =
-        \(Either : *)
-    ->  \(Left  : a -> Either)
-    ->  \(Right : c -> Either)
-    ->  e Either Left (\(r : b) -> Right (f r))
-in  map

@@ -1,0 +1,1 @@
+λ(a : *) → λ(b : *) → λ(eqA : #Eq  a) → λ(eqB : #Eq  b) → λ(s1 : #Sum2  a b) → λ(s2 : #Sum2  a b) → s1 #Bool  (λ(_Make1 : a) → s2 #Bool  (eqA _Make1) (λ(_ : b) → #Bool/False )) (λ(_Make2 : b) → s2 #Bool  (λ(_ : a) → #Bool/False ) (eqB _Make2))

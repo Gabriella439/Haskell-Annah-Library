@@ -1,6 +1,0 @@
-given a : *
-given b : *
-type Either
-data Left  (l : a)
-data Right (r : b)
-in Left

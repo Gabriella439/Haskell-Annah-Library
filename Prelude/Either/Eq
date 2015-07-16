@@ -1,1 +1,0 @@
-λ(a : *) → λ(b : *) → λ(eqA : #Eq  a) → λ(eqB : #Eq  b) → λ(e1 : #Either  a b) → λ(e2 : #Either  a b) → e1 #Bool  (λ(l1 : a) → e2 #Bool  (eqA l1) (λ(_ : b) → #Bool/False )) (λ(r1 : b) → e2 #Bool  (λ(_ : a) → #Bool/False ) (eqB r1))

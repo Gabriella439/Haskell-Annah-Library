@@ -1,0 +1,6 @@
+let map (a : *) (b : *) (r : *) (f : b -> r) (s : #Sum2 a b) : #Sum2 a r =
+        \(Sum2 : *)
+    ->  \(Make1 : a -> Sum2)
+    ->  \(Make2 : r -> Sum2)
+    ->  s Sum2 Make1 (\(x : b) -> Make2 (f x))
+in  map

@@ -1,1 +1,0 @@
-λ(a : *) → λ(b : *) → ∀(Either : *) → ∀(Left : ∀(l : a) → Either) → ∀(Right : ∀(r : b) → Either) → Either

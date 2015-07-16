@@ -1,0 +1,1 @@
+λ(a : *) → λ(x : *) → λ(cmd : #Cmd  (#Sum2  a) x) → cmd (#Sum2  a x) (λ(b : *) → #Sum2/Make2/(>>=)  a b x) (#Sum2/Make2/pure  a x)

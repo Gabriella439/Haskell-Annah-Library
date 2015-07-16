@@ -1,0 +1,1 @@
+λ(a : *) → λ(b : *) → ∀(Sum2 : *) → ∀(Make1 : ∀(_Make1 : a) → Sum2) → ∀(Make2 : ∀(_Make2 : b) → Sum2) → Sum2

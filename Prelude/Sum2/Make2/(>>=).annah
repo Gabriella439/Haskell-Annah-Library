@@ -1,0 +1,7 @@
+let (>>=) (a : *) (b : *) (r : *) (m : #Sum2 a b) (f : b -> #Sum2 a r)
+    : #Sum2 a r
+    =   \(Sum2 : *)
+    ->  \(Make1 : a -> Sum2)
+    ->  \(Make2 : r -> Sum2)
+    ->  m Sum2 Make1 (\(x : b) -> f x Sum2 Make1 Make2)
+in  (>>=)
