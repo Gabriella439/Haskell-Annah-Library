@@ -1,0 +1,5 @@
+let concatMap (a : *) (b : *) (f : a -> #List b) (xs : #List a) : #List b =
+    #List/run b (do #List {
+        x : a <- xs;
+        _ : b <- f x; })
+in  concatMap

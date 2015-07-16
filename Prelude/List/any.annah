@@ -1,0 +1,3 @@
+let any (a : *) (f : a -> #Bool ) (xs : #List a) : #Bool =
+    #List/or (#List/map a #Bool f xs)
+in  any
