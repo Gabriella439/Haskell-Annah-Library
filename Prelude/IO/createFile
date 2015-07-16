@@ -1,0 +1,1 @@
+λ(payload : #ASCII ) → λ(dest : #ASCII ) → #IO/CreateFile_  #Prod0  payload dest (#IO/Pure_  #Prod0  #Prod0/Make )

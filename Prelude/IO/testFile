@@ -1,0 +1,1 @@
+λ(path : #ASCII ) → #IO/TestFile_  #Bool  path (#IO/Pure_  #Bool )

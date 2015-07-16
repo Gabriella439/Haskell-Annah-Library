@@ -1,1 +1,1 @@
-λ(a : *) → ∀(IO : *) → ∀(PutLine_ : ∀(str : #ASCII ) → IO → IO) → ∀(GetLine_ : (#ASCII  → IO) → IO) → ∀(Pure_ : ∀(r : a) → IO) → IO
+λ(a : *) → ∀(IO : *) → ∀(PutLine_ : ∀(str : #ASCII ) → IO → IO) → ∀(GetLine_ : (#ASCII  → IO) → IO) → ∀(Download_ : ∀(url : #ASCII ) → ∀(dest : #ASCII ) → IO → IO) → ∀(CreateFile_ : ∀(payload : #ASCII ) → ∀(dest : #ASCII ) → IO → IO) → ∀(TestFile_ : ∀(path : #ASCII ) → (#Bool  → IO) → IO) → ∀(Pure_ : ∀(r : a) → IO) → IO

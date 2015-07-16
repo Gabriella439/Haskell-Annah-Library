@@ -7,4 +7,4 @@ data CreateFile_ (payload : #ASCII ) (dest : #ASCII ) IO
 data TestFile_ (path : #ASCII ) (#Bool -> IO)
 data Pure_ (r : a)
 in
-IO
+TestFile_

@@ -2,6 +2,9 @@ given a : *
 type IO
 data PutLine_ (str : #ASCII ) IO
 data GetLine_ (#ASCII -> IO)
+data Download_ (url : #ASCII ) (dest : #ASCII ) IO
+data CreateFile_ (payload : #ASCII ) (dest : #ASCII ) IO
+data TestFile_ (path : #ASCII ) (#Bool -> IO)
 data Pure_ (r : a)
 in
 PutLine_

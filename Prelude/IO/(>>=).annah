@@ -2,6 +2,9 @@ given a : *
 type IO
 data PutLine_ (str : #ASCII ) IO
 data GetLine_ (#ASCII -> IO)
+data Download_ (url : #ASCII ) (dest : #ASCII ) IO
+data CreateFile_ (payload : #ASCII ) (dest : #ASCII ) IO
+data TestFile_ (path : #ASCII ) (#Bool -> IO)
 data Pure_ (r : a)
 fold foldIO
 in
@@ -12,6 +15,18 @@ let (>>=) (a : *) (b : *) (m : IO a) (f : a -> IO b) : IO b =
         (IO b)
         (PutLine_ b)
         (GetLine_ b)
-        (\(r : a) -> foldIO b (f r) (IO b) (PutLine_ b) (GetLine_ b) (Pure_ b))
+        (Download_ b)
+        (CreateFile_ b)
+        (TestFile_ b)
+        (\(r : a) ->
+            foldIO b (f r)
+            (IO b)
+            (PutLine_ b)
+            (GetLine_ b)
+            (Download_ b)
+            (CreateFile_ b)
+            (TestFile_ b)
+            (Pure_ b)
+        )
 
 in (>>=)
