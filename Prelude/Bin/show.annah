@@ -1,16 +1,16 @@
-let show (bin : #Bin ) : #ASCII =
-    let str : #ASCII = bin
-            #ASCII
+let show (bin : #Bin ) : #String =
+    let str : #String = bin
+            #String
             "0"
             (\(bin_ : #Bin/Bin_ ) ->
-                #ASCII/(++)
+                #String/(++)
                 "1"
                 (   bin_
-                    #ASCII
+                    #String
                     ""
-                    (#ASCII/(++) "0")
-                    (#ASCII/(++) "1")
+                    (#String/(++) "0")
+                    (#String/(++) "1")
                 )
             )
-    in #ASCII/(++) str "b"
+    in #String/(++) str "b"
 in  show

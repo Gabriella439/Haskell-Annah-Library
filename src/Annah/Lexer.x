@@ -52,7 +52,7 @@ tokens :-
     "[nil"                          { \_    -> yield OpenList                  }
     "[id"                           { \_    -> yield OpenPath                  }
     "]"                             { \_    -> yield CloseBracket              }
-    \" $ascii* \"                   { \text -> yield (ASCII (trim text))       }
+    \" $ascii* \"                   { \text -> yield (String (trim text))      }
     ","                             { \_    -> yield Comma                     }
     ":"                             { \_    -> yield Colon                     }
     ";"                             { \_    -> yield Semicolon                 }
@@ -178,7 +178,7 @@ data Token
     | OpenList
     | OpenPath
     | CloseBracket
-    | ASCII Text
+    | String Text
     | Period
     | Comma
     | Colon

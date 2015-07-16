@@ -1,5 +1,5 @@
-    \(n1 : #ASCII )
-->  \(n2 : #ASCII )
+    \(n1 : #String )
+->  \(n2 : #String )
 ->  \(S : *)
 ->  \(N : S)
 ->  \(C : S -> S)

@@ -122,8 +122,8 @@ data Expr
     | Family [Arg] [Type] Expr
     -- | > Nat n                           ~  n
     | Natural Integer
-    -- | > ASCII txt                       ~  txt
-    | ASCII Text
+    -- | > String txt                      ~  txt
+    | String Text
     -- | > List t [x, y, z]                ~  [nil t,x,y,z]
     | List Expr [Expr]
     -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [id c {o1} m1 {o2} m2 {o3}]
@@ -151,7 +151,7 @@ desugar (Annot a _A        ) = desugar (Lets [Let "x" [] _A a] "x")
 desugar (Lets ls e         ) = desugarLets  ls               e
 desugar (Family as ts e    ) = desugarLets (desugarFamily as ts) e
 desugar (Natural n         ) = desugarNat n
-desugar (ASCII txt         ) = desugarASCII txt
+desugar (String txt        ) = desugarString txt
 desugar (List t es         ) = desugarList t es
 desugar (Path t oms o      ) = desugarPath t oms o
 desugar (Do m bs b         ) = desugarDo m bs b
@@ -205,9 +205,9 @@ desugarNat n0 =
     go1 (Zero_ bin_) = M.App "Zero_" (go1 bin_)
     go1 (One_  bin_) = M.App "One_"  (go1 bin_)
 
--- | Convert an ASCII literal to a Morte expression
-desugarASCII :: Text -> M.Expr M.Path
-desugarASCII txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
+-- | Convert a string literal to a Morte expression
+desugarString :: Text -> M.Expr M.Path
+desugarString txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
   where
     go n | n < 128   = M.Lam "C" (M.Pi "_" "S" "S") (go $! n + 1)
          | otherwise = Text.foldr cons nil txt

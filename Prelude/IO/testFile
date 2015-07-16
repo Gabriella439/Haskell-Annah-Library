@@ -1,1 +1,1 @@
-λ(path : #ASCII ) → #IO/TestFile_  #Bool  path (#IO/Pure_  #Bool )
+λ(path : #String ) → #IO/TestFile_  #Bool  path (#IO/Pure_  #Bool )

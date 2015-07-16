@@ -1,14 +1,14 @@
 let show
     (a : *)
-    (showType : #ASCII )
-    (showA : a -> #ASCII )
-    (xs : #List a) : #ASCII =
-    #ASCII/concat
-    [nil #ASCII
+    (showType : #String )
+    (showA : a -> #String )
+    (xs : #List a) : #String =
+    #String/concat
+    [nil #String
     ,   "[nil "
     ,   showType
-    ,   #ASCII/concat
-        (#List/map a #ASCII (\(x : a) -> #ASCII/(++) ", " (showA x)) xs)
+    ,   #String/concat
+        (#List/map a #String (\(x : a) -> #String/(++) ", " (showA x)) xs)
     ,   "]"
     ]
 in  show

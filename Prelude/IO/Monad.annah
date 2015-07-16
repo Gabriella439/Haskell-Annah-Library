@@ -1,5 +1,5 @@
-let runIO : #Monad #IO =
+let Monad : #Monad #IO =
         \(a : *)
     ->  \(cmd : #Cmd #IO a)
     ->  cmd (#IO a) (\(b : *) -> #IO/(>>=) b a) (#IO/pure a)
-in  runIO
+in  Monad

@@ -1,1 +1,1 @@
-λ(url : #ASCII ) → λ(dest : #ASCII ) → #IO/Download_  #Prod0  url dest (#IO/Pure_  #Prod0  #Prod0/Make )
+λ(url : #String ) → λ(dest : #String ) → #IO/Download_  #Prod0  url dest (#IO/Pure_  #Prod0  #Prod0/Make )

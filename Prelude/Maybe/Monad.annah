@@ -1,5 +1,5 @@
-let run : #Monad #Maybe =
+let Monad : #Monad #Maybe =
         \(a : *)
     ->  \(cmd : #Cmd #Maybe a)
     ->  cmd (#Maybe a) (\(b : *) -> #Maybe/(>>=) b a) (#Maybe/pure a)
-in  run
+in  Monad

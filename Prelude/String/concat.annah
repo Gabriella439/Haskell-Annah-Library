@@ -1,0 +1,3 @@
+let concat : #Monoid #String =
+    \(strs : #List #String ) -> strs #String #String/(++) ""
+in  concat

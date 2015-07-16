@@ -1,3 +1,0 @@
-let concat : #Monoid #ASCII =
-    \(strs : #List #ASCII ) -> strs #ASCII #ASCII/(++) ""
-in  concat

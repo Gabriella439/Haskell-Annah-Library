@@ -2,7 +2,7 @@ let subsequences (a : *) (xs : #List a) : #List (#List a) =
     xs
     (#List (#List a))
     (\(x : a) -> \(yss : #List (#List a)) ->
-        #List/run (#List a) (do #List {
+        #List/Monad (#List a) (do #List {
             ys2 : #List a <- yss;
             ys1 : #List a <- [nil (#List a), [nil a], [nil a, x]];
             _   : #List a <- #List/pure (#List a) (#List/(++) a ys1 ys2); })

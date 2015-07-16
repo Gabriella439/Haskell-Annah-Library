@@ -9,7 +9,9 @@ let intersperse (a : *) (x : a) (xs : #List a) : #List a =
             #List/Cons
             a
             head
-            (#List/run a (do #List { y : a <- tail; _ : a <- [nil a, x, y]; }))
+            (#List/Monad a (do #List {
+                y : a <- tail;
+                _ : a <- [nil a, x, y]; }))
         )
     )
 in  intersperse

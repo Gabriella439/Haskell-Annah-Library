@@ -1,3 +1,3 @@
-let createFile (payload : #ASCII ) (dest : #ASCII ) : #IO #Prod0 =
+let createFile (payload : #String ) (dest : #String ) : #IO #Prod0 =
     #IO/CreateFile_ #Prod0 payload dest (#IO/Pure_ #Prod0 #Prod0/Make )
 in  createFile

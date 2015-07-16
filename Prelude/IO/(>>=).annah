@@ -1,10 +1,10 @@
 given a : *
 type IO
-data PutLine_ (str : #ASCII ) IO
-data GetLine_ (#ASCII -> IO)
-data Download_ (url : #ASCII ) (dest : #ASCII ) IO
-data CreateFile_ (payload : #ASCII ) (dest : #ASCII ) IO
-data TestFile_ (path : #ASCII ) (#Bool -> IO)
+data PutLine_ (str : #String ) IO
+data GetLine_ (#String -> IO)
+data Download_ (url : #String ) (dest : #String ) IO
+data CreateFile_ (payload : #String ) (dest : #String ) IO
+data TestFile_ (path : #String ) (#Bool -> IO)
 data Pure_ (r : a)
 fold foldIO
 in

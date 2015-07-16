@@ -1,1 +1,1 @@
-λ(str : #ASCII ) → #IO/PutLine_  #Prod0  str (#IO/Pure_  #Prod0  #Prod0/Make )
+λ(str : #String ) → #IO/PutLine_  #Prod0  str (#IO/Pure_  #Prod0  #Prod0/Make )

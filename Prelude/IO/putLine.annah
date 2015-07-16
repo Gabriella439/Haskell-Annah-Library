@@ -1,3 +1,3 @@
-let putLine (str : #ASCII ) : #IO #Prod0 =
+let putLine (str : #String ) : #IO #Prod0 =
     #IO/PutLine_ #Prod0 str (#IO/Pure_ #Prod0 #Prod0/Make )
 in  putLine
