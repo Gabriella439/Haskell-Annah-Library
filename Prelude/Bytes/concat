@@ -1,0 +1,1 @@
+λ(strs : #List  #Bytes ) → strs #Bytes  #Bytes/(++)  #Bytes/empty 
