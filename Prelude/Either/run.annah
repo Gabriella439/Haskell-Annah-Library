@@ -1,0 +1,5 @@
+let run (a : *) : #Monad (#Either a) =
+        \(b : *)
+    ->  \(cmd : #Cmd (#Either a) b)
+    ->  cmd (#Either a b) (\(c : *) -> #Either/(>>=) a c b) (#Either/pure a b)
+in  run

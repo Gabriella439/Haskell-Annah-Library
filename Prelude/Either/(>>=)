@@ -1,0 +1,1 @@
+λ(a : *) → λ(b : *) → λ(c : *) → λ(m : #Either  a b) → λ(f : b → #Either  a c) → λ(Either : *) → λ(Left : a → Either) → λ(Right : c → Either) → m Either Left (λ(r : b) → f r Either Left Right)

@@ -1,0 +1,7 @@
+let (>>=) (a : *) (b : *) (c : *) (m : #Either a b) (f : b -> #Either a c)
+    : #Either a c
+    =   \(Either : *)
+    ->  \(Left  : a -> Either)
+    ->  \(Right : c -> Either)
+    ->  m Either Left (\(r : b) -> f r Either Left Right)
+in  (>>=)
