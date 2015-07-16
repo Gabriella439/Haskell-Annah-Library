@@ -1,0 +1,8 @@
+let Eq : #Eq #Bool =
+        \(b1 : #Bool )
+    ->  \(b2 : #Bool )
+    ->  b1
+        #Bool
+        b2
+        (#Bool/not b2)
+in  Eq
