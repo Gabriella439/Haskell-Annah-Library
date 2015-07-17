@@ -1,8 +1,8 @@
 let Monad (a : *) : #Monad (\(b : *) -> #Sum2 a b) =
-        \(x : *)
-    ->  \(cmd : #Cmd (\(b : *) -> #Sum2 a b) x)
+        \(r : *)
+    ->  \(cmd : #Cmd (\(b : *) -> #Sum2 a b) r)
     ->  cmd
-        (#Sum2 a x)
-        (\(b : *) -> #Sum2/Make2/(>>=) a b x)
-        (#Sum2/Make2/pure a x)
+        (#Sum2 a r)
+        (\(b : *) -> #Sum2/Make2/(>>=) a b r)
+        (#Sum2/Make2/pure a r)
 in  Monad
