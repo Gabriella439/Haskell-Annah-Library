@@ -130,7 +130,7 @@ data Expr
     | Path Expr [(Expr, Expr)] Expr
     -- | > Do m [b1, b2] b3                ~  do m { b1 b2 b3 }
     | Do Expr [Bind] Bind
-    | Import M.Path
+    | Embed M.Path
 
 instance IsString Expr where
     fromString str = Var (fromString str)
@@ -146,7 +146,7 @@ desugar (Var v             ) = M.Var   v
 desugar (Lam x _A  b       ) = M.Lam x (desugar _A) (desugar  b)
 desugar (Pi  x _A _B       ) = M.Pi  x (desugar _A) (desugar _B)
 desugar (App f a           ) = M.App (desugar f) (desugar a)
-desugar (Import p          ) = M.Import p
+desugar (Embed  p          ) = M.Embed p
 desugar (Annot a _A        ) = desugar (Lets [Let "x" [] _A a] "x")
 desugar (Lets ls e         ) = desugarLets  ls               e
 desugar (Family as ts e    ) = desugarLets (desugarFamily as ts) e
