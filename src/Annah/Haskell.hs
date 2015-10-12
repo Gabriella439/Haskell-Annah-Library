@@ -23,18 +23,13 @@ module Annah.Haskell (
     ) where
 
 import Data.Char (chr, ord)
-import qualified Filesystem.Path.CurrentOS as Filesystem
-import Turtle
 
 -- | @annah@ encoding of `IO`
 type IO' a =
         forall io x
     .   x
-    ->  (String' -> io -> io)
     ->  ((String' -> io) -> io)
-    ->  (String' -> String' -> io -> io)
-    ->  (String' -> String' -> io -> io)
-    ->  (String' -> (Bool' -> io) -> io)
+    ->  (String' -> io -> io)
     ->  (a -> io)
     ->  io
 
@@ -42,19 +37,8 @@ type IO' a =
 io'ToIO :: IO' Prod0 -> IO ()
 io'ToIO io' = io'
     ()
-    (\str io          -> do putStrLn (string'ToString str); io)
     (\k               -> do str <- getLine; k (stringToString' str))
-    (\url     dest io -> do 
-        -- TODO: Actually download
-        writeFile (string'ToString dest) (string'ToString url)
-        io )
-    (\payload dest io -> do
-        writeFile (string'ToString dest) (string'ToString payload)
-        io )
-    (\path k          -> do
-        -- TODO: Actually check
-        exists <- testfile (Filesystem.decodeString (string'ToString path))
-        k (boolToBool' exists) )
+    (\str io          -> do putStrLn (string'ToString str); io)
     (\prod0 -> return (prod0ToUnit prod0))
 
 -- | @annah@ encoding of `Bool`
