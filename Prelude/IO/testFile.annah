@@ -1,3 +1,0 @@
-let testFile (path : #String ) : #IO #Bool =
-    #IO/TestFile_ #Bool path (#IO/Pure_ #Bool )
-in  testFile

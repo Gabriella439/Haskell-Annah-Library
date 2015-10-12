@@ -6,4 +6,4 @@ data GetLine_ (#String -> IO)
 data PutLine_ #String IO
 data Pure_ a
 
-in \(str : #String ) -> PutLine_ #Prod0 str (Pure_ #Prod0 #Prod0/Make )
+in Pure_

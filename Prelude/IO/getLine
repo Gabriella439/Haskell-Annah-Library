@@ -1,1 +1,1 @@
-#IO/GetLine_  #String  (#IO/Pure_  #String )
+λ(IO : *) → λ(GetLine_ : (#String  → IO) → IO) → λ(PutLine_ : #String  → IO → IO) → GetLine_

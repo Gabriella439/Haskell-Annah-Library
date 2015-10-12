@@ -1,1 +1,0 @@
-λ(a : *) → λ(r : a) → λ(IO : *) → λ(PutLine_ : ∀(str : #String ) → IO → IO) → λ(GetLine_ : (#String  → IO) → IO) → λ(Download_ : ∀(url : #String ) → ∀(dest : #String ) → IO → IO) → λ(CreateFile_ : ∀(payload : #String ) → ∀(dest : #String ) → IO → IO) → λ(TestFile_ : ∀(path : #String ) → (#Bool  → IO) → IO) → λ(Pure_ : ∀(r : a) → IO) → Pure_ r

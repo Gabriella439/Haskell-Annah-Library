@@ -1,10 +1,9 @@
 given a : *
+
 type IO
-data PutLine_ (str : #String ) IO
+
 data GetLine_ (#String -> IO)
-data Download_ (url : #String ) (dest : #String ) IO
-data CreateFile_ (payload : #String ) (dest : #String ) IO
-data TestFile_ (path : #String ) (#Bool -> IO)
-data Pure_ (r : a)
-in
-IO
+data PutLine_ #String IO
+data Pure_ a
+
+in IO
