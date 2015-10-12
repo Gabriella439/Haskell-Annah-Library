@@ -23,6 +23,8 @@ module Annah.Haskell (
     ) where
 
 import Data.Char (chr, ord)
+import qualified Filesystem.Path.CurrentOS as Filesystem
+import Turtle
 
 -- | @annah@ encoding of `IO`
 type IO' a =
@@ -51,7 +53,7 @@ io'ToIO io' = io'
         io )
     (\path k          -> do
         -- TODO: Actually check
-        exists <- return True
+        exists <- testfile (Filesystem.decodeString (string'ToString path))
         k (boolToBool' exists) )
     (\prod0 -> return (prod0ToUnit prod0))
 
