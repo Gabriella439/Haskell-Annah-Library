@@ -1,2 +1,9 @@
-let getLine : #IO #String = #IO/GetLine_ #String (#IO/Pure_ #String )
-in  getLine
+given a : *
+
+type IO
+
+data GetLine_ (#String -> IO)
+data PutLine_ #String IO
+data Pure_ a
+
+in GetLine_ #String (Pure_ #String )

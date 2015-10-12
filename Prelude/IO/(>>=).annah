@@ -1,32 +1,30 @@
 given a : *
+
 type IO
-data PutLine_ (str : #String ) IO
+
 data GetLine_ (#String -> IO)
-data Download_ (url : #String ) (dest : #String ) IO
-data CreateFile_ (payload : #String ) (dest : #String ) IO
-data TestFile_ (path : #String ) (#Bool -> IO)
-data Pure_ (r : a)
+data PutLine_ #String IO
+data Pure_ a
+
 fold foldIO
+
 in
 
 let (>>=) (a : *) (b : *) (m : IO a) (f : a -> IO b) : IO b =
-    foldIO a
+    foldIO
+        a
         m
         (IO b)
-        (PutLine_ b)
         (GetLine_ b)
-        (Download_ b)
-        (CreateFile_ b)
-        (TestFile_ b)
+        (PutLine_ b)
         (\(r : a) ->
-            foldIO b (f r)
-            (IO b)
-            (PutLine_ b)
-            (GetLine_ b)
-            (Download_ b)
-            (CreateFile_ b)
-            (TestFile_ b)
-            (Pure_ b)
+            foldIO
+                b
+                (f r)
+                (IO b)
+                (GetLine_ b)
+                (PutLine_ b)
+                (Pure_ b)
         )
 
 in (>>=)

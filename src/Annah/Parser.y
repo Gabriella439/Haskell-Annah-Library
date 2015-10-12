@@ -102,7 +102,7 @@ Expr3 :: { Expr }
     : VExpr                       { Var $1                                   }
     | '*'                         { Const Star                               }
     | 'BOX'                       { Const Box                                }
-    | Import                      { Import $1                                }
+    | Embed                       { Embed $1                                 }
     | number                      { Natural (fromIntegral $1)                }
     | string                      { String $1                                }
     | '[nil' Expr0 ListFields ']' { List $2 $3                               }
@@ -180,7 +180,7 @@ Binds :: { ([Bind], Bind) }
     : Bind Binds { let ~(init, last) = $2 in ($1:init, last) }
     | Bind       { ([], $1)                                  }
 
-Import :: { Path }
+Embed :: { Path }
     : file { File $1 }
     | url  { URL  $1 }
 

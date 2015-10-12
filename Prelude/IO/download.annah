@@ -1,3 +1,0 @@
-let download (url : #String ) (dest : #String ) : #IO #Prod0 =
-    #IO/Download_ #Prod0 url dest (#IO/Pure_ #Prod0 #Prod0/Make )
-in  download
