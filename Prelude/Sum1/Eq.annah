@@ -1,0 +1,7 @@
+let Eq (a : *) (eqA : #Eq a) : #Eq (#Sum1 a) =
+        \(s1 : #Sum1 a)
+    ->  \(s2 : #Sum1 a)
+    ->  s1
+        #Bool
+        (\(_Make1 : a) -> s2 #Bool (\(_Make1 : a) -> eqA _Make1@1 _Make1))
+in  Eq
