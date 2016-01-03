@@ -1,2 +1,0 @@
-let show (b : #Bool ) : #String = b #String "#Bool/True" "#Bool/False"
-in  show
