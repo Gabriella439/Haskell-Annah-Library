@@ -2,8 +2,8 @@ given a : *
 
 type IO
 
-data GetLine_ (#String -> IO)
-data PutLine_ #String IO
+data Get_ (#Message -> IO)
+data Put_ #Message IO
 data Pure_ a
 
 in Pure_

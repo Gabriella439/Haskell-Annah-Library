@@ -2,8 +2,8 @@ given a : *
 
 type IO
 
-data GetLine_ (#String -> IO)
-data PutLine_ #String IO
+data Get_ (#Message -> IO)
+data Put_ #Message IO
 data Pure_ a
 
 fold foldIO
@@ -15,15 +15,15 @@ let (>>=) (a : *) (b : *) (m : IO a) (f : a -> IO b) : IO b =
         a
         m
         (IO b)
-        (GetLine_ b)
-        (PutLine_ b)
+        (Get_ b)
+        (Put_ b)
         (\(r : a) ->
             foldIO
                 b
                 (f r)
                 (IO b)
-                (GetLine_ b)
-                (PutLine_ b)
+                (Get_ b)
+                (Put_ b)
                 (Pure_ b)
         )
 

@@ -1,1 +1,1 @@
-λ(a : *) → ∀(IO : *) → ∀(GetLine_ : (#String  → IO) → IO) → ∀(PutLine_ : #String  → IO → IO) → ∀(Pure_ : a → IO) → IO
+λ(a : *) → ∀(IO : *) → ∀(Get_ : (#Message  → IO) → IO) → ∀(Put_ : #Message  → IO → IO) → ∀(Pure_ : a → IO) → IO

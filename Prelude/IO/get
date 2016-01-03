@@ -1,0 +1,1 @@
+λ(IO : *) → λ(Get_ : (#Message  → IO) → IO) → λ(Put_ : #Message  → IO → IO) → Get_
