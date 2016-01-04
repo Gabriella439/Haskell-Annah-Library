@@ -1,0 +1,1 @@
+λ(m : * → *) → λ(monad : #Monad  m) → λ(cmds : #List  (m #Prod0 )) → monad #Prod0  (cmds (#Cmd  m #Prod0 ) (λ(cmd1 : m #Prod0 ) → λ(cmd2 : #Cmd  m #Prod0 ) → #Cmd/Bind  m #Prod0  #Prod0  cmd1 (λ(_ : #Prod0 ) → cmd2)) (#Cmd/Pure  m #Prod0  #Prod0/Make ))

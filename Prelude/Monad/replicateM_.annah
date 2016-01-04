@@ -1,0 +1,4 @@
+let replicateM_ (m : * -> *) (monad : #Monad m) (n : #Bin ) (cmd : m #Prod0 )
+  : m #Prod0
+  = #Monad/sequence_ m monad (#List/replicate (m #Prod0 ) n cmd)
+in  replicateM_
