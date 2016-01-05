@@ -1,0 +1,1 @@
+λ(m : #Nat ) → λ(n : #Nat ) → λ(N : *) → λ(S : N → N) → λ(Z : N) → m N S (n N S Z)

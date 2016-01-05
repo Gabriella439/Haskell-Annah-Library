@@ -1,2 +1,0 @@
-let sum : #Monoid #Bin = \(xs : #List #Bin ) -> xs #Bin #Bin/(+) 0
-in  sum

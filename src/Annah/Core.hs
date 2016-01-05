@@ -156,54 +156,16 @@ desugar (List t es         ) = desugarList t es
 desugar (Path t oms o      ) = desugarPath t oms o
 desugar (Do m bs b         ) = desugarDo m bs b
 
-data Bin = Zero | One Bin_
-
-data Bin_ = Nil_ | Zero_ Bin_ | One_ Bin_
-
-integerToBin :: Integer -> Bin
-integerToBin n0 = go0 n0
-  where
-    go0 n
-        | n <= 0    = Zero
-        | r == 0    = case go0 q of
-            Zero     -> Zero
-            One bin_ -> One (append Zero_ bin_)
-        | otherwise = case go0 q of
-            Zero     -> One Nil_
-            One bin_ -> One (append One_  bin_)
-      where
-        (q, r) = n `quotRem` 2
-
-    append diffBin_  Nil_        = diffBin_ Nil_
-    append diffBin_ (Zero_ bin_) = Zero_ (append diffBin_ bin_)
-    append diffBin_ (One_  bin_) = One_ (append diffBin_  bin_)
-
 -- | Convert a numeric literal to a Morte expression
 desugarNat :: Integer -> M.Expr M.Path
 desugarNat n0 =
-    M.Lam "Bin" (M.Const M.Star)
-        (M.Lam "Zero" "Bin"
-            (M.Lam "One" (M.Pi "_" bin_Type "Bin") (go0 (integerToBin n0)) ) )
+    M.Lam "N" (M.Const M.Star)
+        (M.Lam "S" (M.Pi "_" (M.Var (M.V "N" 0)) (M.Var (M.V "N" 0)))
+            (M.Lam "Z" (M.Var (M.V "N" 0))
+                (go0 n0) ) )
   where
-    bin_Type =
-        M.Pi "Bin_" (M.Const M.Star)
-            (M.Pi "Nil_" "Bin_"
-                (M.Pi "Zero_" (M.Pi "_" "Bin_" "Bin_")
-                    (M.Pi "One_" (M.Pi "_" "Bin_" "Bin_")
-                        "Bin_" ) ) )
-
-    go0  Zero      = "Zero"
-    go0 (One bin_) =
-        M.App "One"
-            (M.Lam "Bin_" (M.Const M.Star)
-                (M.Lam "Nil_" "Bin_"
-                    (M.Lam "Zero_" (M.Pi "_" "Bin_" "Bin_")
-                        (M.Lam "One_" (M.Pi "_" "Bin_" "Bin_")
-                            (go1 bin_) ) ) ) )
-
-    go1  Nil_        = "Nil_"
-    go1 (Zero_ bin_) = M.App "Zero_" (go1 bin_)
-    go1 (One_  bin_) = M.App "One_"  (go1 bin_)
+    go0 n | n <= 0    = M.Var (M.V "Z" 0)
+          | otherwise = M.App (M.Var (M.V "S" 0)) (go0 (n - 1))
 
 -- | Convert a string literal to a Morte expression
 desugarString :: Text -> M.Expr M.Path

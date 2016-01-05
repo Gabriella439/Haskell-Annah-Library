@@ -1,1 +1,0 @@
-λ(_ : ∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → λ(Bin_ : *) → λ(Nil_ : Bin_) → λ(Zero_ : Bin_ → Bin_) → λ(One_ : Bin_ → Bin_) → Zero_ (_ Bin_ Nil_ Zero_ One_)

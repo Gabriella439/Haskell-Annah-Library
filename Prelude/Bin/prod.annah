@@ -1,2 +1,0 @@
-let prod : #Monoid #Bin = \(xs : #List #Bin ) -> xs #Bin #Bin/(*) 1
-in  prod

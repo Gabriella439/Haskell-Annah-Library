@@ -1,0 +1,2 @@
+let prod : #Monoid #Nat = \(xs : #List #Nat ) -> xs #Nat #Nat/(*) 1
+in  prod

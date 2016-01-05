@@ -1,0 +1,5 @@
+let (*) (m : #Nat ) (n : #Nat ) : #Nat =
+    \(N : *)
+->  \(S : N -> N)
+->  m N (n N S)
+in  (*)

@@ -1,1 +1,1 @@
-λ(a : *) → λ(n : #Bin ) → λ(x : a) → #Bin/foldNat  n (#List  a) (#List/Cons  a x) (#List/Nil  a)
+λ(a : *) → λ(n : #Nat ) → λ(x : a) → #Nat/foldNat  n (#List  a) (#List/Cons  a x) (#List/Nil  a)

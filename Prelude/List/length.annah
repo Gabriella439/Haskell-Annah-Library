@@ -1,6 +1,9 @@
-let length (a : *) (xs : #List a) : #Bin =
-    xs
-    #Bin
-    (\(_ : a) -> \(r : #Bin ) -> #Bin/succ r)
-    0
+let length (a : *) (xs : #List a) : #Nat =
+    \(N : *)
+->  \(S : N -> N)
+->  \(Z : N)
+->  xs
+    N
+    (\(_ : a) -> \(n : N) -> S n)
+    Z
 in  length

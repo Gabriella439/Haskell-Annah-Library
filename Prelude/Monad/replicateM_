@@ -1,1 +1,1 @@
-λ(m : * → *) → λ(monad : #Monad  m) → λ(n : #Bin ) → λ(cmd : m #Prod0 ) → #Monad/sequence_  m monad (#List/replicate  (m #Prod0 ) n cmd)
+λ(m : * → *) → λ(monad : #Monad  m) → λ(n : #Nat ) → λ(cmd : m #Prod0 ) → #Monad/sequence_  m monad (#List/replicate  (m #Prod0 ) n cmd)

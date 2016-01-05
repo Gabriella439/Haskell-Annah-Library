@@ -1,0 +1,6 @@
+let (+) (m : #Nat ) (n : #Nat ) : #Nat =
+    \(N : *)
+->  \(S : N -> N)
+->  \(Z : N)
+->  m N S (n N S Z)
+in  (+)

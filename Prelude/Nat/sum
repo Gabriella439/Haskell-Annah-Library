@@ -1,0 +1,1 @@
+λ(xs : #List  #Nat ) → xs #Nat  #Nat/(+)  (λ(N : *) → λ(S : N → N) → λ(Z : N) → Z)

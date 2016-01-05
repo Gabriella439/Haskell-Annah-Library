@@ -1,0 +1,8 @@
+type N
+
+data S N
+data Z
+
+fold foldNat
+
+in foldNat

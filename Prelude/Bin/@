@@ -1,1 +1,0 @@
-∀(Bin : *) → ∀(Zero : Bin) → ∀(One : (∀(Bin_ : *) → ∀(Nil_ : Bin_) → ∀(Zero_ : Bin_ → Bin_) → ∀(One_ : Bin_ → Bin_) → Bin_) → Bin) → Bin
