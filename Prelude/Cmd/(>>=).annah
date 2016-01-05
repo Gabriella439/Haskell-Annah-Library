@@ -1,7 +1,7 @@
 let (>>=) (a : *) (b : *) (m : * -> *) (cmd : #Cmd m a) (f : a -> #Cmd m b)
-    : #Cmd m b
-    =   cmd
-        (#Cmd m b)
-        (\(t : *) -> \(x : m t) -> \(f : t -> #Cmd m b) -> #Cmd/Bind m b t x f)
-        f
+    : #Cmd m b =
+    \(Cmd : *)
+->  \(Bind : forall (b : *) -> m b -> (b -> Cmd) -> Cmd)
+->  \(Pure : forall (r : b) -> Cmd)
+->  cmd Cmd Bind (\(r : a) -> f r Cmd Bind Pure)
 in  (>>=)
