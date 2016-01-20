@@ -119,7 +119,7 @@ data Expr
     -- | > Lets [l1, l2] e                 ~  l1 l2 in e
     | Lets [Let] Expr
     -- | > Family f e                      ~  f in e
-    | Family [Arg] [Type] Expr
+    | Family [Type] Expr
     -- | > Nat n                           ~  n
     | Natural Integer
     -- | > String txt                      ~  txt
@@ -141,20 +141,20 @@ desugar
     -- ^ Annah expression
     -> M.Expr M.Path
     -- ^ Morte expression
-desugar (Const c           ) = M.Const c
-desugar (Var v             ) = M.Var   v
-desugar (Lam x _A  b       ) = M.Lam x (desugar _A) (desugar  b)
-desugar (Pi  x _A _B       ) = M.Pi  x (desugar _A) (desugar _B)
-desugar (App f a           ) = M.App (desugar f) (desugar a)
-desugar (Embed  p          ) = M.Embed p
-desugar (Annot a _A        ) = desugar (Lets [Let "x" [] _A a] "x")
-desugar (Lets ls e         ) = desugarLets  ls               e
-desugar (Family as ts e    ) = desugarLets (desugarFamily as ts) e
-desugar (Natural n         ) = desugarNat n
-desugar (String txt        ) = desugarString txt
-desugar (List t es         ) = desugarList t es
-desugar (Path t oms o      ) = desugarPath t oms o
-desugar (Do m bs b         ) = desugarDo m bs b
+desugar (Const c     ) = M.Const c
+desugar (Var v       ) = M.Var   v
+desugar (Lam x _A  b ) = M.Lam x (desugar _A) (desugar  b)
+desugar (Pi  x _A _B ) = M.Pi  x (desugar _A) (desugar _B)
+desugar (App f a     ) = M.App (desugar f) (desugar a)
+desugar (Embed  p    ) = M.Embed p
+desugar (Annot a _A  ) = desugar (Lets [Let "x" [] _A a] "x")
+desugar (Lets ls e   ) = desugarLets  ls               e
+desugar (Family ts e ) = desugarLets (desugarFamily ts) e
+desugar (Natural n   ) = desugarNat n
+desugar (String txt  ) = desugarString txt
+desugar (List t es   ) = desugarList t es
+desugar (Path t oms o) = desugarPath t oms o
+desugar (Do m bs b   ) = desugarDo m bs b
 
 -- | Convert a numeric literal to a Morte expression
 desugarNat :: Integer -> M.Expr M.Path
@@ -381,11 +381,11 @@ data Cons = Cons
     useful for constructors with multiple fields where the user omits the field name
     and defaults to @\"_\"@, like in this example:
 
-    > given a : *
-    > given b : *
-    > type Pair
-    > data MakePair a b
-    > in   MakePair
+    >     \(a : *)
+    > ->  \(b : *)
+    > ->  type Pair
+    >     data MakePair a b
+    >     in   MakePair
 
     ... which compiles to:
 
@@ -397,15 +397,9 @@ data Cons = Cons
     > ->  \(MakePair : a -> b -> Pair)
     > ->  MakePair _@1 _
 -}
-desugarFamily :: [Arg] -> [Type] -> [Let]
-desugarFamily universalArgs familyTypes = typeLets ++ dataLets ++ foldLets
+desugarFamily :: [Type] -> [Let]
+desugarFamily familyTypes = typeLets ++ dataLets ++ foldLets
   where
-    universalVars :: [Expr]
-    universalVars = do
-        Arg x _ <- universalArgs
-        return (Var (M.V x 0))
-        -- TODO: Fix this to avoid name collisions with universal variables
-
     typeConstructors :: [Cons]
     typeConstructors = do
         t <- familyTypes
@@ -435,12 +429,11 @@ desugarFamily universalArgs familyTypes = typeLets ++ dataLets ++ foldLets
         let names1    = map consName tsAfter
         let names2    = map consName dataConstructors
         let con       = consName t `isShadowedBy` (names1 ++ names2)
-        let typeName' = consName t
         let typeRhs'  = makeRhs Pi con
-        let foldType' = Pi "x" (apply con universalVars) typeRhs'
+        let foldType' = Pi  "x" con      typeRhs'
         let foldRhs'  = Lam "x" typeRhs' "x"
-        return ( Let typeName' universalArgs (consType t) typeRhs'
-               , Let fold      universalArgs  foldType'   foldRhs'
+        return ( Let (consName t) [] (consType t) typeRhs'
+               , Let  fold        []  foldType'   foldRhs'
                ) )
 
     -- TODO: Enforce that argument types are `Var`s?
@@ -495,12 +488,12 @@ desugarFamily universalArgs familyTypes = typeLets ++ dataLets ++ foldLets
                 return (case desugarType _A of
                     Just (args, _B, _B') -> (lhsArg, rhsArg)
                       where
-                        lhsArg = Arg x (pi args (apply _B universalVars))
-                        rhsArg = Arg x (pi args        _B'             )
+                        lhsArg = Arg x (pi args _B )
+                        rhsArg = Arg x (pi args _B')
                     Nothing              -> (   arg,    arg) ) )
-        let letType' = pi  lhsArgs (apply (consType d) universalVars)
+        let letType' = pi  lhsArgs (consType d)
         let letRhs'  = lam rhsArgs (makeRhs Lam (apply conVar conArgs))
-        return (Let (consName d) universalArgs letType' letRhs')
+        return (Let (consName d) [] letType' letRhs')
 
 -- | Apply an expression to a list of arguments
 apply :: Expr -> [Expr] -> Expr

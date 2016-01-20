@@ -63,7 +63,6 @@ tokens :-
     "<-" | "←"                      { \_    -> yield LArrow                    }
     "\/" | "|~|" | "forall" | "∀" | "Π" { \_ -> yield Pi                       }
     "\" | "λ"                       { \_    -> yield Lambda                    }
-    "given"                         { \_    -> yield Given                     }
     "type"                          { \_    -> yield Type                      }
     "fold"                          { \_    -> yield Fold                      }
     "data"                          { \_    -> yield Data                      }
@@ -190,7 +189,6 @@ data Token
     | LArrow
     | Lambda
     | Pi
-    | Given
     | Type
     | Fold
     | Data

@@ -62,7 +62,6 @@ import Annah.Core
     '<-'    { Lexer.LArrow           }
     '\\'    { Lexer.Lambda           }
     '|~|'   { Lexer.Pi               }
-    'given' { Lexer.Given            }
     'type'  { Lexer.Type             }
     'fold'  { Lexer.Fold             }
     'data'  { Lexer.Data             }
@@ -83,12 +82,12 @@ Expr0 :: { Expr }
     | Expr1           { $1          }
 
 Expr1 :: { Expr }
-    : '\\'  '(' label ':' Expr1 ')' '->' Expr1 { Lam $3  $5 $8   }
-    | '|~|' '(' label ':' Expr1 ')' '->' Expr1 { Pi  $3  $5 $8   }
-    | Expr2 '->' Expr1                         { Pi  "_" $1 $3   }
-    | Givens Types 'in' Expr1                  { Family $1 $2 $4 }
-    | Lets   'in' Expr1                        { Lets $1 $3      }
-    | Expr2                                    { $1              }
+    : '\\'  '(' label ':' Expr1 ')' '->' Expr1 { Lam $3  $5 $8 }
+    | '|~|' '(' label ':' Expr1 ')' '->' Expr1 { Pi  $3  $5 $8 }
+    | Expr2 '->' Expr1                         { Pi  "_" $1 $3 }
+    | Types 'in' Expr1                         { Family  $1 $3 }
+    | Lets  'in' Expr1                         { Lets $1 $3    }
+    | Expr2                                    { $1            }
 
 VExpr  :: { Var }
     : label '@' number { V $1 $3 }
@@ -120,13 +119,6 @@ ArgsRev :: { [Arg] }
 Arg :: { Arg }
     : '(' label ':' Expr1 ')' { Arg $2  $4 }
     |               Expr3     { Arg "_" $1 }
-
-GivensRev :: { [Arg] }
-    : GivensRev 'given' label ':' Expr0 { Arg $3 $5 : $1 }
-    |                                   { []             }
-
-Givens :: { [Arg] }
-    : GivensRev { reverse $1 }
 
 Data :: { Data }
     : 'data' label Args { Data $2 $3 }
