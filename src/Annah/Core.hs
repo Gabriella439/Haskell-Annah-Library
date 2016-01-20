@@ -411,7 +411,8 @@ desugarFamily familyTypes = typeLets ++ dataLets ++ foldLets
         (dsBefore, d, _      ) <- zippers (typeDatas t)
         let names1  = map typeName tsAfter
         let names2  = map dataName dsBefore
-        let typeVar = typeName t `isShadowedBy` (names1 ++ names2)
+        let names3  = map argName (dataArgs d)
+        let typeVar = typeName t `isShadowedBy` (names1 ++ names2 ++ names3)
         return (Cons (dataName d) (dataArgs d) typeVar)
 
     constructors :: [Cons]
