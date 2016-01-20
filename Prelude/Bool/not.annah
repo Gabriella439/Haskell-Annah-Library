@@ -1,2 +1,6 @@
-let not (b : #Bool ) : #Bool = b #Bool #Bool/False #Bool/True
+let not (b : #Bool ) : #Bool =
+    \(Bool : *)
+->  \(True : Bool)
+->  \(False : Bool)
+->  b Bool False True
 in  not

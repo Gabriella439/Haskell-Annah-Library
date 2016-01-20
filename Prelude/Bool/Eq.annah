@@ -1,8 +1,11 @@
 let Eq : #Eq #Bool =
-        \(b1 : #Bool )
-    ->  \(b2 : #Bool )
-    ->  b1
-        #Bool
-        b2
-        (#Bool/not b2)
+    \(b1 : #Bool )
+->  \(b2 : #Bool )
+->  \(Bool : *)
+->  \(True : Bool)
+->  \(False : Bool)
+->  b1
+    Bool
+    (b2 Bool True  False)
+    (b2 Bool False True)
 in  Eq

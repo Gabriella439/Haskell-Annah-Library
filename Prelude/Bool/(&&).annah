@@ -1,2 +1,6 @@
-let (&&) (b1 : #Bool ) (b2 : #Bool ) : #Bool = b1 #Bool b2 #Bool/False
+let (&&) (b1 : #Bool ) (b2 : #Bool ) : #Bool =
+    \(Bool : *)
+->  \(True : Bool)
+->  \(False : Bool)
+->  b1 Bool (b2 Bool True False) False
 in  (&&)

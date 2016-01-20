@@ -1,1 +1,1 @@
-λ(b : #Bool ) → b #Bool  #Bool/False  #Bool/True 
+λ(b : #Bool ) → λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → b Bool False True

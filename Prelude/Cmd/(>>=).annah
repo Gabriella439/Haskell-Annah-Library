@@ -3,8 +3,5 @@ let (>>=) (a : *) (b : *) (m : * -> *) (cmd : #Cmd m a) (f : a -> #Cmd m b)
     \(Cmd : *                                          )
 ->  \(Bind : forall (t : *) -> m t -> (t -> Cmd) -> Cmd)
 ->  \(Pure : forall (r : b) -> Cmd                     )
-->  cmd
-    Cmd
-    Bind
-    (\(x : a) -> f x Cmd Bind Pure)
+->  cmd Cmd Bind (\(r : a) -> f r Cmd Bind Pure)
 in  (>>=)
