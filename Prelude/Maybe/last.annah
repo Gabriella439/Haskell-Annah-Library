@@ -1,7 +1,11 @@
 let last (a : *) : #Monoid (#Maybe a) =
-    let c (m1 : #Maybe a) (m2 : #Maybe a) : #Maybe a = m2
-        (#Maybe a)
-        m1
-        (\(x : a) -> #Maybe/Just a x)
+    let c (m1 : #Maybe a) (m2 : #Maybe a) : #Maybe a =
+        \(Maybe   : *                          )
+    ->  \(Nothing : Maybe                      )
+    ->  \(Just    : forall (_Just : a) -> Maybe)
+    ->  m2
+        Maybe
+        (m1 Maybe Nothing Just)
+        Just
     in  \(l : (#List (#Maybe a))) -> l (#Maybe a) c (#Maybe/Nothing a)
 in  last

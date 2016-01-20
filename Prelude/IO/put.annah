@@ -1,9 +1,7 @@
-given a : *
-
 type IO
 
 data Get_ (#Message -> IO)
 data Put_ #Message IO
-data Pure_ a
+data Pure_ #Prod0
 
-in \(msg : #Message ) -> Put_ #Prod0 msg (Pure_ #Prod0 #Prod0/Make )
+in \(msg : #Message ) -> Put_ msg (Pure_ #Prod0/Make )

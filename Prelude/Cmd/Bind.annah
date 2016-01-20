@@ -1,6 +1,8 @@
-given f : * -> *
-given a : *
-type Cmd
-data Bind (b : *) (f b) (b -> Cmd)
-data Pure (r : a)
-in   Bind
+    \(f : * -> *)
+->  \(a : *     )
+->  type Cmd
+
+    data Bind (b : *) (f b) (b -> Cmd)
+    data Pure (r : a)
+
+    in   Bind

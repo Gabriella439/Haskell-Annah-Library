@@ -10,6 +10,6 @@ let embed
     ->  \(Pure : a -> Cmd)
     ->  x
         Cmd
-        (\(b : *) -> \(m : f b) -> \(j : b -> Cmd) -> k b m Cmd Bind j)
+        (\(b : *) -> \(m : f b) -> k b m Cmd Bind)
         Pure
 in  embed

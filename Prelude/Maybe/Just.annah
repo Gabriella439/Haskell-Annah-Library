@@ -1,5 +1,7 @@
-given a : *
-type Maybe
-data Nothing
-data Just (_Just : a)
-in Just
+    \(a : *)
+->  type Maybe
+
+    data Nothing
+    data Just (_Just : a)
+
+    in   Just

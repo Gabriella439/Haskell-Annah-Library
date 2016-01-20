@@ -1,3 +1,6 @@
 let (>>=) (a : *) (b : *) (m : #Maybe a) (f : a -> #Maybe b) : #Maybe b =
-    m (#Maybe b) (#Maybe/Nothing b) f
+    \(Maybe   : *                          )
+->  \(Nothing : Maybe                      )
+->  \(Just    : forall (_Just : b) -> Maybe)
+->  m Maybe Nothing (\(x : a) -> f x Maybe Nothing Just)
 in  (>>=)

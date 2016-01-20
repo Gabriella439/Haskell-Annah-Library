@@ -1,9 +1,8 @@
-given a : *
+    \(a : *)
+->  type IO
 
-type IO
+    data Get_ (#Message -> IO)
+    data Put_ #Message IO
+    data Pure_ a
 
-data Get_ (#Message -> IO)
-data Put_ #Message IO
-data Pure_ a
-
-in Pure_
+    in Pure_

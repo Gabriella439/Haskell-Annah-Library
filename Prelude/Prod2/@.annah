@@ -1,5 +1,8 @@
-given a : *
-given b : *
-type Prod2
-data Make (_1 : a) (_2 : b)
-in Prod2
+    \(a : *)
+->  \(b : *)
+
+->  type Prod2
+
+    data Make (_1 : a) (_2 : b)
+
+    in   Prod2
