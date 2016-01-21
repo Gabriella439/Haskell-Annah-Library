@@ -1,0 +1,3 @@
+let void (f : * -> *) (functor : #Functor f) (a : *) (x : f a) : f #Prod0 =
+    #Functor/map f functor a #Prod0 (\(_ : a) -> #Prod0/Make ) x
+in  void
