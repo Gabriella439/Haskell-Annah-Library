@@ -1,0 +1,14 @@
+let Functor (f : * -> *) : #Functor (#Cmd f) =
+    \(b : *)
+->  \(d : #Defer (#Cmd f) b)
+->  d
+    (#Cmd f b)
+    (   \(a    : *                                         )
+    ->  \(k    : a -> b                                    )
+    ->  \(x    : #Cmd f a                                  )
+    ->  \(Cmd  : *                                         )
+    ->  \(Bind : forall (s : *) -> f s -> (s -> Cmd) -> Cmd)
+    ->  \(Pure : b -> Cmd                                  )
+    ->  x Cmd Bind (\(r : a) -> Pure (k r))
+    )
+in  Functor
