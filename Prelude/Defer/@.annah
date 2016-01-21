@@ -1,0 +1,7 @@
+    \(f : * -> *)
+->  \(b : *     )
+->  type Defer
+
+    data Map (a : *) (k : a -> b) (x : f a)
+
+    in   Defer

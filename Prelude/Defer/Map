@@ -1,0 +1,1 @@
+λ(f : * → *) → λ(b : *) → λ(a : *) → λ(k : a → b) → λ(x : f a) → λ(Defer : *) → λ(Map : ∀(a : *) → ∀(k : a → b) → ∀(x : f a) → Defer) → Map a k x

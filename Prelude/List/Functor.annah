@@ -1,0 +1,14 @@
+let Functor : #Functor #List =
+    \(b : *)
+->  \(d : #Defer #List b)
+->  d
+    (#List b)
+    (   \(a    : *                )
+    ->  \(k    : a -> b           )
+    ->  \(xs   : #List a          )
+    ->  \(List : *                )
+    ->  \(Cons : b -> List -> List)
+    ->  \(Nil  : List             )
+    ->   xs List (\(x : a) -> Cons (k x)) Nil
+    )
+in  Functor

@@ -1,9 +1,0 @@
-let map (a : *) (b : *) (f : a -> b) (xs : #List a) : #List b =
-        \(List : *)
-    ->  \(Cons : b -> List -> List)
-    ->  \(Nil : List)
-    ->   xs
-         List
-         (\(x : a) -> \(r : List) -> Cons (f x) r)
-         Nil
-in  map

@@ -1,0 +1,1 @@
+λ(f : * → *) → λ(b : *) → ∀(Defer : *) → ∀(Map : ∀(a : *) → ∀(k : a → b) → ∀(x : f a) → Defer) → Defer

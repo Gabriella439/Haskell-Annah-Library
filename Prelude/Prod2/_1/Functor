@@ -1,0 +1,1 @@
+λ(t : *) → λ(b : *) → λ(d : #Defer  (λ(b : *) → #Prod2  b t) b) → d (#Prod2  b t) (λ(a : *) → λ(k : a → b) → λ(x : #Prod2  a t) → λ(Prod2 : *) → λ(Make : ∀(_1 : b) → ∀(_2 : t) → Prod2) → x Prod2 (λ(_1 : a) → Make (k _1)))

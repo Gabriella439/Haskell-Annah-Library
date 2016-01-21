@@ -1,0 +1,1 @@
+λ(b : *) → λ(d : #Defer  #Sum1  b) → d (#Sum1  b) (λ(a : *) → λ(k : a → b) → λ(x : #Sum1  a) → λ(Sum1 : *) → λ(Make : ∀(_Make1 : b) → Sum1) → x Sum1 (λ(_Make1 : a) → Make (k _Make1)))
