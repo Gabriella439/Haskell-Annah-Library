@@ -71,7 +71,6 @@ import Annah.Core
     'do'    { Lexer.Do               }
     label   { Lexer.Label $$         }
     number  { Lexer.Number $$        }
-    string  { Lexer.String $$        }
     file    { Lexer.File $$          }
     url     { Lexer.URL $$           }
 
@@ -103,7 +102,6 @@ Expr3 :: { Expr }
     | 'BOX'                       { Const Box                                }
     | Embed                       { Embed $1                                 }
     | number                      { Natural (fromIntegral $1)                }
-    | string                      { String $1                                }
     | '[nil' Expr0 ListFields ']' { List $2 $3                               }
     | '[id'  Expr0 PathFields ']' { let ~(oms, o) = $3 in Path $2 oms o      }
     | 'do' Expr0 '{' Binds '}'    { let (init, last) = $4 in Do $2 init last }

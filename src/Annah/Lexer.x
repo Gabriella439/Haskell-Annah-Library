@@ -31,7 +31,6 @@ $opchar = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~]
 
 $fst   = [A-Za-z_]
 $label = [A-Za-z0-9_]
-$ascii = [\x00-\x7f] # [\x22]
 
 $nonwhite       = ~$white
 $whiteNoNewline = $white # \n
@@ -52,7 +51,6 @@ tokens :-
     "[nil"                          { \_    -> yield OpenList                  }
     "[id"                           { \_    -> yield OpenPath                  }
     "]"                             { \_    -> yield CloseBracket              }
-    \" $ascii* \"                   { \text -> yield (String (trim text))      }
     ","                             { \_    -> yield Comma                     }
     ":"                             { \_    -> yield Colon                     }
     ";"                             { \_    -> yield Semicolon                 }
@@ -177,7 +175,6 @@ data Token
     | OpenList
     | OpenPath
     | CloseBracket
-    | String Text
     | Period
     | Comma
     | Colon

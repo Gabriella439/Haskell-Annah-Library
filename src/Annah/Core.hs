@@ -47,7 +47,6 @@ module Annah.Core (
     , desugar
     , desugarFamily
     , desugarNatural
-    , desugarString
     , desugarDo
     , desugarList
     , desugarPath
@@ -56,10 +55,8 @@ module Annah.Core (
     ) where
 
 import Control.Applicative (pure, empty)
-import Data.Char (ord)
 import Data.String (IsString(..))
 import Data.Text.Lazy (Text)
-import qualified Data.Text.Lazy as Text
 import qualified Morte.Core as M
 import Numeric.Natural (Natural)
 import Prelude hiding (pi)
@@ -130,8 +127,6 @@ data Expr
     | Family [Type] Expr
     -- | > Natural n                       ~  n
     | Natural Natural
-    -- | > String txt                      ~  txt
-    | String Text
     -- | > List t [x, y, z]                ~  [nil t,x,y,z]
     | List Expr [Expr]
     -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [id c {o1} m1 {o2} m2 {o3}]
@@ -159,7 +154,6 @@ desugar (Annot a _A  ) = desugar (Lets [Let "x" [] _A a] "x")
 desugar (Lets ls e   ) = desugarLets  ls               e
 desugar (Family ts e ) = desugarLets (desugarFamily ts) e
 desugar (Natural n   ) = desugarNatural n
-desugar (String txt  ) = desugarString txt
 desugar (List t es   ) = desugarList t es
 desugar (Path t oms o) = desugarPath t oms o
 desugar (Do m bs b   ) = desugarDo m bs b
@@ -186,16 +180,6 @@ desugarNatural n0 =
   where
     go0 n | n <= 0    = M.Var (M.V "Zero" 0)
           | otherwise = M.App (M.Var (M.V "Succ" 0)) (go0 (n - 1))
-
--- | Convert a string literal to a Morte expression
-desugarString :: Text -> M.Expr M.Path
-desugarString txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
-  where
-    go n | n < 128   = M.Lam "C" (M.Pi "_" "S" "S") (go $! n + 1)
-         | otherwise = Text.foldr cons nil txt
-
-    cons c t = M.App (M.Var (M.V "C" (ord c))) t
-    nil      = "N"
 
 {-| Convert a list into a Morte expression
 
