@@ -45,6 +45,13 @@ module Annah.Core (
 
     -- * Desugaring
     , desugar
+    , desugarFamily
+    , desugarNatural
+    , desugarString
+    , desugarDo
+    , desugarList
+    , desugarPath
+    , desugarLets
 
     ) where
 
@@ -54,6 +61,7 @@ import Data.String (IsString(..))
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
 import qualified Morte.Core as M
+import Numeric.Natural (Natural)
 import Prelude hiding (pi)
 
 {-| Argument for function or constructor definitions
@@ -120,8 +128,8 @@ data Expr
     | Lets [Let] Expr
     -- | > Family f e                      ~  f in e
     | Family [Type] Expr
-    -- | > Nat n                           ~  n
-    | Natural Integer
+    -- | > Natural n                       ~  n
+    | Natural Natural
     -- | > String txt                      ~  txt
     | String Text
     -- | > List t [x, y, z]                ~  [nil t,x,y,z]
@@ -150,27 +158,27 @@ desugar (Embed  p    ) = M.Embed p
 desugar (Annot a _A  ) = desugar (Lets [Let "x" [] _A a] "x")
 desugar (Lets ls e   ) = desugarLets  ls               e
 desugar (Family ts e ) = desugarLets (desugarFamily ts) e
-desugar (Natural n   ) = desugarNat n
+desugar (Natural n   ) = desugarNatural n
 desugar (String txt  ) = desugarString txt
 desugar (List t es   ) = desugarList t es
 desugar (Path t oms o) = desugarPath t oms o
 desugar (Do m bs b   ) = desugarDo m bs b
 
-{-| Convert a numeric literal to a Morte expression
+{-| Convert a natural number to a Morte expression
 
-    For example:
+    For example, this natural number:
 
 > 4
 
-    ... desugars to:
+    ... desugars to this Morte expression:
 
 >     λ(Nat : *)
 > →   λ(Succ : Nat → Nat)
 > →   λ(Zero : Nat)
 > →   Succ (Succ (Succ (Succ Zero)))
 -}
-desugarNat :: Integer -> M.Expr M.Path
-desugarNat n0 =
+desugarNatural :: Natural -> M.Expr M.Path
+desugarNatural n0 =
     M.Lam "Nat" (M.Const M.Star)
         (M.Lam "Succ" (M.Pi "pred" (M.Var (M.V "Nat" 0)) (M.Var (M.V "Nat" 0)))
             (M.Lam "Zero" (M.Var (M.V "Nat" 0))
@@ -191,11 +199,11 @@ desugarString txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
 
 {-| Convert a list into a Morte expression
 
-    For example:
+    For example, this list:
 
 > [nil Bool, True, False, False]
 
-    ... desugars to:
+    ... desugars to this Morte expression:
 
 >     λ(List : *)
 > →   λ(Cons : ∀(head : Bool) → ∀(tail : List) → List)
@@ -217,13 +225,13 @@ desugarList e0 ts0 =
 
 {-| Convert a path into a Morte expression
 
-    For the experts, a path is a \"free category\" (a.k.a. a \"type-aligned
-    list\")
+    For example, this path:
 
-    Example:
+> [id cat (|a|) f (|b|) g (|c|)]
 
-> [. cat (|a|) f (|b|) g (|c|)]
-> =>  λ(Path : ∀(a : *) → ∀(b : *) → *)
+    ... desugars to this Morte expression:
+
+>     λ(Path : ∀(a : *) → ∀(b : *) → *)
 > →   λ(  Step
 >     :   ∀(a : *)
 >     →   ∀(b : *)
@@ -283,24 +291,21 @@ desugarPath c0 oms0 o0 =
 
 {-| Convert a command (i.e. do-notation) into a Morte expression
 
-    For the experts, this encodes the do-notation using what the Haskell world
-    calls the \"operational monad\" which is a free monad without a functor
-    constraint.  I choose this approach because Annah does not have type
-    classes.
+    For example, this command:
 
-    Example:
+> do m
+> {   x0 : _A0 <- e0;
+>     x1 : _A1 <- e1;
+> }
 
-> do m { x0 : _A0 <- e0; x1 : _A1 <- e1 }
-> =>  λ(Cmd : *)
+    .. desugars to this Morte expression:
+
+>     λ(Cmd : *)
 > →   λ(Bind : ∀(b : *) → m b → (b → Cmd) → Cmd)
 > →   λ(Pure : ∀(x1 : _A1) → Cmd)
-> →   Bind
->     _A0
->     e0
+> →   Bind _A0 e0
 >     (   λ(x0 : _A0)
->     →   Bind
->         _A1
->         e1
+>     →   Bind _A1 e1
 >         Pure
 >     )
 -}
@@ -329,14 +334,16 @@ desugarDo m bs0 (Bind (Arg x0 _A0) e0) =
         numBind' = if x == "Bind" then numBind + 1 else numBind
         numPure' = if x == "Pure" then numPure + 1 else numPure
 
-{-| `desugarLets` converts this:
+{-| Convert a let expression into a Morte expression
+
+    For example, this let expression:
 
 > let f0 (x00 : _A00) ... (x0j : _A0j) _B0 = b0
 > ..
 > let fi (xi0 : _Ai0) ... (xij : _Aij) _Bi = bi
 > in  e
 
-... into this:
+    ... desugars to this Morte expression:
 
 > (   \(f0 : forall (x00 : _A00) -> ... -> forall (x0j : _A0j) -> _B0)
 > ->  ...
@@ -385,10 +392,55 @@ data Cons = Cons
     , consType :: Expr
     }
 
-{-| This is the meat of the Boehm-Berarducci encoding which translates type
-    declarations into their equivalent `let` expressions.
+{-| This translates datatype definitions to let expressons using the
+    Boehm-Berarducci encoding.
 
-    Annah permits data constructors to have duplicate names and Annah also
+    For example, this mutually recursive datatype definition:
+
+> type Even
+> data Zero
+> data SuccE (predE : Odd)
+> fold foldEven
+> 
+> type Odd
+> data SuccO (predO : Even)
+> fold foldOdd
+> 
+> in SuccE
+
+    ... desugars to seven let expressions:
+
+> let Even : * = ...
+> let Odd  : *
+> let Zero : Even = ...
+> let SuccE : ∀(predE : Odd ) → Even = ...
+> let SuccO : ∀(predO : Even) → Odd  = ...
+> let foldEven : ∀(x : Even) → ... = ...
+> let foldOdd  : ∀(x : Odd ) → ... = ...
+> in  SuccE
+
+    ... and normalizes to:
+
+>     λ(  predE
+>     :   ∀(Even  : *)
+>     →   ∀(Odd   : *)
+>     →   ∀(Zero  : Even)
+>     →   ∀(SuccE : ∀(predE : Odd ) → Even)
+>     →   ∀(SuccO : ∀(predO : Even) → Odd)
+>     →   Odd
+>     )
+> →   λ(Even : *)
+> →   λ(Odd : *)
+> →   λ(Zero : Even)
+> →   λ(SuccE : ∀(predE : Odd) → Even)
+> →   λ(SuccO : ∀(predO : Even) → Odd)
+> →   SuccE (predE Even Odd Zero SuccE SuccO)
+
+-}
+
+desugarFamily :: [Type] -> [Let]
+desugarFamily familyTypes = typeLets ++ dataLets ++ foldLets
+{-  Annah permits data constructors to have duplicate names and Annah also
     permits data constructors to share the same name as type constructors.  A
     lot of the complexity of this code is due to avoiding name collisions.
 
@@ -412,8 +464,6 @@ data Cons = Cons
     > ->  \(MakePair : a -> b -> Pair)
     > ->  MakePair _@1 _
 -}
-desugarFamily :: [Type] -> [Let]
-desugarFamily familyTypes = typeLets ++ dataLets ++ foldLets
   where
     typeConstructors :: [Cons]
     typeConstructors = do
