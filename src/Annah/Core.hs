@@ -156,16 +156,28 @@ desugar (List t es   ) = desugarList t es
 desugar (Path t oms o) = desugarPath t oms o
 desugar (Do m bs b   ) = desugarDo m bs b
 
--- | Convert a numeric literal to a Morte expression
+{-| Convert a numeric literal to a Morte expression
+
+    For example:
+
+> 4
+
+    ... desugars to:
+
+>     λ(Nat : *)
+> →   λ(Succ : Nat → Nat)
+> →   λ(Zero : Nat)
+> →   Succ (Succ (Succ (Succ Zero)))
+-}
 desugarNat :: Integer -> M.Expr M.Path
 desugarNat n0 =
-    M.Lam "N" (M.Const M.Star)
-        (M.Lam "S" (M.Pi "_" (M.Var (M.V "N" 0)) (M.Var (M.V "N" 0)))
-            (M.Lam "Z" (M.Var (M.V "N" 0))
+    M.Lam "Nat" (M.Const M.Star)
+        (M.Lam "Succ" (M.Pi "pred" (M.Var (M.V "Nat" 0)) (M.Var (M.V "Nat" 0)))
+            (M.Lam "Zero" (M.Var (M.V "Nat" 0))
                 (go0 n0) ) )
   where
-    go0 n | n <= 0    = M.Var (M.V "Z" 0)
-          | otherwise = M.App (M.Var (M.V "S" 0)) (go0 (n - 1))
+    go0 n | n <= 0    = M.Var (M.V "Zero" 0)
+          | otherwise = M.App (M.Var (M.V "Succ" 0)) (go0 (n - 1))
 
 -- | Convert a string literal to a Morte expression
 desugarString :: Text -> M.Expr M.Path
@@ -179,13 +191,16 @@ desugarString txt = M.Lam "S" (M.Const M.Star) (M.Lam "N" "S" (go (0 :: Int)))
 
 {-| Convert a list into a Morte expression
 
-    Example:
+    For example:
 
-> [nil Bool, True, False]
-> =>  λ(List : *)
-> →   λ(Cons : ∀(head : Bool}) → ∀(tail : List) → List)
+> [nil Bool, True, False, False]
+
+    ... desugars to:
+
+>     λ(List : *)
+> →   λ(Cons : ∀(head : Bool) → ∀(tail : List) → List)
 > →   λ(Nil : List)
-> →   Cons True (Cons False Nil)
+> →   Cons True (Cons False (Cons False Nil))
 -}
 desugarList :: Expr -> [Expr] -> M.Expr M.Path
 desugarList e0 ts0 =
@@ -374,12 +389,12 @@ data Cons = Cons
     declarations into their equivalent `let` expressions.
 
     Annah permits data constructors to have duplicate names and Annah also
-    permits data constructors to share the same name as type constructors.  A lot of
-    the complexity of this code is due to avoiding name collisions.
+    permits data constructors to share the same name as type constructors.  A
+    lot of the complexity of this code is due to avoiding name collisions.
 
-    Constructor fields can also have duplicate field names, too.  This is particularly
-    useful for constructors with multiple fields where the user omits the field name
-    and defaults to @\"_\"@, like in this example:
+    Constructor fields can also have duplicate field names, too.  This is
+    particularly useful for constructors with multiple fields where the user
+    omits the field name and defaults to @\"_\"@, like in this example:
 
     >     \(a : *)
     > ->  \(b : *)
@@ -407,7 +422,7 @@ desugarFamily familyTypes = typeLets ++ dataLets ++ foldLets
 
     dataConstructors :: [Cons]
     dataConstructors = do
-        (tsBefore, t, tsAfter) <- zippers familyTypes
+        (tsBefore , t, tsAfter) <- zippers familyTypes
         (dsBefore1, d, _      ) <- zippers (typeDatas t)
         let dsBefore0 = do
                 t' <- tsBefore
@@ -423,28 +438,27 @@ desugarFamily familyTypes = typeLets ++ dataLets ++ foldLets
     constructors :: [Cons]
     constructors = typeConstructors ++ dataConstructors
 
-    makeRhs piOrLam con = go constructors
+    makeRhs piOrLam con = foldr cons con constructors
       where
-        go ((Cons x args _A):stmts) = piOrLam x (pi args _A) (go stmts)
-        go  []                      = con
+        cons (Cons x args _A) = piOrLam x (pi args _A)
 
     typeLets, foldLets :: [Let]
     (typeLets, foldLets) = unzip (do
         let folds = map typeFold familyTypes
         ((_, t, tsAfter), fold) <- zip (zippers typeConstructors) folds
-        let names1    = map consName tsAfter
-        let names2    = map consName dataConstructors
-        let con       = consName t `isShadowedBy` (names1 ++ names2)
-        let typeRhs'  = makeRhs Pi con
-        let foldType' = Pi  "x" con      typeRhs'
-        let foldRhs'  = Lam "x" typeRhs' "x"
-        return ( Let (consName t) [] (consType t) typeRhs'
-               , Let  fold        []  foldType'   foldRhs'
+        let names1   = map consName tsAfter
+        let names2   = map consName dataConstructors
+        let con      = consName t `isShadowedBy` (names1 ++ names2)
+        let typeRhs  = makeRhs Pi con
+        let foldType = Pi  "x" con      typeRhs
+        let foldRhs  = Lam "x" typeRhs  "x"
+        return ( Let (consName t) [] (consType t) typeRhs
+               , Let  fold        []  foldType    foldRhs
                ) )
 
     -- TODO: Enforce that argument types are `Var`s?
     desugarType :: Expr -> Maybe ([Arg], Expr, Expr)
-    desugarType (Pi x _A e      )   = do
+    desugarType   (Pi x _A e      ) = do
         ~(args, f, f') <- desugarType e
         return (Arg x _A:args, f, f')
     desugarType f@(Var (M.V x0 n0)) = do
@@ -505,16 +519,14 @@ desugarFamily familyTypes = typeLets ++ dataLets ++ foldLets
 apply :: Expr -> [Expr] -> Expr
 apply f as = foldr (flip App) f (reverse as)
 
-{-| Compute the correct DeBruijn index for a synthetic `Var` (`x`) by providing
-    all variables bound in between when `x` is introduced and when `x` is used.
+{-| Compute the correct DeBruijn index for a synthetic `Var` (@x@) by providing
+    all variables bound in between when @x@ is introduced and when @x@ is used.
 -}
 isShadowedBy :: Text -> [Text] -> Expr
 x `isShadowedBy` vars = Var (M.V x (length (filter (== x) vars)))
 
-pi :: [Arg] -> Expr -> Expr
-pi args e = foldr (\(Arg x _A) -> Pi x _A) e args
-
-lam :: [Arg] -> Expr -> Expr
+pi, lam :: [Arg] -> Expr -> Expr
+pi  args e = foldr (\(Arg x _A) -> Pi  x _A) e args
 lam args e = foldr (\(Arg x _A) -> Lam x _A) e args
 
 -- | > zippers [1, 2, 3] = [([], 1, [2, 3]), ([1], 2, [3]), ([2, 1], 3, [])]
@@ -528,4 +540,3 @@ zippers (stmt:stmts') = z:go z
     go (ls, m, r:rs) = z':go z'
       where
         z' = (m:ls, r, rs)
--- TODO: No need to return the left prefix any longer
