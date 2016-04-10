@@ -43,4 +43,5 @@ Executable annah
         annah                                     ,
         morte                >= 1.6.0    && < 1.7 ,
         optparse-applicative                < 0.13,
+        system-filepath      >= 0.3.1    && < 0.5 ,
         text                 >= 0.11.1.0 && < 1.3
