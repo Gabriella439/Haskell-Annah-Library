@@ -1,0 +1,5 @@
+let (>>=) (a : *) (b : *) (m : ../../Prod1 a) (f : a -> ../../Prod1 b) : ../../Prod1 b =
+    \(Prod1 : *)
+->  \(Make : forall (_1 : b) -> Prod1)
+->  m Prod1 (\(_1 : a) -> f _1 Prod1 Make)
+in  (>>=)

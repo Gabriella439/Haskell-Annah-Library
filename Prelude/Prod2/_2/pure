@@ -1,0 +1,1 @@
+λ(t : *) → λ(monoid : ../../Monoid  t) → λ(a : *) → ../Make  t a (monoid (λ(List : *) → λ(Cons : ∀(head : t) → ∀(tail : List) → List) → λ(Nil : List) → Nil))

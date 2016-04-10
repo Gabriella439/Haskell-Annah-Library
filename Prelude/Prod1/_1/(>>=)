@@ -1,0 +1,1 @@
+λ(a : *) → λ(b : *) → λ(m : ../../Prod1  a) → λ(f : a → ../../Prod1  b) → λ(Prod1 : *) → λ(Make : ∀(_1 : b) → Prod1) → m Prod1 (λ(_1 : a) → f _1 Prod1 Make)

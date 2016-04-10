@@ -1,0 +1,5 @@
+let Monad : ../../Monad ../../Prod1 =
+    \(a : *)
+->  \(cmd : ../../Cmd ../../Prod1 a)
+->  cmd (../../Prod1 a) (\(b : *) -> ./(>>=) b a) (./pure a)
+in  Monad

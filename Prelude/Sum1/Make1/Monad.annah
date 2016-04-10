@@ -1,0 +1,8 @@
+let Monad : ../../Monad ../../Sum1 =
+    \(a : *)
+->  \(cmd : ../../Cmd ../../Sum1 a)
+->  cmd
+    (../../Sum1 a)
+    (\(b : *) -> ./(>>=) b a)
+    (./pure a)
+in  Monad

@@ -1,0 +1,1 @@
+λ(t : *) → λ(monoid : ../../Monoid  t) → λ(a : *) → λ(cmd : ../../Cmd  (../../Prod2  t) a) → cmd (../../Prod2  t a) (λ(b : *) → ./(>>=)  t monoid b a) (./pure  t monoid a)

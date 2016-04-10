@@ -1,0 +1,3 @@
+let pure (t : *) (monoid : ../../Monoid t) (a : *) (x : a) : ../../Prod2 t a =
+    ../Make t a (monoid [nil t]) x
+in  pure

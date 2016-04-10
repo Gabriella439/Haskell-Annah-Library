@@ -1,0 +1,14 @@
+let (>>=)
+    (t : *)
+    (monoid : ../../Monoid t)
+    (a : *)
+    (b : *)
+    (m : ../../Prod2 t a)
+    (f : a -> ../../Prod2 t b)
+    : ../../Prod2 t b =
+    m (../../Prod2 t b) (\(_1 : t) -> \(_2 : a) ->
+        f _2 (../../Prod2 t b) (\(_1 : t) -> \(_2 : b) ->
+            ../Make t b (monoid [nil t, _1@1, _1]) _2
+        )
+    )
+in  (>>=)

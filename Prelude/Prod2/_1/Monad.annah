@@ -1,0 +1,8 @@
+let Monad (t : *) (monoid : ../../Monoid t) : ../../Monad (\(a : *) -> ../../Prod2 a t) =
+    \(a : *)
+->  \(cmd : ../../Cmd (\(a : *) -> ../../Prod2 a t) a)
+->  cmd
+    (../../Prod2 a t)
+    (\(b : *) -> ./(>>=) t monoid b a)
+    (./pure t monoid a)
+in  Monad

@@ -1,0 +1,1 @@
+λ(t : *) → λ(monoid : ../../Monoid  t) → λ(a : *) → λ(b : *) → λ(m : ../../Prod2  a t) → λ(f : a → ../../Prod2  b t) → m (../../Prod2  b t) (λ(_1 : a) → λ(_2 : t) → f _1 (../../Prod2  b t) (λ(_1 : b) → λ(_2 : t) → ../Make  b t _1 (monoid (λ(List : *) → λ(Cons : ∀(head : t) → ∀(tail : List) → List) → λ(Nil : List) → Cons _2@1 (Cons _2 Nil)))))
