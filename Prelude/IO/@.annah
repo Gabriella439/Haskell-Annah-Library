@@ -1,8 +1,0 @@
-    \(a : *)
-->  type IO
-
-    data Get_ (#Message -> IO)
-    data Put_ #Message IO
-    data Pure_ a
-
-    in IO

@@ -1,7 +1,7 @@
-let (>>=) (a : *) (b : *) (m : #IO a) (f : a -> #IO b) : #IO b =
+let (>>=) (a : *) (b : *) (m : ../IO a) (f : a -> ../IO b) : ../IO b =
     \(IO    : *                     )
-->  \(Get_  : (#Message -> IO) -> IO)
-->  \(Put_  : #Message -> IO -> IO  )
+->  \(Get_  : (../Nat -> IO) -> IO)
+->  \(Put_  : ../Nat -> IO -> IO  )
 ->  \(Pure_ : b -> IO               )
 ->  m IO Get_ Put_ (\(r : a) -> f r IO Get_ Put_ Pure_)
 

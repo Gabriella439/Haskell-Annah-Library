@@ -1,1 +1,1 @@
-λ(b1 : #Bool ) → λ(b2 : #Bool ) → λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → b1 Bool (b2 Bool True False) (b2 Bool False True)
+λ(b1 : ../Bool ) → λ(b2 : ../Bool ) → λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → b1 Bool (b2 Bool True False) (b2 Bool False True)

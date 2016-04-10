@@ -1,2 +1,0 @@
-let Functor (f : * -> *) : * = forall (b : *) -> #Defer f b -> f b
-in  Functor

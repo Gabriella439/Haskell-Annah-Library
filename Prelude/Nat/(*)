@@ -1,1 +1,1 @@
-λ(m : #Nat ) → λ(n : #Nat ) → λ(N : *) → λ(S : N → N) → m N (n N S)
+λ(m : ../Nat ) → λ(n : ../Nat ) → λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → m Nat (n Nat Succ)

@@ -1,1 +1,1 @@
-λ(N : *) → λ(S : N → N) → λ(Z : N) → Z
+λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Zero

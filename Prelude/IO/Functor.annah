@@ -1,14 +1,14 @@
-let Functor : #Functor #IO =
+let Functor : ../Functor ../IO =
     \(b : *)
-->  \(d : #Defer #IO b)
+->  \(d : ../Defer ../IO b)
 ->  d
-    (#IO b)
+    (../IO b)
     (   \(a : *)
     ->  \(k : a -> b)
-    ->  \(x : #IO a)
+    ->  \(x : ../IO a)
     ->  \(IO   : *)
-    ->  \(Get_ : (#Message -> IO) -> IO)
-    ->  \(Put_ : #Message -> IO -> IO)
+    ->  \(Get_ : (../Nat -> IO) -> IO)
+    ->  \(Put_ : ../Nat -> IO -> IO)
     ->  \(Pure : b -> IO)
     ->  x IO Get_ Put_ (\(r : a) -> Pure (k r))
     )

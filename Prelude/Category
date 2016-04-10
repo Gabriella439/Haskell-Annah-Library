@@ -1,1 +1,1 @@
-λ(cat : * → * → *) → ∀(a : *) → ∀(b : *) → #Path  cat a b → cat a b
+λ(cat : * → * → *) → ∀(a : *) → ∀(b : *) → ./Path  cat a b → cat a b

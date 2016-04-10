@@ -1,7 +1,7 @@
     type IO
 
-    data Get_ (#Message -> IO)
-    data Put_ #Message IO
-    data Pure_ #Message
+    data Get_ (../Nat -> IO)
+    data Put_ ../Nat IO
+    data Pure_ ../Nat
 
     in Get_ Pure_

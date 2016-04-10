@@ -1,1 +1,1 @@
-λ(xs : #List  #Bool ) → xs #Bool  #Bool/(||)  #Bool/False 
+λ(xs : ../List  ../Bool ) → xs ../Bool  ./(||)  ./False 

@@ -1,1 +1,1 @@
-λ(f : * → *) → λ(b : *) → λ(d : #Defer  (#Defer  f) b) → d (#Defer  f b) (λ(a : *) → λ(k : a → b) → λ(x : #Defer  f a) → λ(Defer : *) → λ(Map : ∀(s : *) → ∀(k : s → b) → ∀(x : f s) → Defer) → x Defer (λ(s : *) → λ(l : s → a) → Map s (λ(vs : s) → k (l vs))))
+λ(f : * → *) → λ(b : *) → λ(d : ../Defer  (../Defer  f) b) → d (../Defer  f b) (λ(a : *) → λ(k : a → b) → λ(x : ../Defer  f a) → λ(Defer : *) → λ(Map : ∀(s : *) → ∀(k : s → b) → ∀(x : f s) → Defer) → x Defer (λ(s : *) → λ(l : s → a) → Map s (λ(vs : s) → k (l vs))))

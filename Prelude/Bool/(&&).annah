@@ -1,4 +1,4 @@
-let (&&) (b1 : #Bool ) (b2 : #Bool ) : #Bool =
+let (&&) (b1 : ../Bool ) (b2 : ../Bool ) : ../Bool =
     \(Bool : *)
 ->  \(True : Bool)
 ->  \(False : Bool)

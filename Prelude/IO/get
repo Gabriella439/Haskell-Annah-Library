@@ -1,1 +1,1 @@
-λ(IO : *) → λ(Get_ : (#Message  → IO) → IO) → λ(Put_ : #Message  → IO → IO) → Get_
+λ(IO : *) → λ(Get_ : (../Nat  → IO) → IO) → λ(Put_ : ../Nat  → IO → IO) → Get_

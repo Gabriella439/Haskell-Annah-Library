@@ -1,0 +1,8 @@
+    \(a : *)
+->  type IO
+
+    data Get_ (./Nat -> IO)
+    data Put_ ./Nat IO
+    data Pure_ a
+
+    in IO

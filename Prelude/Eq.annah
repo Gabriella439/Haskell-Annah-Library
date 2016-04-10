@@ -1,2 +1,2 @@
-let Eq (a : *) : * = a -> a -> #Bool
+let Eq (a : *) : * = a -> a -> ./Bool
 in  Eq

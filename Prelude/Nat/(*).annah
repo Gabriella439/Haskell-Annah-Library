@@ -1,5 +1,5 @@
-let (*) (m : #Nat ) (n : #Nat ) : #Nat =
-    \(N : *)
-->  \(S : N -> N)
-->  m N (n N S)
+let (*) (m : ../Nat ) (n : ../Nat ) : ../Nat =
+    \(Nat : *)
+->  \(Succ : ∀(pred : Nat) -> Nat)
+->  m Nat (n Nat Succ)
 in  (*)

@@ -1,4 +1,4 @@
-let End (f : * -> * -> *) (a : *) : #Path f a a =
+let End (f : * -> * -> *) (a : *) : ../Path f a a =
         \(Path : forall (a : *) -> forall (c : *) -> *)
     ->  \(  Step
         :   forall (a : *)

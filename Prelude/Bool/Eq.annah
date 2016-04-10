@@ -1,6 +1,6 @@
-let Eq : #Eq #Bool =
-    \(b1 : #Bool )
-->  \(b2 : #Bool )
+let Eq : ../Eq ../Bool =
+    \(b1 : ../Bool )
+->  \(b2 : ../Bool )
 ->  \(Bool : *)
 ->  \(True : Bool)
 ->  \(False : Bool)

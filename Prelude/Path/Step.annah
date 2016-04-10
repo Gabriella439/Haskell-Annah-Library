@@ -4,8 +4,8 @@ let Step
     (b : *)
     (c : *)
     (head : f a b)
-    (tail : #Path f b c)
-    : #Path f a c =
+    (tail : ../Path f b c)
+    : ../Path f a c =
         \(Path : forall (a : *) -> forall (c : *) -> *)
     ->  \(  Step
         :   forall (a : *)

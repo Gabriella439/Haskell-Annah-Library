@@ -1,1 +1,1 @@
-λ(x : ∀(N : *) → ∀(S : N → N) → ∀(Z : N) → N) → x
+λ(x : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → x

@@ -1,1 +1,1 @@
-λ(b : *) → λ(d : #Defer  #List  b) → d (#List  b) (λ(a : *) → λ(k : a → b) → λ(xs : #List  a) → λ(List : *) → λ(Cons : b → List → List) → xs List (λ(x : a) → Cons (k x)))
+λ(b : *) → λ(d : ../Defer  ../List  b) → d (../List  b) (λ(a : *) → λ(k : a → b) → λ(xs : ../List  a) → λ(List : *) → λ(Cons : b → List → List) → xs List (λ(x : a) → Cons (k x)))

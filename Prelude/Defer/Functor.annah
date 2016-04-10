@@ -1,11 +1,11 @@
-let Functor (f : * -> *) : #Functor (#Defer f) =
+let Functor (f : * -> *) : ../Functor (../Defer f) =
     \(b : *)
-->  \(d : #Defer (#Defer f) b)
+->  \(d : ../Defer (../Defer f) b)
 ->  d
-    (#Defer f b)
+    (../Defer f b)
     (   \(a     : *         )
     ->  \(k     : a -> b    )
-    ->  \(x     : #Defer f a)
+    ->  \(x     : ../Defer f a)
     ->  \(Defer : *         )
     ->  \(  Map
         : forall (s : *) -> forall (k : s -> b) -> forall (x : f s) -> Defer

@@ -1,4 +1,4 @@
-let (>>=) (a : *) (b : *) (m : #List a) (f : a -> #List b) : #List b
+let (>>=) (a : *) (b : *) (m : ../List a) (f : a -> ../List b) : ../List b
     =   \(List : *)
     ->  \(Cons : forall (head : b) -> forall (tail : List) -> List)
     ->  \(Nil : List)

@@ -1,1 +1,1 @@
-λ(msg : #Message ) → λ(IO : *) → λ(Get_ : (#Message  → IO) → IO) → λ(Put_ : #Message  → IO → IO) → λ(Pure_ : #Prod0  → IO) → Put_ msg (Pure_ #Prod0/Make )
+λ(msg : ../Nat ) → λ(IO : *) → λ(Get_ : (../Nat  → IO) → IO) → λ(Put_ : ../Nat  → IO → IO) → λ(Pure_ : ../Prod0  → IO) → Put_ msg (Pure_ ../Prod0/Make )

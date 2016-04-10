@@ -1,4 +1,4 @@
-let not (b : #Bool ) : #Bool =
+let not (b : ../Bool ) : ../Bool =
     \(Bool : *)
 ->  \(True : Bool)
 ->  \(False : Bool)

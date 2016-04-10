@@ -1,1 +1,1 @@
-λ(a : *) → λ(_ : a) → λ(IO : *) → λ(Get_ : (#Message  → IO) → IO) → λ(Put_ : #Message  → IO → IO) → λ(Pure_ : a → IO) → Pure_ _
+λ(a : *) → λ(_ : a) → λ(IO : *) → λ(Get_ : (../Nat  → IO) → IO) → λ(Put_ : ../Nat  → IO → IO) → λ(Pure_ : a → IO) → Pure_ _

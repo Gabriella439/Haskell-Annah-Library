@@ -1,6 +1,6 @@
-let (+) (m : #Nat ) (n : #Nat ) : #Nat =
-    \(N : *)
-->  \(S : N -> N)
-->  \(Z : N)
-->  m N S (n N S Z)
+let (+) (m : ../Nat ) (n : ../Nat ) : ../Nat =
+    \(Nat : *)
+->  \(Succ : forall (pred : Nat) -> Nat)
+->  \(Zero : Nat)
+->  m Nat Succ (n Nat Succ Zero)
 in  (+)

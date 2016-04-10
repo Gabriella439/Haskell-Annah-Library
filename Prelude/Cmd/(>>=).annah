@@ -1,5 +1,5 @@
-let (>>=) (a : *) (b : *) (m : * -> *) (cmd : #Cmd m a) (f : a -> #Cmd m b)
-    : #Cmd m b =
+let (>>=) (a : *) (b : *) (m : * -> *) (cmd : ../Cmd m a) (f : a -> ../Cmd m b)
+    : ../Cmd m b =
     \(Cmd : *                                          )
 ->  \(Bind : forall (t : *) -> m t -> (t -> Cmd) -> Cmd)
 ->  \(Pure : forall (r : b) -> Cmd                     )

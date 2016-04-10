@@ -1,1 +1,1 @@
-λ(f : * → *) → λ(functor : #Functor  f) → λ(a : *) → #Functor/map  f functor a #Prod0  (λ(_ : a) → #Prod0/Make )
+λ(f : * → *) → λ(functor : ../Functor  f) → λ(a : *) → ../Functor/map  f functor a ../Prod0  (λ(_ : a) → ../Prod0/Make )

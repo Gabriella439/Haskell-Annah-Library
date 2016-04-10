@@ -1,0 +1,13 @@
+let map (a : *) (b : *) (f : a -> b) (as : ../List a) : ../List b =
+    ./Functor
+    b
+    (   \(Defer : *)
+    ->  \(  Map
+        :   forall (a : *        )
+        ->  forall (k : a -> b   )
+        ->  forall (x : ../List a)
+        ->  Defer
+        )
+    ->  Map a f as
+    )
+in  map

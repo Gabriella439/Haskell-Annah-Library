@@ -1,4 +1,4 @@
-let (++) (a : *) (as1 : #List a) (as2 : #List a) : #List a =
+let (++) (a : *) (as1 : ../List a) (as2 : ../List a) : ../List a =
         \(List : *)
     ->  \(Cons : a -> List -> List)
     ->  \(Nil : List)

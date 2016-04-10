@@ -1,7 +1,7 @@
-let Monad (f : * -> *) : #Monad (#Cmd f) =
-    \(a    : *                                         )
-->  \(cmd  : #Cmd (#Cmd f) a                           )
-->  \(Cmd  : *                                         )
-->  \(Bind : forall (b : *) -> f b -> (b -> Cmd) -> Cmd)
-->  cmd Cmd (\(b : *) -> \(x : #Cmd f b) -> x Cmd Bind)
+let Monad (f : * -> *) : ../Monad (../Cmd f) =
+    \(a    : *                                          )
+->  \(cmd  : ../Cmd (../Cmd f) a                        )
+->  \(Cmd  : *                                          )
+->  \(Bind : forall (b : *) -> f b -> (b -> Cmd) -> Cmd )
+->  cmd Cmd (\(b : *) -> \(x : ../Cmd f b) -> x Cmd Bind)
 in  Monad

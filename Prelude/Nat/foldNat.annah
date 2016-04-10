@@ -1,7 +1,7 @@
-type N
+type Nat
 
-data S N
-data Z
+data Succ (pred : Nat)
+data Zero
 
 fold foldNat
 

@@ -1,11 +1,11 @@
-let Functor : #Functor #List =
+let Functor : ../Functor ../List =
     \(b : *)
-->  \(d : #Defer #List b)
+->  \(d : ../Defer ../List b)
 ->  d
-    (#List b)
+    (../List b)
     (   \(a    : *                )
     ->  \(k    : a -> b           )
-    ->  \(xs   : #List a          )
+    ->  \(xs   : ../List a        )
     ->  \(List : *                )
     ->  \(Cons : b -> List -> List)
     ->  \(Nil  : List             )

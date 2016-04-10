@@ -1,3 +1,0 @@
-let concat : #Monoid #Bytes =
-    \(strs : #List #Bytes ) -> strs #Bytes #Bytes/(++) #Bytes/empty
-in  concat
