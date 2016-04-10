@@ -1,0 +1,5 @@
+let map (a : *) (b : *) (k : a -> b) (s : ../../Sum1 a) : ../../Sum1 b =
+    \(Sum1 : *)
+->  \(Make1 : forall (_Make1 : b) -> Sum1)
+->  s Sum1 (\(_Make1 : a) -> Make1 (k _Make1))
+in  map

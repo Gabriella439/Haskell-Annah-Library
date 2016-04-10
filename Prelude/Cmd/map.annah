@@ -1,0 +1,9 @@
+let map (f : * -> *) (a : *) (b : *) (k : a -> b) (cmd : ../Cmd f a) : ../Cmd f b =
+    \(Cmd : *)
+->  \(Bind : forall (b : *) -> f b -> (b -> Cmd) -> Cmd)
+->  \(Pure : forall (r : b) -> Cmd)
+->  cmd
+    Cmd
+    Bind
+    (\(x : a) -> Pure (k x))
+in  map

@@ -1,13 +1,5 @@
 let Functor (t : *) : ../../Functor (\(b : *) -> ../../Prod2 b t) =
     \(b : *)
 ->  \(d : ../../Defer (\(b : *) -> ../../Prod2 b t) b)
-->  d
-    (../../Prod2 b t)
-    (   \(a     : *                                          )
-    ->  \(k     : a -> b                                     )
-    ->  \(x     : ../../Prod2 a t                            )
-    ->  \(Prod2 : *                                          )
-    ->  \(Make  : forall (_1 : b) -> forall (_2 : t) -> Prod2)
-    ->  x Prod2 (\(_1 : a) -> \(_2 : t) -> Make (k _1) _2)
-    )
+->  d (../../Prod2 b t) (\(a : *) -> ./map t a b)
 in  Functor

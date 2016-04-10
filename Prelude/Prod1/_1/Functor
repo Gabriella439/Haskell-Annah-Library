@@ -1,1 +1,1 @@
-λ(b : *) → λ(d : ../../Defer  ../../Prod1  b) → d (../../Prod1  b) (λ(a : *) → λ(k : a → b) → λ(x : ../../Prod1  a) → λ(Prod1 : *) → λ(Make : ∀(_1 : b) → Prod1) → x Prod1 (λ(r : a) → Make (k r)))
+λ(b : *) → λ(d : ../../Defer  ../../Prod1  b) → d (../../Prod1  b) (λ(a : *) → ./map  a b)

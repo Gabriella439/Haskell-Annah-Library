@@ -1,0 +1,5 @@
+let map (t : *) (a : *) (b : *) (k : a -> b) (p : ../../Prod2 a t) : ../../Prod2 b t =
+    \(Prod2 : *)
+->  \(Make : forall (_1 : b) -> forall (_2 : t) -> Prod2)
+->  p Prod2 (\(_1 : a) -> \(_2 : t) -> Make (k _1) _2)
+in  map

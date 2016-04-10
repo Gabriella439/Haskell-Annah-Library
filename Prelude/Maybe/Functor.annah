@@ -1,14 +1,5 @@
 let Functor : ../Functor ../Maybe =
     \(b : *)
 ->  \(d : ../Defer ../Maybe b)
-->  d
-    (../Maybe b)
-    (   \(a       : *         )
-    ->  \(k       : a -> b    )
-    ->  \(x       : ../Maybe a)
-    ->  \(Maybe   : *         )
-    ->  \(Nothing : Maybe     )
-    ->  \(Just    : b -> Maybe)
-    ->  x Maybe Nothing (\(r : a) -> Just (k r))
-    )
+->  d (../Maybe b) (\(a : *) -> ./map a b)
 in  Functor

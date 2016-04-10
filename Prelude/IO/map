@@ -1,0 +1,1 @@
+λ(a : *) → λ(b : *) → λ(k : a → b) → λ(io : ../IO  a) → λ(IO : *) → λ(Get_ : (../Nat  → IO) → IO) → λ(Put_ : ../Nat  → IO → IO) → λ(Pure_ : b → IO) → io IO Get_ Put_ (λ(x : a) → Pure_ (k x))

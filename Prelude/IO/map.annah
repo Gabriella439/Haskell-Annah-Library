@@ -1,0 +1,7 @@
+let map (a : *) (b : *) (k : a -> b) (io : ../IO a) : ../IO b =
+    \(IO : *)
+->  \(Get_ : (../Nat -> IO) -> IO)
+->  \(Put_ : ../Nat -> IO -> IO)
+->  \(Pure_ : b -> IO)
+->  io IO Get_ Put_ (\(x : a) -> Pure_ (k x))
+in  map

@@ -1,1 +1,1 @@
-λ(b : *) → λ(d : ../Defer  ../IO  b) → d (../IO  b) (λ(a : *) → λ(k : a → b) → λ(x : ../IO  a) → λ(IO : *) → λ(Get_ : (../Nat  → IO) → IO) → λ(Put_ : ../Nat  → IO → IO) → λ(Pure : b → IO) → x IO Get_ Put_ (λ(r : a) → Pure (k r)))
+λ(b : *) → λ(d : ../Defer  ../IO  b) → d (../IO  b) (λ(a : *) → ./map  a b)

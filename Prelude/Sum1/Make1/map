@@ -1,0 +1,1 @@
+λ(a : *) → λ(b : *) → λ(k : a → b) → λ(s : ../../Sum1  a) → λ(Sum1 : *) → λ(Make1 : ∀(_Make1 : b) → Sum1) → s Sum1 (λ(_Make1 : a) → Make1 (k _Make1))

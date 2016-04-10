@@ -1,1 +1,1 @@
-λ(f : * → *) → λ(b : *) → λ(d : ../Defer  (../Cmd  f) b) → d (../Cmd  f b) (λ(a : *) → λ(k : a → b) → λ(x : ../Cmd  f a) → λ(Cmd : *) → λ(Bind : ∀(s : *) → f s → (s → Cmd) → Cmd) → λ(Pure : b → Cmd) → x Cmd Bind (λ(r : a) → Pure (k r)))
+λ(f : * → *) → λ(b : *) → λ(d : ../Defer  (../Cmd  f) b) → d (../Cmd  f b) (λ(a : *) → ./map  f a b)

@@ -1,0 +1,9 @@
+let map (f : * -> *) (a : *) (b : *) (k : a -> b) (d : ../Defer f a) : ../Defer f b =
+    \(Defer : *)
+->  \(Map : forall (s : *) -> forall (g : s -> b) -> forall (x : f s) -> Defer)
+->  d
+    Defer
+    (\(s : *) -> \(g : s -> a) ->
+        Map s (\(y : s) -> k (g y))
+    )
+in  map

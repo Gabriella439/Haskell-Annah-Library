@@ -1,19 +1,5 @@
 let Functor (f : * -> *) : ../Functor (../Defer f) =
     \(b : *)
 ->  \(d : ../Defer (../Defer f) b)
-->  d
-    (../Defer f b)
-    (   \(a     : *         )
-    ->  \(k     : a -> b    )
-    ->  \(x     : ../Defer f a)
-    ->  \(Defer : *         )
-    ->  \(  Map
-        : forall (s : *) -> forall (k : s -> b) -> forall (x : f s) -> Defer
-        )
-    ->  x
-        Defer
-        (\(s : *) -> \(l : s -> a) -> \(x : f s) ->
-            Map s (\(vs : s) -> k (l vs)) x
-        )
-    )
+->  d (../Defer f b) (\(a : *) -> ./map f a b)
 in  Functor

@@ -1,0 +1,6 @@
+let map (a : *) (b : *) (k : a -> b) (m : ../Maybe a) : ../Maybe b =
+    \(Maybe : *)
+->  \(Nothing : Maybe)
+->  \(Just : forall (_Just : b) -> Maybe)
+->  m Maybe Nothing (\(_Just : a) -> Just (k _Just))
+in  map
