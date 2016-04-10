@@ -1,14 +1,5 @@
 let Functor (t : *) : ../../Functor (\(b : *) -> ../../Sum2 b t) =
     \(b : *)
 ->  \(d : ../../Defer (\(b : *) -> ../../Sum2 b t) b)
-->  d
-    (../../Sum2 b t)
-    (   \(a : *)
-    ->  \(k : a -> b)
-    ->  \(x : ../../Sum2 a t)
-    ->  \(Sum2 : *)
-    ->  \(Make1 : forall (_Make1 : b) -> Sum2)
-    ->  \(Make2 : forall (_Make2 : t) -> Sum2)
-    ->  x Sum2 (\(_Make1 : a) -> Make1 (k _Make1)) Make2
-    )
+->  d (../../Sum2 b t) (\(a : *) -> ./map t a b)
 in  Functor

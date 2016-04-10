@@ -1,13 +1,5 @@
 let map (a : *) (b : *) (f : a -> b) (as : ../List a) : ../List b =
-    ./Functor
-    b
-    (   \(Defer : *)
-    ->  \(  Map
-        :   forall (a : *        )
-        ->  forall (k : a -> b   )
-        ->  forall (x : ../List a)
-        ->  Defer
-        )
-    ->  Map a f as
-    )
+    \(List : *)
+->  \(Cons : forall (head : b) -> forall (tail : List) -> List)
+->  as List (\(head : a) -> Cons (f head))
 in  map

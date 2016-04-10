@@ -1,1 +1,1 @@
-λ(t : *) → λ(b : *) → λ(d : ../../Defer  (λ(b : *) → ../../Sum2  b t) b) → d (../../Sum2  b t) (λ(a : *) → λ(k : a → b) → λ(x : ../../Sum2  a t) → λ(Sum2 : *) → λ(Make1 : ∀(_Make1 : b) → Sum2) → x Sum2 (λ(_Make1 : a) → Make1 (k _Make1)))
+λ(t : *) → λ(b : *) → λ(d : ../../Defer  (λ(b : *) → ../../Sum2  b t) b) → d (../../Sum2  b t) (λ(a : *) → ./map  t a b)

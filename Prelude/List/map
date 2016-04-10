@@ -1,1 +1,1 @@
-λ(a : *) → λ(b : *) → λ(f : a → b) → λ(as : ../List  a) → ./Functor  b (λ(Defer : *) → λ(Map : ∀(a : *) → ∀(k : a → b) → ∀(x : ../List  a) → Defer) → Map a f as)
+λ(a : *) → λ(b : *) → λ(f : a → b) → λ(as : ../List  a) → λ(List : *) → λ(Cons : ∀(head : b) → ∀(tail : List) → List) → as List (λ(head : a) → Cons (f head))
