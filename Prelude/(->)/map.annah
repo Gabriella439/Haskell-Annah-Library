@@ -1,0 +1,3 @@
+let map (e : *) (a : *) (b : *) (k : a -> b) (m : ../(->) e a) : ../(->) e b =
+    \(x : e) -> k (m x)
+in  map

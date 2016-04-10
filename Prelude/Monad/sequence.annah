@@ -1,0 +1,20 @@
+let sequence
+    (m : * -> *)
+    (a : *)
+    (monad : ../Monad m)
+    (cmds : ../List (m a))
+    : m (../List a) =
+    monad
+    (../List a)
+    (   cmds
+        (../Cmd m (../List a) )
+        (\(cmd1 : m a) -> \(cmd2 : ../Cmd m (../List a)) ->
+            ../Cmd/Monad m (../List a) (do (../Cmd m) {
+                x  : a         <- ../Cmd/lift m a cmd1;
+                xs : ../List a <- cmd2;
+                _  : ../List a <- ../Cmd/Pure m (../List a) (../List/Cons a x xs);
+            })
+        )
+        (../Cmd/Pure m (../List a) (../List/Nil a) )
+    )
+in  sequence

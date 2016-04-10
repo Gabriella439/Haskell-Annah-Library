@@ -1,0 +1,1 @@
+λ(f : * → *) → λ(m : *) → λ(monoid : ../Monoid  m) → λ(cmds : ../List  (../Cmd  f m)) → ./Monad  f m (λ(Cmd : *) → λ(Bind : ∀(b : *) → ../Cmd  f b → (b → Cmd) → Cmd) → λ(Pure : m → Cmd) → Bind (../List  m) (../Monad/sequence  (../Cmd  f) m (./Monad  f) cmds) (λ(ms : ../List  m) → Bind m (./Pure  f m (monoid ms)) Pure))

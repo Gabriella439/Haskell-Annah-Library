@@ -1,0 +1,5 @@
+let Monad (e : *) : ../Monad (../(->) e) =
+    \(a : *)
+->  \(cmd : ../Cmd (../(->) e) a)
+->  cmd (../(->) e a) (\(b : *) -> ./(>>=) e b a) (./pure e a)
+in  Monad

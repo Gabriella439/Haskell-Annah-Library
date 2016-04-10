@@ -1,0 +1,2 @@
+let pure (e : *) (a : *) (x : a) : ../(->) e a = \(_ : e) -> x
+in  pure

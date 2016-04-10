@@ -1,0 +1,11 @@
+let Functor (e : *) : ../Functor (../(->) e) =
+    \(b : *)
+->  \(d : ../Defer (../(->) e) b)
+->  d
+    (../(->) e b)
+    (   \(a : *)
+    ->  \(k : a -> b)
+    ->  \(x : ../(->) e a)
+    ->  ./map e a b k x
+    )
+in  Functor
