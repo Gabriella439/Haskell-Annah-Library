@@ -1,19 +1,19 @@
-let unsnoc (a : *) (xs : #List a) : #Maybe (#Prod2 (#List a) a) =
+let unsnoc (a : *) (xs : ../List a) : ../Maybe (../Prod2 (../List a) a) =
     xs
-    (#Maybe (#Prod2 (#List a) a))
-    (\(x : a) -> \(r : #Maybe (#Prod2 (#List a) a)) ->
+    (../Maybe (../Prod2 (../List a) a))
+    (\(x : a) -> \(r : ../Maybe (../Prod2 (../List a) a)) ->
         r
-        (#Maybe (#Prod2 (#List a) a))
-        (#Maybe/Just (#Prod2 (#List a) a) (#Prod2/Make (#List a) a [nil a] x))
-        (\(p : #Prod2 (#List a) a) ->
+        (../Maybe (../Prod2 (../List a) a))
+        (../Maybe/Just (../Prod2 (../List a) a) (../Prod2/Make (../List a) a [nil a] x))
+        (\(p : ../Prod2 (../List a) a) ->
             p
-            (#Maybe (#Prod2 (#List a) a))
-            (\(ys : #List a) -> \(y : a) ->
-                #Maybe/Just
-               (#Prod2 (#List a) a)
-               (#Prod2/Make (#List a) a (#List/Cons a x ys) y)
+            (../Maybe (../Prod2 (../List a) a))
+            (\(ys : ../List a) -> \(y : a) ->
+                ../Maybe/Just
+               (../Prod2 (../List a) a)
+               (../Prod2/Make (../List a) a (./Cons a x ys) y)
             )
         )
     )
-    (#Maybe/Nothing (#Prod2 (#List a) a))
+    (../Maybe/Nothing (../Prod2 (../List a) a))
 in  unsnoc

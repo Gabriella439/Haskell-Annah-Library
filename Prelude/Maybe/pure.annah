@@ -1,2 +1,2 @@
-let pure (a : *) (x : a) : #Maybe a = #Maybe/Just a x
+let pure (a : *) (x : a) : ../Maybe a = ./Just a x
 in  pure

@@ -1,8 +1,8 @@
-let Eq (a : *) (eqA : #Eq a) : #Eq (#Maybe a) =
-        \(mx1 : #Maybe a)
-    ->  \(mx2 : #Maybe a)
+let Eq (a : *) (eqA : ../Eq a) : ../Eq (../Maybe a) =
+        \(mx1 : ../Maybe a)
+    ->  \(mx2 : ../Maybe a)
     ->  mx1
-        #Bool
-        (mx2 #Bool #Bool/True (\(_ : a) -> #Bool/False ))
-        (\(x1 : a) -> mx2 #Bool #Bool/False (\(x2 : a) -> eqA x1 x2))
+        ../Bool
+        (mx2 ../Bool ../Bool/True (\(_ : a) -> ../Bool/False ))
+        (\(x1 : a) -> mx2 ../Bool ../Bool/False (\(x2 : a) -> eqA x1 x2))
 in  Eq

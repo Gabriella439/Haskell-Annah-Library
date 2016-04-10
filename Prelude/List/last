@@ -1,1 +1,1 @@
-λ(a : *) → λ(xs : #List  a) → xs (#Maybe  a) (λ(x : a) → λ(r : #Maybe  a) → r (#Maybe  a) (#Maybe/Just  a x) (#Maybe/Just  a)) (#Maybe/Nothing  a)
+λ(a : *) → λ(xs : ../List  a) → xs (../Maybe  a) (λ(x : a) → λ(r : ../Maybe  a) → r (../Maybe  a) (../Maybe/Just  a x) (../Maybe/Just  a)) (../Maybe/Nothing  a)

@@ -1,4 +1,4 @@
-let length (a : *) (xs : #List a) : #Nat =
+let length (a : *) (xs : ../List a) : ../Nat =
     \(N : *)
 ->  \(S : N -> N)
 ->  \(Z : N)

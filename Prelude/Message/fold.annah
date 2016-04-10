@@ -1,8 +1,0 @@
-type Message
-
-data Line (_Line : #String )
-data Done
-
-fold foldMessage
-
-in foldMessage

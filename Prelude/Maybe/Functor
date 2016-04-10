@@ -1,1 +1,1 @@
-λ(b : *) → λ(d : #Defer  #Maybe  b) → d (#Maybe  b) (λ(a : *) → λ(k : a → b) → λ(x : #Maybe  a) → λ(Maybe : *) → λ(Nothing : Maybe) → λ(Just : b → Maybe) → x Maybe Nothing (λ(r : a) → Just (k r)))
+λ(b : *) → λ(d : ../Defer  ../Maybe  b) → d (../Maybe  b) (λ(a : *) → λ(k : a → b) → λ(x : ../Maybe  a) → λ(Maybe : *) → λ(Nothing : Maybe) → λ(Just : b → Maybe) → x Maybe Nothing (λ(r : a) → Just (k r)))

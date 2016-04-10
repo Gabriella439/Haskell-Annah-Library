@@ -1,1 +1,1 @@
-λ(a : *) → λ(b : *) → λ(f : a → #List  b) → λ(xs : #List  a) → #List/Monad  b (λ(Cmd : *) → λ(Bind : ∀(b : *) → #List  b → (b → Cmd) → Cmd) → λ(Pure : b → Cmd) → Bind a xs (λ(x : a) → Bind b (f x) Pure))
+λ(a : *) → λ(b : *) → λ(f : a → ../List  b) → λ(xs : ../List  a) → ./Monad  b (λ(Cmd : *) → λ(Bind : ∀(b : *) → ../List  b → (b → Cmd) → Cmd) → λ(Pure : b → Cmd) → Bind a xs (λ(x : a) → Bind b (f x) Pure))

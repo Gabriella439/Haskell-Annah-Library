@@ -1,5 +1,5 @@
-let Eq (a : *) (eqA : #Eq a) : #Eq (#Prod1 a) =
-        \(p1 : #Prod1 a)
-    ->  \(p2 : #Prod1 a)
-    ->  p1 #Bool (\(_1 : a) -> p2 #Bool (\(_1 : a) -> eqA _1@1 _1))
+let Eq (a : *) (eqA : ../Eq a) : ../Eq (../Prod1 a) =
+        \(p1 : ../Prod1 a)
+    ->  \(p2 : ../Prod1 a)
+    ->  p1 ../Bool (\(_1 : a) -> p2 ../Bool (\(_1 : a) -> eqA _1@1 _1))
 in  Eq

@@ -1,1 +1,1 @@
-λ(a : *) → λ(eqA : #Eq  a) → λ(s1 : #Sum1  a) → λ(s2 : #Sum1  a) → s1 #Bool  (λ(_Make1 : a) → s2 #Bool  (eqA _Make1))
+λ(a : *) → λ(eqA : ../Eq  a) → λ(s1 : ../Sum1  a) → λ(s2 : ../Sum1  a) → s1 ../Bool  (λ(_Make1 : a) → s2 ../Bool  (eqA _Make1))

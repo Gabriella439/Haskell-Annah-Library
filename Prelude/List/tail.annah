@@ -1,7 +1,7 @@
-let tail (a : *) (xs : #List a) : #Maybe (#List a) =
+let tail (a : *) (xs : ../List a) : ../Maybe (../List a) =
     type S
     data Empty
-    data NonEmpty (head : a) (tail : #List a)
+    data NonEmpty (head : a) (tail : ../List a)
     fold foldS
     in
 
@@ -11,15 +11,15 @@ let tail (a : *) (xs : #List a) : #Maybe (#List a) =
         (\(x : a) -> \(s : S) -> foldS s
             S
             (NonEmpty x [nil a])
-            (\(head : a) -> \(tail : #List a) ->
-                NonEmpty x (#List/Cons a head tail)
+            (\(head : a) -> \(tail : ../List a) ->
+                NonEmpty x (./Cons a head tail)
             )
         )
         Empty
 
     in  foldS s
-        (#Maybe (#List a))
-        (#Maybe/Nothing (#List a))
-        (\(_ : a) -> \(tail : #List a) -> #Maybe/Just (#List a) tail)
+        (../Maybe (../List a))
+        (../Maybe/Nothing (../List a))
+        (\(_ : a) -> \(tail : ../List a) -> ../Maybe/Just (../List a) tail)
 
 in  tail

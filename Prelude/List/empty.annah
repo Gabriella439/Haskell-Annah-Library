@@ -1,2 +1,2 @@
-let empty (a : *) : #List a = #List/Nil a
+let empty (a : *) : ../List a = ../List/Nil a
 in  empty

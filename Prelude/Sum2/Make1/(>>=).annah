@@ -1,5 +1,5 @@
-let (>>=) (a : *) (b : *) (r : *) (m : #Sum2 a b) (f : a -> #Sum2 r b)
-    : #Sum2 r b
+let (>>=) (a : *) (b : *) (r : *) (m : ../../Sum2 a b) (f : a -> ../../Sum2 r b)
+    : ../../Sum2 r b
     =   \(Sum2 : *)
     ->  \(Make1 : r -> Sum2)
     ->  \(Make2 : b -> Sum2)

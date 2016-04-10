@@ -1,6 +1,6 @@
-let head (a : *) (xs : #List a) : #Maybe a =
+let head (a : *) (xs : ../List a) : ../Maybe a =
     xs
-    (#Maybe a)
-    (\(x : a) -> \(_ : #Maybe a) -> #Maybe/Just a x)
-    (#Maybe/Nothing a)
+    (../Maybe a)
+    (\(x : a) -> \(_ : ../Maybe a) -> ../Maybe/Just a x)
+    (../Maybe/Nothing a)
 in  head

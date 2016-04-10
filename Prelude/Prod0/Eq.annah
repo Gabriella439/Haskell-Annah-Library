@@ -1,5 +1,5 @@
-let Eq : #Eq #Prod0 =
-        \(_ : #Prod0 )
-    ->  \(_ : #Prod0 )
-    ->  #Bool/True
+let Eq : ../Eq ../Prod0 =
+        \(_ : ../Prod0 )
+    ->  \(_ : ../Prod0 )
+    ->  ../Bool/True
 in  Eq

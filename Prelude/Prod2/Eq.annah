@@ -1,13 +1,13 @@
-let Eq (a : *) (b : *) (eqA : #Eq a) (eqB : #Eq b) : #Eq (#Prod2 a b) =
-        \(p1 : #Prod2 a b)
-    ->  \(p2 : #Prod2 a b)
+let Eq (a : *) (b : *) (eqA : ../Eq a) (eqB : ../Eq b) : ../Eq (../Prod2 a b) =
+        \(p1 : ../Prod2 a b)
+    ->  \(p2 : ../Prod2 a b)
     ->  p1
-        #Bool
+        ../Bool
         (\(_1 : a) -> \(_2 : b) ->
             p2
-            #Bool
+            ../Bool
             (\(_1 : a) -> \(_2 : b) ->
-                #Bool/(&&) (eqA _1@1 _1) (eqB _2@1 _2)
+                ../Bool/(&&) (eqA _1@1 _1) (eqB _2@1 _2)
             )
         )
 in  Eq

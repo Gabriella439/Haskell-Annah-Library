@@ -1,4 +1,4 @@
-let (>>=) (a : *) (b : *) (m : #Maybe a) (f : a -> #Maybe b) : #Maybe b =
+let (>>=) (a : *) (b : *) (m : ../Maybe a) (f : a -> ../Maybe b) : ../Maybe b =
     \(Maybe   : *                          )
 ->  \(Nothing : Maybe                      )
 ->  \(Just    : forall (_Just : b) -> Maybe)

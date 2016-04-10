@@ -1,18 +1,18 @@
-let Eq (a : *) (b : *) (eqA : #Eq a) (eqB : #Eq b) : #Eq (#Sum2 a b) =
-        \(s1 : #Sum2 a b)
-    ->  \(s2 : #Sum2 a b)
+let Eq (a : *) (b : *) (eqA : ../Eq a) (eqB : ../Eq b) : ../Eq (../Sum2 a b) =
+        \(s1 : ../Sum2 a b)
+    ->  \(s2 : ../Sum2 a b)
     ->  s1
-        #Bool
+        ../Bool
         (\(_Make1 : a) ->
             s2
-            #Bool
+            ../Bool
             (\(_Make1 : a) -> eqA _Make1@1 _Make1)
-            (\(_      : b) -> #Bool/False )
+            (\(_      : b) -> ../Bool/False )
         )
         (\(_Make2 : b) ->
             s2
-            #Bool
-            (\(_      : a) -> #Bool/False )
+            ../Bool
+            (\(_      : a) -> ../Bool/False )
             (\(_Make2 : b) -> eqB _Make2@1 _Make2)
         )
 in  Eq

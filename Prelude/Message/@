@@ -1,1 +1,0 @@
-∀(Message : *) → ∀(Line : ∀(_Line : #String ) → Message) → ∀(Done : Message) → Message

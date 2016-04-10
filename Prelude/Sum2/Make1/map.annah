@@ -1,4 +1,4 @@
-let map (a : *) (b : *) (r : *) (f : a -> r) (s : #Sum2 a b) : #Sum2 r b =
+let map (a : *) (b : *) (r : *) (f : a -> r) (s : ../../Sum2 a b) : ../../Sum2 r b =
         \(Sum2 : *)
     ->  \(Make1 : r -> Sum2)
     ->  \(Make2 : b -> Sum2)

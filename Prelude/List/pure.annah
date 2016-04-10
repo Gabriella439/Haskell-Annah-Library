@@ -1,2 +1,2 @@
-let pure (a : *) (x : a) : #List a = [nil a, x]
+let pure (a : *) (x : a) : ../List a = [nil a, x]
 in  pure

@@ -1,5 +1,5 @@
-let Monad: #Monad #List
+let Monad: ../Monad ../List
     =   \(a : *)
-    ->  \(m : #Cmd #List a)
-    ->  m (#List a) (\(b : *) -> #List/(>>=) b a) (#List/pure a)
+    ->  \(m : ../Cmd ../List a)
+    ->  m (../List a) (\(b : *) -> ./(>>=) b a) (./pure a)
 in  Monad

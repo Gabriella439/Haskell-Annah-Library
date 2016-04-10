@@ -1,11 +1,11 @@
-let Functor : #Functor #Sum1 =
+let Functor : ../../Functor ../../Sum1 =
     \(b : *)
-->  \(d : #Defer #Sum1 b)
+->  \(d : ../../Defer ../../Sum1 b)
 ->  d
-    (#Sum1 b)
+    (../../Sum1 b)
     (   \(a    : *                          )
     ->  \(k    : a -> b                     )
-    ->  \(x    : #Sum1 a                    )
+    ->  \(x    : ../../Sum1 a               )
     ->  \(Sum1 : *                          )
     ->  \(Make : forall (_Make1 : b) -> Sum1)
     ->  x Sum1 (\(_Make1 : a) -> Make (k _Make1))

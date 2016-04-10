@@ -1,1 +1,0 @@
-λ(x : ∀(Message : *) → ∀(Line : ∀(_Line : #String ) → Message) → ∀(Done : Message) → Message) → x

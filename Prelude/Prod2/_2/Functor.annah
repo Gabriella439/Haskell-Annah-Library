@@ -1,11 +1,11 @@
-let Functor (t : *) : #Functor (#Prod2 t) =
+let Functor (t : *) : ../../Functor (../../Prod2 t) =
     \(b : *)
-->  \(d : #Defer (#Prod2 t) b)
+->  \(d : ../../Defer (../../Prod2 t) b)
 ->  d
-    (#Prod2 t b)
+    (../../Prod2 t b)
     (   \(a     : *                                          )
     ->  \(k     : a -> b                                     )
-    ->  \(x     : #Prod2 t a                                 )
+    ->  \(x     : ../../Prod2 t a                            )
     ->  \(Prod2 : *                                          )
     ->  \(Make  : forall (_1 : t) -> forall (_2 : b) -> Prod2)
     ->  x Prod2 (\(_1 : t) -> \(_2 : a) -> Make _1 (k _2))

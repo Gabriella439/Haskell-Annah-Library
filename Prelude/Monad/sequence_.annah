@@ -1,15 +1,15 @@
 let sequence_
     (m : * -> *)
-    (monad : #Monad m)
-    (cmds : #List (m #Prod0 ))
-    : m #Prod0 =
+    (monad : ../Monad m)
+    (cmds : ../List (m ../Prod0 ))
+    : m ../Prod0 =
     monad
-    #Prod0
+    ../Prod0
     (   cmds
-        (#Cmd m #Prod0 )
-        (\(cmd1 : m #Prod0 ) -> \(cmd2 : #Cmd m #Prod0 ) ->
-            #Cmd/Bind m #Prod0 #Prod0 cmd1 (\(_ : #Prod0 ) -> cmd2)
+        (../Cmd m ../Prod0 )
+        (\(cmd1 : m ../Prod0 ) -> \(cmd2 : ../Cmd m ../Prod0 ) ->
+            ../Cmd/Bind m ../Prod0 ../Prod0 cmd1 (\(_ : ../Prod0 ) -> cmd2)
         )
-        (#Cmd/Pure m #Prod0 #Prod0/Make )
+        (../Cmd/Pure m ../Prod0 ../Prod0/Make )
     )
 in  sequence_

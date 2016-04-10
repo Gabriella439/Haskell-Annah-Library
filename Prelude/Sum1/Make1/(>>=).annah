@@ -1,4 +1,4 @@
-let (>>=) (a : *) (r : *) (m : #Sum1 a) (f : a -> #Sum1 r) : #Sum1 r
+let (>>=) (a : *) (r : *) (m : ../../Sum1 a) (f : a -> ../../Sum1 r) : ../../Sum1 r
     =   \(Sum1 : *)
     ->  \(Make1 : r -> Sum1)
     ->  m Sum1 (\(x : a) -> f x Sum1 Make1)

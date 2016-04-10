@@ -1,1 +1,0 @@
-λ(Message : *) → λ(Line : ∀(_Line : #String ) → Message) → λ(Done : Message) → Done

@@ -1,1 +1,1 @@
-λ(a : *) → λ(r : *) → λ(m : #Sum1  a) → λ(f : a → #Sum1  r) → λ(Sum1 : *) → λ(Make1 : r → Sum1) → m Sum1 (λ(x : a) → f x Sum1 Make1)
+λ(a : *) → λ(r : *) → λ(m : ../../Sum1  a) → λ(f : a → ../../Sum1  r) → λ(Sum1 : *) → λ(Make1 : r → Sum1) → m Sum1 (λ(x : a) → f x Sum1 Make1)

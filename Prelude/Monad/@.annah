@@ -1,2 +1,0 @@
-let Monad (m : * -> *) : * = forall (a : *) -> #Cmd m a -> m a
-in  Monad

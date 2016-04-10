@@ -1,11 +1,11 @@
-let Functor : #Functor #Maybe =
+let Functor : ../Functor ../Maybe =
     \(b : *)
-->  \(d : #Defer #Maybe b)
+->  \(d : ../Defer ../Maybe b)
 ->  d
-    (#Maybe b)
+    (../Maybe b)
     (   \(a       : *         )
     ->  \(k       : a -> b    )
-    ->  \(x       : #Maybe a  )
+    ->  \(x       : ../Maybe a)
     ->  \(Maybe   : *         )
     ->  \(Nothing : Maybe     )
     ->  \(Just    : b -> Maybe)

@@ -1,1 +1,1 @@
-λ(a : *) → λ(xs : #List  a) → λ(xss : #List  (#List  a)) → #List/concat  a (#List/intersperse  (#List  a) xs xss)
+λ(a : *) → λ(xs : ../List  a) → λ(xss : ../List  (../List  a)) → ./concat  a (./intersperse  (../List  a) xs xss)

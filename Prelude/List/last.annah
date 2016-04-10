@@ -1,8 +1,8 @@
-let last (a : *) (xs : #List a) : #Maybe a =
+let last (a : *) (xs : ../List a) : ../Maybe a =
     xs
-    (#Maybe a)
-    (\(x : a) -> \(r : #Maybe a) ->
-        r (#Maybe a) (#Maybe/Just a x) (#Maybe/Just a)
+    (../Maybe a)
+    (\(x : a) -> \(r : ../Maybe a) ->
+        r (../Maybe a) (../Maybe/Just a x) (../Maybe/Just a)
     )
-    (#Maybe/Nothing a)
+    (../Maybe/Nothing a)
 in  last
