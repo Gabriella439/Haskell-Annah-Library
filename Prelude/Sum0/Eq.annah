@@ -1,0 +1,5 @@
+let Eq : ../Eq ../Sum0 =
+    \(_ : ../Sum0 )
+->  \(_ : ../Sum0 )
+->  ../Bool/True
+in  Eq
