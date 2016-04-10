@@ -14,6 +14,7 @@ module Annah.Lexer (
 import Control.Monad.Trans.State.Strict (State)
 import Data.Bits (shiftR, (.&.))
 import Data.Char (ord, digitToInt, isDigit)
+import Data.Int (Int64)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
 import Data.Word (Word8)
@@ -70,19 +71,18 @@ tokens :-
     "do"                            { \_    -> yield Do                        }
     $digit+                         { \text -> yield (Number (toInt text))     }
     $fst $label* | "(" $opchar+ ")" { \text -> yield (Label text)              }
-    "#https://" $nonwhite+          { \text -> yield (URL (toUrl text))        }
-    "#http://" $nonwhite+           { \text -> yield (URL (toUrl text))        }
-    "#" $nonwhite+                  { \text -> yield (File (toFile text))      }
+    "https://" $nonwhite+           { \text -> yield (URL text)                }
+    "http://" $nonwhite+            { \text -> yield (URL text)                }
+    "/" $nonwhite+                  { \text -> yield (File (toFile 0 text))    }
+    "./" $nonwhite+                 { \text -> yield (File (toFile 2 text))    }
+    "../" $nonwhite+                { \text -> yield (File (toFile 0 text))    }
 
 {
 toInt :: Text -> Int
 toInt = Text.foldl' (\x c -> 10 * x + digitToInt c) 0
 
-toUrl :: Text -> Text
-toUrl = Text.drop 1
-
-toFile :: Text -> FilePath
-toFile = fromText . Text.toStrict . Text.drop 1
+toFile :: Int64 -> Text -> FilePath
+toFile n = fromText . Text.toStrict . Text.drop n
 
 trim :: Text -> Text
 trim = Text.init . Text.tail
