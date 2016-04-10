@@ -166,9 +166,9 @@ desugar (Do m bs b   ) = desugarDo m bs b
 
     ... desugars to this Morte expression:
 
->     λ(Nat : *)
-> →   λ(Succ : Nat → Nat)
-> →   λ(Zero : Nat)
+>     λ(Nat  : *                  )
+> →   λ(Succ : ∀(pred : Nat) → Nat)
+> →   λ(Zero : Nat                )
 > →   Succ (Succ (Succ (Succ Zero)))
 -}
 desugarNatural :: Natural -> M.Expr M.Path
