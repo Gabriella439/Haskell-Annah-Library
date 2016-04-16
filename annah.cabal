@@ -8,9 +8,30 @@ Copyright: 2015 Gabriel Gonzalez
 Author: Gabriel Gonzalez
 Maintainer: Gabriel439@gmail.com
 Bug-Reports: https://github.com/Gabriel439/Haskell-Annah-Library/issues
-Synopsis: Distributed programming language that desugars to Morte
-Description: Annah is a statically typed and purely functional language built
-    for distributed programming.
+Synopsis: Medium-level language that desugars to Morte
+Description: Annah is a very simple statically typed and purely functional
+    lambda calculus with built-in support for:
+    .
+    * imports via embedding remote expressions
+    .
+    * mutually recursive data types
+    .
+    * let expressions
+    .
+    * natural numbers
+    .
+    * lists
+    .
+    * free monads
+    .
+    * free categories
+    .
+    Annah is built on top of Morte (a minimalist calculus of constructions),
+    meaning that all language features that Annah provides are desugared to
+    a pure non-recursive lambda calculus.
+    .
+    Read the "Annah.Tutorial" module to learn more about how to program using
+    Annah.
 Category: Compiler
 Source-Repository head
     Type: git
@@ -19,19 +40,19 @@ Source-Repository head
 Library
     Hs-Source-Dirs: src
     Build-Depends:
-        base                 >= 4        && < 5   ,
-        array                >= 0.4.0.0  && < 0.6 ,
-        lens-family-core     >= 1.0.0    && < 1.3 ,
-        morte                >= 1.6.0    && < 1.7 ,
-        pipes                >= 4.0.0    && < 4.2 ,
-        system-filepath      >= 0.3.1    && < 0.5 ,
-        text                 >= 0.11.1.0 && < 1.3 ,
-        transformers         >= 0.2.0.0  && < 0.5
+        base             >= 4        && < 5  ,
+        array            >= 0.4.0.0  && < 0.6,
+        lens-family-core >= 1.0.0    && < 1.3,
+        morte            >= 1.6.0    && < 1.7,
+        pipes            >= 4.0.0    && < 4.2,
+        system-filepath  >= 0.3.1    && < 0.5,
+        text             >= 0.11.1.0 && < 1.3,
+        transformers     >= 0.2.0.0  && < 0.5
     Exposed-Modules:
         Annah.Core,
         Annah.Lexer,
-        Annah.Parser
---      Annah.Tutorial
+        Annah.Parser,
+        Annah.Tutorial
     Build-Tools: alex, happy
     GHC-Options: -O2
 
