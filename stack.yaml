@@ -1,6 +1,7 @@
 resolver: lts-5.11
 packages:
 - '.'
-- location: '../morte'
+- location:
+    git: git@github.com:Gabriel439/Haskell-Morte-Library.git
+    commit: 23a7c871c71390746c29698bd05916c61147d0c9
   extra-dep: true
-flags: {}
