@@ -27,6 +27,8 @@
 
     * You `desugar` the Annah expression to Morte
 
+    * You resolve all imports using `M.load`
+
     * You type-check the Morte expression using `M.typeOf`
 
     * You `M.normalize` the Morte expression
@@ -211,7 +213,7 @@ desugarList e0 ts0 =
 
     For example, this path:
 
-> [id cat (|a|) f (|b|) g (|c|)]
+> [id cat {a} f {b} g {c}]
 
     ... desugars to this Morte expression:
 
