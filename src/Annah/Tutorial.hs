@@ -45,6 +45,9 @@ module Annah.Tutorial (
 
     -- * Folds
     -- $folds
+
+    -- * Recursive types
+    -- $recursive
     ) where
 
 {- $introduction
@@ -284,10 +287,10 @@ module Annah.Tutorial (
     Then we will translate each of them to a file encoding the equivalent Morte
     expression without the @\".annah\"@ file suffix:
 
-> $ annah  Bool.annah > Bool
-> $ annah  True.annah > True
+> $ annah  Bool.annah >  Bool
+> $ annah  True.annah >  True
 > $ annah False.annah > False
-> $ annah    if.annah > if
+> $ annah    if.annah >    if
 
     Now that we've created a file for each type and term we can import them
     within other expressions.  For example, now we can define the @not@ function
@@ -550,37 +553,384 @@ module Annah.Tutorial (
 > data False
 > data True
 > in   Bool
+> <Ctrl-D>
 > $ annah > True
 > type Bool
 > data False
 > data True
 > in   True
+> <Ctrl-D>
 > $ annah > False
 > type Bool
 > data False
 > data True
 > in   False
+> <Ctrl-D>
 
     The above changes would break the user's code unless we change @./if@ to
     export the pattern match order that the user expects:
 
-> $ cat if
+> $ echo > if
 >     \(b : ./Bool )
 > ->  \(Bool : *)
 > ->  \(True : Bool)
 > ->  \(False : Bool)
 > ->  b Bool False True
+> <Ctrl-D>
 
     Now the user's code continues to work as if nothing ever happened.
 
-    Therefore, saving @fold@s to files and using them to pattern match is not
+    So saving @fold@s to files and using them to pattern match is not strictly
     necessary, but if you do use them then you can change the underlying
     implementation of the type without breaking backwards compatibility.
 
     There's no way that you can force users to use the @fold@ that you provide
-    since all saved expressions are encoded in raw lambda calculus, which does
-    not provide any support for implementation hiding or encapsulation.  The
-    best you can do is to simply warn users that you might break their code some
+    since all saved expressions are encoded in lambda calculus, which does not
+    provide any support for implementation hiding or encapsulation.  The best
+    you can do is to simply warn users that you might break their code some
     day if they perform a \"raw pattern match\" (i.e. a pattern match without
     the use of a saved @fold@).
+-}
+
+{- $recursive
+    Annah supports recursive and mutually recursive types.  We saw an example
+    of recursive types with natural numbers:
+
+> $ annah
+> type Nat
+> data Succ (pred : Nat)
+> data Zero
+> fold foldNat
+>
+> in   Succ (Succ (Succ Zero))
+> <Ctrl-D>
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ Zero))
+
+    What might not be obvious is that if you save each type and constructor to
+    a separate file then you can build a natural number just from the files.
+
+    First, we will save each type and term to a separate @*.annah@ file:
+
+> $ cat Nat.annah
+> type Nat
+> data Succ (pred : Nat)
+> data Zero
+> fold foldNat
+> in   Nat
+
+> $ cat Succ.annah
+> type Nat
+> data Succ (pred : Nat)
+> data Zero
+> fold foldNat
+> in   Succ
+
+> $ cat Zero.annah
+> type Nat
+> data Succ (pred : Nat)
+> data Zero
+> fold foldNat
+> in   Zero
+
+> $ cat foldNat.annah
+> type Nat
+> data Succ (pred : Nat)
+> data Zero
+> fold foldNat
+> in   foldNat
+
+    Then we will compile them to Morte code that we can import:
+
+> $ annah    Bool.annah >    Bool
+> $ annah    Succ.annah >    Succ
+> $ annah    Zero.annah >    Zero
+> $ annah foldNat.annah > foldNat
+
+    ... and now we can build natural numbers directly without having to first
+    introduce a natural number datatype definition:
+
+> $ morte
+> ./Succ (./Succ (./Succ ./Zero ))
+> <Ctrl-D>
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ Zero))
+
+    This gives the exact same result as before, but now we are programming
+    directly at the "top level" using files instead of programming underneath
+    a datatype definition.
+
+    Also notice that the inferred type of our expression is identical to
+    @./Nat@:
+
+> $ cat ./Nat
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+
+    We can also fold natural numbers using our @./foldNat@ function.  Let's
+    consult the type of the function:
+
+> ∀(x : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(x : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → x
+
+    If we clean up that type we get:
+
+>     ∀(x : ./Nat )
+> →   ∀(Nat : *)
+> →   ∀(Succ : ∀(pred : Nat) → Nat)
+> →   ∀(Zero : Nat)
+> →   Nat
+
+    Conceptually, when we fold a @./Nat@ value using @./foldNat@ we just
+    replace each @Succ@ constructor with the argument of the fold labeled @Succ@
+    (i.e. the third argument).  Similarly, we substitute each @Zero@ constructor
+    with the fourth argument.
+
+    We also supply a type parameter named @Nat@ as the second argument.  This
+    type parameter must match the input and output of whatever we use to replace
+    the @Succ@ and @Zero@.
+
+    For example, suppose that we wanted to write a function to test if a @./Nat@
+    was an even number.  We would just substitute every @Zero@ constructor with
+    @./True@ and substitute every @Succ@ constructor with @./not@.  The code
+    for that would be:
+
+> $ cat isEven.annah 
+> let isEven (n : ./Nat ) : ./Bool =
+>     ./foldNat n ./Bool
+>         ./not  -- Replace every `Succ` with `./not`
+>         ./True -- Replace every `Zero` with `./True`
+> in  isEven
+
+    The let definition is not strictly necessary since we could just write:
+
+> \(n : ./Nat ) ->
+>     ./foldNat n ./Bool
+>         ./not
+>         ./True
+
+    ... but the let definition helps the readability of the code by naming the
+    function and documenting the expected return type.
+
+    Then we can compile our Annah expression to Morte code:
+
+> $ annah isEven.annah > isEven
+
+    ... and test that @./isEven@ works:
+
+> $ morte
+> ./isEven (./Succ (./Succ ./Zero ))
+> ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool
+> 
+> λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True
+
+    It works!  The result is identical to @./True@:
+
+> $ cat ./True
+> λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True
+
+    Conceptually, what happened was that @./isEven@ just performed the
+    desired substitutions, replacing every @./Succ@ with @./not@ and replacing
+    every @./Zero@ with @./True@:
+
+> ./isEven (./Succ (./Succ ./Zero ))
+>
+> -- Constructor substitution
+> = ./not (./not ./True )
+>
+> -- β-reduce
+> = ./True
+
+    We can also encode mutually recursive types such as the following type
+    declaration for even and odd numbers:
+
+> $ annah
+> type Even
+> data SuccE (predE : Odd)
+> data ZeroE
+> fold foldEven
+> 
+> type Odd
+> data SuccO (predO : Even)
+> fold foldOdd
+> 
+> in SuccE (SuccO ZeroE)
+> λ(Even : *) → λ(Odd : *) → λ(SuccE : ∀(predE : Odd) → Even) → λ(ZeroE : Even) → λ(SuccO : ∀(predO : Even) → Odd) → SuccE (SuccO ZeroE)
+
+    Like before, we can encode each type and term separately as files and the
+    files:
+
+> $ cat Even.annah 
+> type Even
+> data SuccE (predE : Odd)
+> data ZeroE
+> fold foldEven
+> 
+> type Odd
+> data SuccO (predO : Even)
+> fold foldOdd
+> 
+> in   Even
+
+> $ cat SuccE.annah 
+> type Even
+> data SuccE (predE : Odd)
+> data ZeroE
+> fold foldEven
+> 
+> type Odd
+> data SuccO (predO : Even)
+> fold foldOdd
+> 
+> in   SuccE
+
+> $ cat ZeroE.annah 
+> type Even
+> data SuccE (predE : Odd)
+> data ZeroE
+> fold foldEven
+> 
+> type Odd
+> data SuccO (predO : Even)
+> fold foldOdd
+> 
+> in   ZeroE
+
+> $ cat foldEven.annah 
+> type Even
+> data SuccE (predE : Odd)
+> data ZeroE
+> fold foldEven
+> 
+> type Odd
+> data SuccO (predO : Even)
+> fold foldOdd
+> 
+> in   foldEven
+
+> $ cat Odd.annah 
+> type Even
+> data SuccE (predE : Odd)
+> data ZeroE
+> fold foldEven
+> 
+> type Odd
+> data SuccO (predO : Even)
+> fold foldOdd
+> 
+> in   Odd
+
+> $ cat SuccO.annah 
+> type Even
+> data SuccE (predE : Odd)
+> data ZeroE
+> fold foldEven
+> 
+> type Odd
+> data SuccO (predO : Even)
+> fold foldOdd
+> 
+> in   SuccO
+
+> $ cat foldOdd.annah 
+> type Even
+> data SuccE (predE : Odd)
+> data ZeroE
+> fold foldEven
+> 
+> type Odd
+> data SuccO (predO : Even)
+> fold foldOdd
+> 
+> in   foldOdd
+
+    ... convert them to Morte code:
+
+> $ annah     Even.annah >     Even
+> $ annah    ZeroE.annah >    ZeroE
+> $ annah    SuccE.annah >    SuccE
+> $ annah foldEven.annah > foldEven
+> $ annah      Odd.annah >      Odd
+> $ annah    SuccO.annah >    SuccO
+> $ annah  foldOdd.annah >  foldOdd
+
+    ... and now these files can be used to build @./Even@ or @./Odd@ values:
+
+> $ morte
+> ./SuccE (./SuccO ./ZeroE )
+> <Ctrl-D>
+> ∀(Even : *) → ∀(Odd : *) → ∀(SuccE : ∀(predE : Odd) → Even) → ∀(ZeroE : Even) → ∀(SuccO : ∀(predO : Even) → Odd) → Even
+> 
+> λ(Even : *) → λ(Odd : *) → λ(SuccE : ∀(predE : Odd) → Even) → λ(ZeroE : Even) → λ(SuccO : ∀(predO : Even) → Odd) → SuccE (SuccO ZeroE)
+
+    We can also consume mutually recursive types just by folding them.  Each
+    type is already a preformed fold and we can consult each type's respective
+    @fold@ function to see what arguments the @fold@ expects:
+
+> $ morte < foldEven
+> ∀(x : ∀(Even : *) → ∀(Odd : *) → ∀(SuccE : ∀(predE : Odd) → Even) → ∀(ZeroE : Even) → ∀(SuccO : ∀(predO : Even) → Odd) → Even) → ∀(Even : *) → ∀(Odd : *) → ∀(SuccE : ∀(predE : Odd) → Even) → ∀(ZeroE : Even) → ∀(SuccO : ∀(predO : Even) → Odd) → Even
+> 
+> λ(x : ∀(Even : *) → ∀(Odd : *) → ∀(SuccE : ∀(predE : Odd) → Even) → ∀(ZeroE : Even) → ∀(SuccO : ∀(predO : Even) → Odd) → Even) → x
+> $ morte < foldOdd
+> ∀(x : ∀(Even : *) → ∀(Odd : *) → ∀(SuccE : ∀(predE : Odd) → Even) → ∀(ZeroE : Even) → ∀(SuccO : ∀(predO : Even) → Odd) → Odd) → ∀(Even : *) → ∀(Odd : *) → ∀(SuccE : ∀(predE : Odd) → Even) → ∀(ZeroE : Even) → ∀(SuccO : ∀(predO : Even) → Odd) → Odd
+> 
+> λ(x : ∀(Even : *) → ∀(Odd : *) → ∀(SuccE : ∀(predE : Odd) → Even) → ∀(ZeroE : Even) → ∀(SuccO : ∀(predO : Even) → Odd) → Odd) → x
+
+    If we clean up the type of the @./foldEven@ function we get this:
+
+>     ∀(x : ./Even )
+> →   ∀(Even : *)
+> →   ∀(Odd : *)
+> →   ∀(SuccE : ∀(predE : Odd) → Even)
+> →   ∀(ZeroE : Even)
+> →   ∀(SuccO : ∀(predO : Even) → Odd)
+> →   Even
+
+    Conceptually, when we fold an @./Even@ value using @./foldEven@ we just
+    replace each @SuccE@ constructor with the argument of the fold labeled
+    @SuccE@ (i.e. the fourth argument).  Similarly, we substitute each @ZeroE@
+    constructor with the fifth argument named @ZeroE@ and substitute each
+    @SuccO@ constructor with the sixth argument named @SuccO@.
+
+    We also supply two type parameters named @Even@ and @Odd@.  These type
+    parameters must match the input and output of whatever we use to replace
+    the @SuccE@, @ZeroE@ and @SuccO@ constructors.
+
+    For example, suppose that we wanted to write a function that converts an
+    @./Even@ value to a @./Nat@.  We would just replace every @SuccE@ and
+    @SuccO@ constructor with @Succ@ and replace every @ZeroE@ constructor with
+    @Zero@, like this:
+
+> $ cat evenToNat.annah
+> let evenToNat (e : ./Even ) : ./Nat =
+>     ./foldEven e ./Nat ./Nat
+>     ./Succ  -- Replace every `SuccE` with `Succ`
+>     ./Zero  -- Replace every `ZeroE` with `Zero`
+>     ./Succ  -- Replace every `SuccO` with `Succ`
+> in  evenToNat
+
+    Now we can \"compile\" our @evenToNat@ function to Morte code:
+
+> annah evenToNat.annah > evenToNat
+
+    ... and test that it correctly converts @./Even@ values to their
+    equivalent @./Nat@ values:
+
+> $ morte
+> ./evenToNat (./SuccE (./SuccO ./ZeroE ))
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ Zero)
+
+    It works!  We can began with the number two, encoded as an @./Even@ number
+    and ended with two encoded as a @./Nat@.
+
+    As before, the @./evenTonat@ function was just performing the desired
+    substitution, replacing each @./SuccE@ and @./SuccO@ with @./Succ@ and
+    replacing @./ZeroE@ with @./Zero@:
+
+> ./evenToNat (./SuccE (./SuccO ./ZeroE ))
+>
+> -- Constructor substitution
+> = ./Succ (./Succ ./Zero )
 -}
