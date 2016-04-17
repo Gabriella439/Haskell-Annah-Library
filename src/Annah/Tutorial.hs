@@ -48,6 +48,12 @@ module Annah.Tutorial (
 
     -- * Recursive types
     -- $recursive
+
+    -- * Prelude
+    -- $prelude
+
+    -- * Standard library
+    -- $stdlib
     ) where
 
 {- $introduction
@@ -367,10 +373,11 @@ module Annah.Tutorial (
 
     This type says that @if@ expects the following arguments:
 
-* A value of type @./Bool@ to pattern match on (such as @./True@ or @./False@)
-* The type of the result
-* The result to return if our value equals @./True@
-* The result to return if our value equals @./False@
+    * A value of type @./Bool@ to pattern match on (such as @./True@ or
+      @./False@)
+    * The type of the result
+    * The result to return if our value equals @./True@
+    * The result to return if our value equals @./False@
 
     Carefully note that the second argument is named @Bool@ but can actually be
     any type.  Similarly, the third and fourth arguments are named after the
@@ -741,6 +748,9 @@ module Annah.Tutorial (
 > -- β-reduce
 > = ./True
 
+    Note that this is not the path the compiler takes under the hood, but it's
+    equivalent.
+
     We can also encode mutually recursive types such as the following type
     declaration for even and odd numbers:
 
@@ -933,4 +943,154 @@ module Annah.Tutorial (
 >
 > -- Constructor substitution
 > = ./Succ (./Succ ./Zero )
+>
+> -- β-reduction
+> = ./Succ (./Succ ./Zero )
+
+    Again, this is not the path the compiler takes under the hood, but it's
+    equivalent.
+-}
+
+{- $prelude
+    Annah also comes with a Prelude of utility types and terms.  This Prelude is
+    hosted remotely here:
+
+    <http://sigil.place/tutorial/annah/1.0/>
+
+    You can visit the above link to browse the Prelude and see what is
+    available.
+
+    There are several ways that you can use the Prelude.  The most direct
+    approach is to use expressions from the Prelude directly by referencing
+    their URLs, like this:
+
+> $ morte
+> http://sigil.place/tutorial/annah/1.0/Nat/Succ
+> (   http://sigil.place/tutorial/annah/1.0/Nat/Succ
+>     (   http://sigil.place/tutorial/annah/1.0/Nat/Succ
+>         http://sigil.place/tutorial/annah/1.0/Nat/Zero
+>     )
+> )
+> <Ctrl-D>
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ Zero))
+
+    ... or you can selectively \"alias\" remote references locally by creating
+    local files that refer to the remote URLs:
+
+> $ echo "http://sigil.place/tutorial/annah/1.0/Nat/Succ" > Succ
+> $ echo "http://sigil.place/tutorial/annah/1.0/Nat/Zero" > Zero
+> $ morte
+> ./Succ (./Succ (./Succ ./Zero ))
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ Zero))
+
+    ... or you can \"import\" the entire Prelude into your current directory
+    using @wget@:
+
+> $ wget -np -nH -r --cut-dirs=3 http://sigil.place/tutorial/annah/1.0/
+> $ ls
+> (->)            Defer.annah    List.annah    Path         Sum0.annah
+> (->).annah      Eq             Maybe         Path.annah   Sum1
+> Bool            Eq.annah       Maybe.annah   Prod0        Sum1.annah
+> Bool.annah      Functor        Monad         Prod0.annah  Sum2
+> Category        Functor.annah  Monad.annah   Prod1        Sum2.annah
+> Category.annah  index.html     Monoid        Prod1.annah
+> Cmd             IO             Monoid.annah  Prod2
+> Cmd.annah       IO.annah       Nat           Prod2.annah
+> Defer           List           Nat.annah     Sum0
+
+    This tutorial will assume that you have imported the Prelude locally.
+
+    The Prelude is organized according to the following rules:
+
+    * Each type (like @Bool@ or @Nat@ is a top-level directory.  You can
+      reference that type in your code by its directory
+    * Each constructor of that type lives underneath the type's directory.  For
+      example, @True@ is located underneath the @Bool@ directory
+    * Functions associated with each type are also located underneath the type's
+      directory.  For example, the @length@ function is located underneath the
+      @List@ directory.
+    * Every expression is provided as both the original Annah code (with a
+      @*.annah@ suffix) and Morte code (with no suffix).  For example, you
+      will find the @Monoid.annah@ file which was the Annah expression used to
+      create the @Monoid@ file which is a Morte expression.
+
+    In order to use an expression within Morte you must explicitly import the
+    expression within the Morte code, like this:
+
+> $ echo "./List/length" | morte  # Good
+> ∀(a : *) → ∀(xs : ∀(List : *) → ∀(Cons : ∀(head : a) → ∀(tail : List) → List) → ∀(Nil : List) → List) → ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Nil : Nat) → Nat
+> 
+> λ(a : *) → λ(xs : ∀(List : *) → ∀(Cons : ∀(head : a) → ∀(tail : List) → List) → ∀(Nil : List) → List) → λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → xs Nat (λ(_ : a) → Succ)
+
+    Reading the expression through standard input will (usually) not work:
+
+> $ morte < List/length  # Bad
+> ../List: openFile: does not exist (No such file or directory)
+
+    The reason why is that everything in the Prelude uses relative imports to
+    reference each other.  This is what allows the Prelude to correctly
+    function both when you reference the Prelude remotely and when you download
+    the Prelude locally.  If you read the expression through standard input
+    then Morte incorrectly concludes that any further imports are relative to
+    your current directory.  However, if you explicitly import the expression
+    within the code then Morte correctly concludes that transitive imports are
+    relative to the imported file's path.
+
+    For example, the @List/length@ file has the following contents:
+
+> cat List/length
+> λ(a : *) → λ(xs : ../List  a) → λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → xs Nat (λ(_ : a) → Succ)
+
+    There is one relative reference within that file to @../List@.  That
+    reference is relative to the current file's directory (i.e. relative to
+    @List/@) which means that it still points to the same directory: @List@.  We
+    could have also used just @.@ to refer to the current directory but that
+    would be less readable.  However, if you read in @List/length@ from standard
+    input, then @morte@ looks for @../List@ expression relative to your present
+    working directory and fails.
+-}
+
+{- $stdlib
+    Annah's Prelude has some similarities to Haskell's standard libraries and
+    some differences.  The rough correspondences are:
+
+    * @(->)@ corresponds to Haskell's @(->)@ type constructor
+    * @Bool@ corresponds to Haskell's `Bool` type
+    * @Cmd@ corresponds to the operational monad (i.e.
+      "Control.Monad.Operational".`Control.Monad.Operational.Program`
+    * @Defer@ corresponds to
+      "Data.Functor.Coyoneda".`Data.Functor.Coyoneda.Coyoneda`
+    * @IO@ corresponds to a very simple `IO` type constructor that only supports
+      two operations:
+
+        > ./IO/get : ./IO ./Nat
+        > ./IO/put : ./Nat -> ./IO ./Prod0
+    * @List@ corresponds to Haskell lists except that Annah @List@s are always
+      finite because they are encoded recursively
+    * @Maybe@ corresponds to Haskell's `Maybe` type constructor
+    * @Nat@ corresponds to Haskell's `Numeric.Natural.Natural` type, except
+      much less efficient than its Haskell counterpart
+    * @Path@ corresponds to a free category.  As far as I know there is no
+      standard Haskell implementation for free categories to reference
+    * @Prod0@ corresponds to Haskell's @()@ type.  Mnemonic: \"Product type with
+      zero fields\"
+    * @Prod1@ corresponds to Haskell's `Data.Functor.Identity` type constructor.
+      Mnemonic: \"Product type with one field\"
+    * @Prod2@ corresponds to Haskell's 2-tuple type constructor.  Mnemonic:
+      \"Product type with two fields\"
+    * @Sum0@ corresponds to Haskell's `Data.Void.Void` type.  Mnemonic: \"Sum
+      type with zero fields\"
+    * @Sum1@ also corresponds to Haskell's `Data.Functor.Identity` type
+      constructor.  Mnemonic: \"Sum type with one field\"
+    * @Sum2@ corresponds to Haskell's `Either` type constructor.  Mnemonic:
+      \"Sum type with two fields\"
+
+    In addition to those types, Annah also encodes several of Haskell's type
+    classes as values.  Neither Annah nor Morte supports type classes /per se/.
+    Instead, each class is encoded as a type constructor and each instance is
+    a term of the corresponding type.
 -}
