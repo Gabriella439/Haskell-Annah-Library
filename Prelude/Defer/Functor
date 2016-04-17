@@ -1,1 +1,1 @@
-λ(f : * → *) → λ(b : *) → λ(d : ../Defer  (../Defer  f) b) → d (../Defer  f b) (λ(a : *) → ./map  f a b)
+λ(f : * → *) → λ(b : *) → λ(d : ../Defer  (../Defer  f) b) → d (../Defer  f b) (λ(a : *) → ./map_  f a b)

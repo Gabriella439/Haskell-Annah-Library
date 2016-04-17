@@ -1,5 +1,5 @@
 let Functor (f : * -> *) : ../Functor (../Defer f) =
     \(b : *)
 ->  \(d : ../Defer (../Defer f) b)
-->  d (../Defer f b) (\(a : *) -> ./map f a b)
+->  d (../Defer f b) (\(a : *) -> ./map_ f a b)
 in  Functor
