@@ -71,7 +71,7 @@ import Prelude hiding (pi)
 data Arg = Arg
     { argName :: Text
     , argType :: Expr
-    }
+    } deriving (Show)
 
 {-|
 > Let f [a1, a2] _A rhs  ~  let f a1 a2 : _A = rhs
@@ -81,7 +81,7 @@ data Let = Let
     , letArgs :: [Arg]
     , letType :: Expr
     , letRhs  :: Expr
-    }
+    } deriving (Show)
 
 {-|
 > Type t [d1, d2] f  ~  type t d1 d2 fold f
@@ -90,7 +90,7 @@ data Type = Type
     { typeName  :: Text
     , typeDatas :: [Data]
     , typeFold  :: Text
-    }
+    } deriving (Show)
 
 {-|
 > Data c [a1, a2]  ~  data c a1 a2
@@ -98,7 +98,7 @@ data Type = Type
 data Data = Data
     { dataName :: Text
     , dataArgs :: [Arg]
-    }
+    } deriving (Show)
 
 {-|
 > Bind arg e  ~  arg <- e;
@@ -106,7 +106,7 @@ data Data = Data
 data Bind = Bind
     { bindLhs :: Arg
     , bindRhs :: Expr
-    }
+    } deriving (Show)
 
 -- | Syntax tree for expressions
 data Expr
@@ -136,6 +136,7 @@ data Expr
     -- | > Do m [b1, b2] b3                ~  do m { b1 b2 b3 }
     | Do Expr [Bind] Bind
     | Embed M.Path
+    deriving (Show)
 
 instance IsString Expr where
     fromString str = Var (fromString str)

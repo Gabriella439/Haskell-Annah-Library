@@ -8,7 +8,8 @@ module Annah.Lexer (
 
     -- * Types
     Token(..),
-    Position(..)
+    Position(..),
+    LocatedToken(..)
     ) where
 
 import Control.Monad.Trans.State.Strict (State)
@@ -16,12 +17,14 @@ import Data.Bits (shiftR, (.&.))
 import Data.Char (ord, digitToInt, isDigit)
 import Data.Int (Int64)
 import Data.Text.Lazy (Text)
-import qualified Data.Text.Lazy as Text
 import Data.Word (Word8)
 import Filesystem.Path.CurrentOS (FilePath, fromText)
 import Lens.Family.State.Strict ((.=), (+=))
-import Pipes (Producer, lift, yield)
+import Pipes (Producer, for, lift, yield)
 import Prelude hiding (FilePath)
+
+import qualified Control.Monad.Trans.State.Strict as State
+import qualified Data.Text.Lazy                   as Text
 
 }
 
@@ -152,9 +155,13 @@ alexInputPrevChar = prevChar
     `lexExpr` keeps track of position and returns the remainder of the input if
     lexing fails.
 -}
-lexExpr :: Text -> Producer Token (State Position) (Maybe Text)
-lexExpr text = go (AlexInput '\n' [] text)
+lexExpr :: Text -> Producer LocatedToken (State Position) (Maybe Text)
+lexExpr text = for (go (AlexInput '\n' [] text)) tag
   where
+    tag token = do
+        pos <- lift State.get
+        yield (LocatedToken token pos)
+
     go input = case alexScan input 0 of
         AlexEOF                        -> return Nothing
         AlexError (AlexInput _ _ text) -> return (Just text)
@@ -165,6 +172,12 @@ lexExpr text = go (AlexInput '\n' [] text)
             act (Text.take (fromIntegral len) (currInput input))
             lift (column += len)
             go input'
+
+-- | A `Token` augmented with `Position` information
+data LocatedToken = LocatedToken
+    { token    ::                !Token
+    , position :: {-# UNPACK #-} !Position
+    } deriving (Show)
 
 -- | Token type, used to communicate between the lexer and parser
 data Token
@@ -198,5 +211,5 @@ data Token
     | File FilePath
     | URL Text
     | EOF
-    deriving (Show)
+    deriving (Eq, Show)
 }
