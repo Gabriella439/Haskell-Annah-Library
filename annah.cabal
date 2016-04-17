@@ -55,7 +55,7 @@ Library
         Annah.Lexer,
         Annah.Parser,
         Annah.Tutorial
-    Build-Tools: alex, happy
+    Build-Tools: alex
     GHC-Options: -O2
 
 Executable annah
