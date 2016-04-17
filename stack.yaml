@@ -3,5 +3,5 @@ packages:
 - '.'
 - location:
     git: git@github.com:Gabriel439/Haskell-Morte-Library.git
-    commit: 23a7c871c71390746c29698bd05916c61147d0c9
+    commit: ac7fb04141e8db5be2f71684dcab3ceff477873a
   extra-dep: true
