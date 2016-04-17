@@ -1,1 +1,1 @@
-λ(a : *) → λ(xs : ../List  a) → λ(N : *) → λ(S : N → N) → xs N (λ(_ : a) → S)
+λ(a : *) → λ(xs : ../List  a) → λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → xs Nat (λ(_ : a) → Succ)
