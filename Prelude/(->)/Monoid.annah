@@ -1,5 +1,5 @@
 let Monoid (e : *) (a : *) (monoid : ../Monoid a): ../Monoid (../(->) e a) =
-    \(fs : ./List (../(->) e a))
+    \(fs : ../List (../(->) e a))
 ->  ./Monad e a (do (../(->) e) {
         xs : ../List a <- ../Monad/sequence (../(->) e) a (./Monad e) fs;
         x  : a         <- ./pure e a (monoid xs);
