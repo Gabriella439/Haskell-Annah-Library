@@ -116,12 +116,12 @@ main = do
             txt <- Text.getContents
             ts  <- throws (Annah.typesFromText txt)
             let write file txt =
-                    Filesystem.writeTextFile file (Text.toStrict txt)
+                    Filesystem.writeTextFile file (Text.toStrict txt <> "\n")
             let named = Filesystem.fromText . Text.toStrict
             forM_ ts (\t -> do
                 let typeDir = named (typeName t)
                 let typeAnnahFile = named (typeName t <> ".annah")
-                let typeMorteFile = typeDir </> "@.annah"
+                let typeMorteFile = typeDir </> "@"
                 let foldAnnahFile = typeDir </> named (typeFold t <> ".annah")
                 let foldMorteFile = typeDir </> named (typeFold t)
 
@@ -148,7 +148,7 @@ main = do
 
                     write dataAnnahFile (txt <> "in   " <> dataName d)
 
-                    let e2 = Family ts (Var (V (typeName t) 0))
+                    let e2 = Family ts (Var (V (dataName d) 0))
                     let dataTxt =
                             Morte.pretty (Morte.normalize (Annah.desugar e2))
                     write dataMorteFile dataTxt ) )
