@@ -1,12 +1,14 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecursiveDo       #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RankNTypes         #-}
+{-# LANGUAGE RecursiveDo        #-}
 
 -- | Parsing logic for the Morte language
 
 module Annah.Parser (
     -- * Parser
     exprFromText,
+    typesFromText,
 
     -- * Errors
     ParseError(..),
@@ -77,7 +79,9 @@ sepBy1 x sep = (:) <$> x <*> many (sep *> x)
 sepBy :: Alternative f => f a -> f b -> f [a]
 sepBy x sep = sepBy1 x sep <|> pure []
 
-expr :: Grammar r (Prod r Token LocatedToken Expr)
+expr
+    :: Grammar r
+        (Prod r Token LocatedToken Expr, Prod r Token LocatedToken [Type])
 expr = mdo
     expr0 <- rule
         (   Annot <$> expr1 <*> (match Lexer.Colon *> expr0)
@@ -181,7 +185,7 @@ expr = mdo
         <|> URL <$> url
         )
 
-    return expr0
+    return (expr0, types)
 
 -- | The specific parsing error
 data ParseMessage
@@ -222,9 +226,11 @@ instance Buildable ParseError where
                 <>  "\n"
                 <>  "Error: Parsing failed\n"
 
--- | Parse an `Expr` from `Text` or return a `ParseError` if parsing fails
-exprFromText :: Text -> Either ParseError Expr
-exprFromText text = evalState (runExceptT m) (Lexer.P 1 0)
+runParser
+    :: (forall r . Grammar r (Prod r Token LocatedToken a))
+    -> Text
+    -> Either ParseError a
+runParser p text = evalState (runExceptT m) (Lexer.P 1 0)
   where
     m = do
         (locatedTokens, mtxt) <- lift (Pipes.toListM' (Lexer.lexExpr text))
@@ -234,7 +240,7 @@ exprFromText text = evalState (runExceptT m) (Lexer.P 1 0)
                 pos <- lift get
                 throwE (ParseError pos (Lexing txt))
         let (parses, Report _ needed found) =
-                fullParses (parser expr) locatedTokens
+                fullParses (parser p) locatedTokens
         case parses of
             parse:_ -> return parse
             []      -> do
@@ -242,3 +248,13 @@ exprFromText text = evalState (runExceptT m) (Lexer.P 1 0)
                         lt:_ -> lt
                         _    -> LocatedToken Lexer.EOF (Lexer.P 0 0)
                 throwE (ParseError pos (Parsing t needed))
+
+-- | Parse an `Expr` from `Text` or return a `ParseError` if parsing fails
+exprFromText :: Text -> Either ParseError Expr
+exprFromText = runParser (fmap fst expr)
+
+{-| Parse a type definition from `Text` or return a `ParseError` if parsing
+    fails
+-}
+typesFromText :: Text -> Either ParseError [Type]
+typesFromText = runParser (fmap snd expr)
