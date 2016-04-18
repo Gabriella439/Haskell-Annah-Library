@@ -1,6 +1,6 @@
 {-| Annah is a tiny language that serves to illustrate how various programming
     constructs can be desugared to lambda calculus.  The most sophisticated
-    feature that Annah supports is desugaring mutually recursive data types
+    feature that Annah supports is desugaring mutually recursive datatypes
     to non-recursive lambda expressions.
 
     Under the hood, all Annah expressions are translated to a minimalist
@@ -10,10 +10,11 @@
 
     <http://hackage.haskell.org/package/morte>
 
-    Annah is a proof-of-concept library and does not provide several features
-    like type-checking, evaluation, or pretty-printing.  Instead, Annah
-    piggybacks on Morte; all Annah expressions are translated to Morte
-    expressions and then those Morte expressions are type-checked and evaluated.
+    Annah piggybacks on Morte meaning all Annah expressions are translated to
+    Morte expressions and then those Morte expressions are type-checked and
+    evaluated.  You cannot directly type-check or evaluate Annah expressions;
+    you have to desugar them to Morte expressions first before you can do
+    anything else with them.
 
     Annah is not very user-friendly (and I apologize for that!).  For example,
     Annah reuses Morte's type-checker which means that error messages are in
@@ -107,7 +108,8 @@ module Annah.Tutorial (
 
 {- $let
     Annah supports let expressions which can be used to introduce functions and
-    values.  For example, this is how you can define the `id` function:
+    values.  For example, this is how you can define the polymorphic identity
+    function in Annah:
 
 > $ annah
 > let id (a : *) (x : a) : a = x
@@ -213,7 +215,7 @@ module Annah.Tutorial (
 > (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False)
 > (λ(x : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → x)
 
-    Annah also supports recursive data types.  For example, you can define
+    Annah also supports recursive datatypes.  For example, you can define
     natural numbers like this:
 
 > $ annah
@@ -253,16 +255,16 @@ module Annah.Tutorial (
 
 {- $imports
     Annah supports imports using the same syntax as Morte but you may only
-    import Morte expressions (**not** Annah expressions).  You can embed a
-    file path or http URL anywhere within an expression and Annah will
-    substitute in the plain-text Morte expression located at that path or URL.
+    import Morte expressions (/not/ Annah expressions).  You can embed a file
+    path or http URL anywhere within an expression and Annah will substitute in
+    the Morte expression (encoded as plain text) located at that path or URL.
 
     The reason Annah does not support importing Annah expressions is that Annah
     does not actually resolve the imports.  Annah piggybacks off of Morte's
     support for imports, and Morte only supports importing Morte expressions.
 
-    Imports are extremely useful when combined with data types because you can
-    create a separate file for each type and constructor of a data type.  To
+    Imports are extremely useful when combined with datatypes because you can
+    create a separate file for each type and constructor of a datatype.  To
     illustrate this we'll manually encode @Bool@, @True@, @False@, and @if@ as
     separate Annah files (and later we will see how we can auto-generate these
     files):
@@ -298,10 +300,10 @@ module Annah.Tutorial (
     Then we will translate each of them to a file encoding the equivalent Morte
     expression without the @\".annah\"@ file suffix:
 
-> $ annah  Bool.annah >  Bool
-> $ annah  True.annah >  True
-> $ annah False.annah > False
-> $ annah    if.annah >    if
+> $ annah compile  Bool.annah >  Bool
+> $ annah compile  True.annah >  True
+> $ annah compile False.annah > False
+> $ annah compile    if.annah >    if
 
     Now that we've created a file for each type and term we can import them
     within other expressions.  For example, now we can define the @not@ function
@@ -375,7 +377,7 @@ module Annah.Tutorial (
     definition:
 
 > $ ls
-> Bool  Bool.annah
+> Bool/  Bool.annah
 
     Each type's directory will have two files per data constructor associated
     with the type and two files for the @fold@, too:
@@ -420,32 +422,28 @@ module Annah.Tutorial (
 -}
 
 {- $folds
-    Every datatype definition comes with an optional @fold@.  This fold lets you
-    pattern match on the type to obtain the result.  You can see what arguments
-    the pattern match expects just by querying the type of the fold:
+    Every datatype definition comes with an optional @fold@ which you can use to
+    pattern match on a value of that type.  You can see what arguments the
+    pattern match expects just by querying the type of the fold:
 
-> $ annah | morte
-> type Bool
-> data True
-> data False
-> fold if
-> in   if
+> $ morte
+> ./Bool/if
 > <Ctrl-D>
 > ∀(x : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool
 > 
 > λ(x : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → x
 
-    ... and we can simplify the type to:
+    ... and we can use imports to simplify the type to:
 
 > ∀(x : ./Bool ) → ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool
 
     This type says that @if@ expects the following arguments:
 
-    * A value of type @./Bool@ to pattern match on (such as @./True@ or
-      @./False@)
-    * The type of the result
-    * The result to return if our value equals @./True@
-    * The result to return if our value equals @./False@
+    * A value named @x@ of type @./Bool@ to pattern match on (like
+      @.\/Bool\/True@ or @.\/Bool\/False@)
+    * The type of the result for each branch of the pattern match
+    * The result to return if our value equals @.\/Bool\/True@
+    * The result to return if our value equals @.\/Bool\/False@
 
     Carefully note that the second argument is named @Bool@ but can actually be
     any type.  Similarly, the third and fourth arguments are named after the
@@ -478,8 +476,8 @@ module Annah.Tutorial (
     the expected type of the result after the value that we pattern match on
     (i.e. the @./Bool@ immediately after the @./if b@).
 
-    Our @./not@ function technically did not really need to use the @./if@
-    @fold@.  For example, we could instead write:
+    Our @./not@ function technically did not need to use the @./if@ @fold@.  For
+    example, we could instead write:
 
 > $ cat not.annah
 > let not (b : ./Bool ) : ./Bool = b ./Bool ./False ./True
@@ -495,40 +493,40 @@ module Annah.Tutorial (
 
 > λ(x : ./Bool ) → x
 
-    The reason this works is that all values of type @./Bool@ are already
-    preformed pattern matches.  We can prove this to ourselves by consulting
-    the definitions of @./True@ and @./False@:
+    The reason we can omit the @if@ is that all values of type @./Bool@ are
+    already preformed pattern matches.  We can prove this to ourselves by
+    consulting the definitions of @.\/Bool\/True@ and @.\/Bool\/False@:
 
-> $ morte < ./True
+> $ morte < ./Bool/True
 > ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool
 > 
 > λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True
-> $ morte < ./False
+> $ morte < ./Bool/False
 > ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool
 > 
 > λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False
 
-    In other words, @./True@ is just a preformed pattern match that always
-    returns the first branch that you supply.  Vice versa, @./False@ is just a
-    preformed pattern match that always returns the second branch that you
-    supply.
+    In other words, @.\/Bool\/True@ is just a preformed pattern match that
+    always returns the first branch that you supply.  Vice versa,
+    @.\/Bool\/False@ is just a preformed pattern match that always returns the
+    second branch that you supply.
 
     In fact, all @fold@s are optional when you save a type and associated data
     constructors as separate files.  The only time we truly require the @fold@
-    is when we pattern match on the type within the "body" of a data type
+    is when we pattern match on the type within the "body" of a datatype
     expression, like in our very first example:
 
 > type Bool
 > data True
 > data False
 > fold if
-> in -- Everything below here is the "body" of the `Bool` data type definition
+> in -- Everything below here is the "body" of the `Bool` datatype definition
 >
 > let not (b : Bool) : Bool = if b Bool False True
 > in  not False
 
     @Bool@ and @./Bool@ are not the same type within the "body" of the @Bool@
-    data type definition.  If you omit the @if@ then you will get the following
+    datatype definition.  If you omit the @if@ then you will get the following
     type error:
 
 > $ annah
@@ -572,13 +570,13 @@ module Annah.Tutorial (
 
     However, once you save @./Bool@, @./True@, @./False@ and @./if@ to separate
     files the distinction between @Bool@ and @./Bool@ vanishes.  The type of
-    @./if@ (the file) is not the same as the type as @if@ (the bound variable):
+    @./if@ (the file) is not the same as the type of @if@ (the bound variable):
 
 > -- The type of the file named `./if`
-> ./if : ./Bool → ./Bool
+> ./if : ∀(x : ./Bool ) → ./Bool
 
     You can deduce why the distinction disappears when you save things to
-    separate files if you desugar the data type definitions.  For example our
+    separate files if you desugar the datatype definitions.  For example our
     @if.annah@ file was defined as:
 
 > type Bool
@@ -587,7 +585,13 @@ module Annah.Tutorial (
 > fold if
 > in   if
 
-    ... which desugars to:
+    We can use the @annah desugar@ subcommand to see what that code desugars to
+    before normalization:
+
+> $ annah desugar < ./Bool/if.annah
+> (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → λ(if : ∀(x : Bool) → ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → if) (∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True) (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False) (λ(x : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → x)
+
+    ... which we can clean up a bit to get:
 
 > (   λ(Bool : *)
 > →   λ(True : Bool)
@@ -601,9 +605,9 @@ module Annah.Tutorial (
 > (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False)
 > (λ(x : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → x)
 
-    ... and then normalizes to;
+    That then normalizes to;
 
-> $ morte < if
+> $ annah desugar < ./Bool/if.annah | morte
 > ∀(x : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool
 > 
 > λ(x : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → x
@@ -623,29 +627,15 @@ module Annah.Tutorial (
     ... but we later decide we want to flip the order of of the @True@ and
     @False@ constructors in our datatype definition:
 
-> $ annah > Bool
+> $ annah types
 > type Bool
 > data False
 > data True
-> in   Bool
-> <Ctrl-D>
-> $ annah > True
-> type Bool
-> data False
-> data True
-> in   True
-> <Ctrl-D>
-> $ annah > False
-> type Bool
-> data False
-> data True
-> in   False
-> <Ctrl-D>
 
     The above changes would break the user's code unless we change @./if@ to
     export the pattern match order that the user expects:
 
-> $ echo > if
+> $ cat > if
 >     \(b : ./Bool )
 > ->  \(Bool : *)
 > ->  \(True : Bool)
@@ -684,7 +674,7 @@ module Annah.Tutorial (
     What might not be obvious is that if you save each type and constructor to
     a separate file then you can build a natural number just from the files.
 
-    To illustrate this, we will compile our data type definition to separate
+    To illustrate this, we will compile our datatype definition to separate
     files:
 
 > $ annah types
@@ -704,16 +694,8 @@ module Annah.Tutorial (
 > λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ Zero))
 
     This gives the exact same result as before, but now we are programming
-    directly at the "top level" using files instead of programming underneath
-    a datatype definition.
-
-    Also notice that the inferred type of our expression is identical to
-    @./Nat@:
-
-> $ morte
-> ./Nat
-> <Ctrl-D>
-> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+    directly at the "top level" using files instead of programming inside the
+    body of a datatype definition.
 
     We can also fold natural numbers using our @.\/Nat\/foldNat@ function.
     Let's consult the type of the function:
@@ -733,7 +715,7 @@ module Annah.Tutorial (
     Conceptually, when we fold a @./Nat@ value using @.\/Nat\/foldNat@ we just
     replace each @.\/Nat\/Succ@ constructor with the argument of the fold
     labeled @Succ@ (i.e. the third argument).  Similarly, we substitute each
-    @.\/Nat\/Zero@ constructor with the fourth argument.
+    @.\/Nat\/Zero@ constructor with the fourth argument labeled @Zero@.
 
     We also supply a type parameter named @Nat@ as the second argument.  This
     type parameter must match the input and output of whatever we use to replace
@@ -744,7 +726,7 @@ module Annah.Tutorial (
     @.\/Bool\/True@ and substitute every @.\/Nat\/Succ@ constructor with
     @./not@.  The code for that would be:
 
-> $ cat not.annah
+> $ cat not.annah  # Update `not.annah` to use our new file layout
 > let not (b : ./Bool ) : ./Bool =
 >     ./Bool/if b ./Bool
 >         ./Bool/False
@@ -760,6 +742,13 @@ module Annah.Tutorial (
 
     The let definitions are not strictly necessary since we could just write:
 
+> $ cat not.annah
+> \(b : ./Bool ) ->
+>     ./Bool/if b ./Bool
+>         ./Bool/False
+>         ./Bool/True
+
+> $ cat isEven.annah
 > \(n : ./Nat ) ->
 >     ./Nat/foldNat n ./Bool
 >         ./not
@@ -785,7 +774,7 @@ module Annah.Tutorial (
     It works!  The result is identical to @.\/Bool\/True@:
 
 > $ morte
-> ./BoolTrue
+> ./Bool/True
 > <Ctrl-D>
 > ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool
 >
@@ -803,8 +792,8 @@ module Annah.Tutorial (
 > -- β-reduce
 > = ./Bool/True
 
-    Note that this is not the path the compiler takes under the hood, but it's
-    equivalent.
+    Note that this is not really the path the compiler takes under the hood, but
+    it's equivalent.
 
     We can also encode mutually recursive types such as the following type
     declaration for even and odd numbers:
@@ -929,7 +918,7 @@ module Annah.Tutorial (
     Annah also comes with a Prelude of utility types and terms.  This Prelude is
     hosted remotely here:
 
-    <http://sigil.place/tutorial/annah/1.0/>
+    <http://sigil.place/prelude/annah/1.0/>
 
     You can visit the above link to browse the Prelude and see what is
     available.
@@ -939,10 +928,10 @@ module Annah.Tutorial (
     their URLs, like this:
 
 > $ morte
-> http://sigil.place/tutorial/annah/1.0/Nat/Succ
-> (   http://sigil.place/tutorial/annah/1.0/Nat/Succ
->     (   http://sigil.place/tutorial/annah/1.0/Nat/Succ
->         http://sigil.place/tutorial/annah/1.0/Nat/Zero
+> http://sigil.place/prelude/annah/1.0/Nat/Succ
+> (   http://sigil.place/prelude/annah/1.0/Nat/Succ
+>     (   http://sigil.place/prelude/annah/1.0/Nat/Succ
+>         http://sigil.place/prelude/annah/1.0/Nat/Zero
 >     )
 > )
 > <Ctrl-D>
@@ -953,8 +942,8 @@ module Annah.Tutorial (
     ... or you can selectively \"alias\" remote references locally by creating
     local files that refer to the remote URLs:
 
-> $ echo "http://sigil.place/tutorial/annah/1.0/Nat/Succ" > Succ
-> $ echo "http://sigil.place/tutorial/annah/1.0/Nat/Zero" > Zero
+> $ echo "http://sigil.place/prelude/annah/1.0/Nat/Succ" > Succ
+> $ echo "http://sigil.place/prelude/annah/1.0/Nat/Zero" > Zero
 > $ morte
 > ./Succ (./Succ (./Succ ./Zero ))
 > ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
@@ -964,7 +953,7 @@ module Annah.Tutorial (
     ... or you can \"import\" the entire Prelude into your current directory
     using @wget@:
 
-> $ wget -np -nH -r --cut-dirs=3 http://sigil.place/tutorial/annah/1.0/
+> $ wget -np -nH -r --cut-dirs=3 http://sigil.place/prelude/annah/1.0/
 > $ ls
 > (->)            Defer.annah    List.annah    Path         Sum0.annah
 > (->).annah      Eq             Maybe         Path.annah   Sum1
@@ -980,13 +969,13 @@ module Annah.Tutorial (
 
     The Prelude is organized according to the following rules:
 
-    * Each type (like @Bool@ or @Nat@ is a top-level directory.  You can
+    * Each type (like @./Bool@ or @./Nat@) is a top-level directory.  You can
       reference that type in your code by its directory
     * Each constructor of that type lives underneath the type's directory.  For
-      example, @True@ is located underneath the @Bool@ directory
+      example, @True@ is located underneath the @./Bool@ directory
     * Functions associated with each type are also located underneath the type's
       directory.  For example, the @length@ function is located underneath the
-      @List@ directory.
+      @./List@ directory.
     * Every expression is provided as both the original Annah code (with a
       @*.annah@ suffix) and Morte code (with no suffix).  For example, you
       will find the @Monoid.annah@ file which was the Annah expression used to
@@ -1023,9 +1012,11 @@ module Annah.Tutorial (
     reference is relative to the current file's directory (i.e. relative to
     @List/@) which means that it still points to the same directory: @List@.  We
     could have also used just @.@ to refer to the current directory but that
-    would be less readable.  However, if you read in @List/length@ from standard
-    input, then @morte@ looks for @../List@ expression relative to your present
-    working directory and fails.
+    would be less readable.
+
+    However, if you read in @List/length@ from standard input, then @morte@
+    looks for @../List@ expression relative to your present working directory
+    and fails.
 -}
 
 {- $stdlib
@@ -1035,14 +1026,15 @@ module Annah.Tutorial (
     * @(->)@ corresponds to Haskell's @(->)@ type constructor
     * @Bool@ corresponds to Haskell's `Bool` type
     * @Cmd@ corresponds to the operational monad (i.e.
-      "Control.Monad.Operational".`Control.Monad.Operational.Program`
+      "Control.Monad.Operational".`Control.Monad.Operational.Program`)
     * @Defer@ corresponds to
       "Data.Functor.Coyoneda".`Data.Functor.Coyoneda.Coyoneda`
     * @IO@ corresponds to a very simple `IO` type constructor that only supports
       two operations:
 
-        > ./IO/get : ./IO ./Nat
-        > ./IO/put : ./Nat -> ./IO ./Prod0
+      > ./IO/get : ./IO ./Nat
+      > ./IO/put : ./Nat -> ./IO ./Prod0
+
     * @List@ corresponds to Haskell lists except that Annah @List@s are always
       finite because they are encoded recursively
     * @Maybe@ corresponds to Haskell's `Maybe` type constructor
