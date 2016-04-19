@@ -64,6 +64,12 @@ module Annah.Tutorial (
 
     -- * Monoids
     -- $monoids
+
+    -- * Commands
+    -- $commands
+
+    -- * Monads
+    -- $monads
     ) where
 
 {- $introduction
@@ -1121,13 +1127,12 @@ module Annah.Tutorial (
 
     Annah also provides support for list literals:
 
-> $ annah | morte > bools
+> $ annah > bools
 > [nil ./Bool , ./Bool/True , ./Bool/False , ./Bool/True ]
 > <Ctrl-D>
-> ∀(List : *) → ∀(Cons : ∀(head : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → ∀(tail : List) → List) → ∀(Nil : List) → List
 
 > $ cat bools
-> λ(List : *) → λ(Cons : ∀(head : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → ∀(tail : List) → List) → λ(Nil : List) → Cons (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True) (Cons (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False) (Cons (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True) Nil))
+> λ(List : *) → λ(Cons : ∀(head : ./Bool ) → ∀(tail : List) → List) → λ(Nil : List) → Cons ./Bool/True  (Cons ./Bool/False  (Cons ./Bool/True  Nil))
 
     The general format for lists is:
 
@@ -1251,5 +1256,202 @@ module Annah.Tutorial (
 > λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero))))))))
 -}
 
+{- $commands
+    Annah also provides syntactic support for chaining commands:
+
+> $ annah
+> do ./IO {
+>     n : ./Nat   <- ./IO/get  ;
+>     _ : ./Prod0 <- ./IO/put n;
+> }
+> <Ctrl-D>
+> λ(Cmd : *) → λ(Bind : ∀(b : *) → ./IO  b → (b → Cmd) → Cmd) → λ(Pure : ./Prod0  → Cmd) → Bind ./Nat  ./IO/get  (λ(n : ./Nat ) → Bind ./Prod0  (./IO/put  n) Pure)
+
+    Annah provides a @./Cmd@ type that is equivalent to Haskell's operational
+    type for storing chained commands.  Annah differs from Haskell in that
+    @do@ notation desugars to an operational type instead of desugaring directly
+    to the @(>>=)@ operator.  We'll see why in the next section on \"Monads\".
+
+    Annah also provides utilities similar to Haskell for chaining commands, such
+    as @.\/Monad\/replicateM_.annah@ which lets you repeat a command a fixed
+    number of times:
+
+> $ cat Monad/replicateM_.annah
+> let replicateM_ (m : * -> *) (monad : ../Monad m) (n : ../Nat ) (cmd : m ../Prod0 )
+>   : m ../Prod0
+>   = ./sequence_ m monad (../List/replicate (m ../Prod0 ) n cmd)
+> in  replicateM
+
+    For example:
+
+> $ annah | morte
+> ./Monad/replicateM_ ./IO ./IO/Monad 10 (./IO/put 4)
+> ∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → IO
+> 
+> λ(IO : *) → λ(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → λ(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → λ(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Pure_ (λ(Prod0 : *) → λ(Make : Prod0) → Make)))))))))))
+
+    If you clean that up a bit you get a syntax tree for printing @4@ 10 times:
+
+>     λ(IO : *)
+> →   λ(Get_ : (./Nat → IO) → IO)
+> →   λ(Put_ : ./Nat → IO → IO)
+> →   λ(Pure_ : ./Prod0 → IO)
+> →   Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Pure_ ./Prod0/Make ))))))))))
+-}
+
 {- $monads
+    Suppose that you try to repeat this action 10 times:
+
+> $ annah > echo
+> do ./IO {
+>     n : ./Nat   <- ./IO/get  ;
+>     _ : ./Prod0 <- ./IO/put n;
+> }
+> <Ctrl-D>
+
+    This would not be the correct way to repeat the action 10 times:
+
+> $ morte
+> ./Monad/replicateM_ ./IO ./IO/Monad 10 ./echo
+> <Ctrl-D>
+> annah: 
+> Expression: { very large expression }
+>
+> Error: Function applied to argument of the wrong type
+> 
+> Expected type: ∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → IO
+> Argument type: ∀(Cmd : *) → ∀(Bind : ∀(b : *) → (∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : b → IO) → IO) → (b → Cmd) → Cmd) → ∀(Pure : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → Cmd) → Cmd
+
+    If we were to clean up that type error, we would get:
+
+> Error: Function applied to argument of the wrong type
+> 
+> Expected type: ./IO ./Prod0
+> Argument type: ./Cmd ./IO ./Prod0
+
+    This is Morte's way of telling us that @./echo@ is not an @./IO@ action,
+    but rather a @.\/Cmd .\/IO@ action.  However, we can flatten any action of
+    type @./Cmd ./IO@ back into an @./IO@ action by using the @./IO/Monad@
+    function:
+
+> $ annah > echo2
+> ./IO/Monad ./Prod0 (do ./IO {
+>     n : ./Nat   <- ./IO/get  ;
+>     _ : ./Prod0 <- ./IO/put n;
+> })
+> <Ctrl-D>
+
+    What's the difference between @./echo@ and @./echo2?  If we try to print
+    out the normalized expressions we get a huge mess:
+
+> $ morte
+> ./echo
+> <Ctrl-D>
+> ∀(Cmd : *) → ∀(Bind : ∀(b : *) → (∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : b → IO) → IO) → (b → Cmd) → Cmd) → ∀(Pure : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → Cmd) → Cmd
+> 
+> λ(Cmd : *) → λ(Bind : ∀(b : *) → (∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : b → IO) → IO) → (b → Cmd) → Cmd) → λ(Pure : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → Cmd) → Bind (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) (λ(IO : *) → λ(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → λ(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → Get_) (λ(n : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Bind (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) (λ(IO : *) → λ(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → λ(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → λ(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → Put_ n (Pure_ (λ(Prod0 : *) → λ(Make : Prod0) → Make))) Pure)
+
+> $ morte
+> ./echo2
+> <Ctrl-D>
+> ∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → IO
+> 
+> λ(IO : *) → λ(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → λ(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → λ(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Pure_ (λ(Prod0 : *) → λ(Make : Prod0) → Make)))
+
+    Unfortunately, there is no way that @annah@ or @morte@ can auto-simplify
+    these kinds of outputs in general, but for the purpose of this tutorial I
+    can simplify them for you:
+
+> -- echo
+> 
+> let get : ./IO ./Nat =
+>         λ(IO : *)
+>     →   λ(Get_ : (./Nat → IO) → IO)
+>     →   λ(Put_ : ./Nat → IO → IO)
+>     →   Get_
+>
+> let put : ./Nat → ./IO ./Prod0 =
+>         λ(IO : *)
+>     →   λ(Get_ : (./Nat → IO) → IO)
+>     →   λ(Put_ : ./Nat → IO → IO)
+>     →   λ(Pure_ : ./Prod0 → IO)
+>     →   Put_ n (Pure_ ./Prod0/Make ))
+>
+> in  λ(Cmd : *)
+> →   λ(Bind : ∀(b : *) → ./IO b → (b → Cmd) → Cmd)
+> →   λ(Pure : ./Prod0 → Cmd)
+> →   Bind ./Nat get (λ(n : ./Nat ) →
+>         Bind ./Prod0 put Pure)
+
+> -- echo2
+>
+>     λ(IO : *)
+> →   λ(Get_ : (./Nat → IO) → IO)
+> →   λ(Put_ : ./Nat → IO → IO)
+> →   λ(Pure_ : ./Prod0 → IO)
+> →   Get_ (λ(r : ./Nat ) →
+>         Put_ r
+>             (Pure_ ./Prod0/Make ))
+
+    In @./echo@, the @.\/IO\/get@ and .\/IO\/put@ actions have not been fused
+    together yet.  They are just stored within a @./Cmd@ type, which behaves a
+    lot like a \"list for actions\", waiting to be fused.
+
+    @./echo2@, on ther other hand, has fused both @./IO@ actions together and is
+    an @./IO@ action in its own right.
+
+    If we look at the type of @.\/IO\/Monad@, we get:
+
+> $ cat IO/Monad.annah
+> let Monad : ../Monad ../IO =
+>         \(a : *)
+>     ->  \(cmd : ../Cmd ../IO a)
+>     ->  cmd (../IO a) (\(b : *) -> ../IO/(>>=) b a) (../IO/pure a)
+> in  Monad
+
+    The type says that it is a @./Monad@ instance for the @./IO@ type
+    constructor.  Let's see what the definition of @./Monad@ looks like:
+
+> $ cat Monad.annah
+> let Monad (m : * -> *) : * = forall (a : *) -> ./Cmd m a -> m a
+> in  Monad
+
+    In other words, a @./Monad m@ is something that knows how to fold a \"list
+    of @m@ actions\" (i.e. a @./Cmd m@) into a single @m@ action.
+
+    Now let's see if we can repeat the fixed @./echo2@ command 10 times:
+
+> $ annah | morte
+> ./Monad/replicateM_ ./IO ./IO/Monad 10 ./echo2
+> ∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → IO
+> 
+> λ(IO : *) → λ(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → λ(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → λ(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Pure_ (λ(Prod0 : *) → λ(Make : Prod0) → Make)))))))))))))))))))))
+
+    ... which if we simplify we get:
+
+>     λ(IO : *)
+> →   λ(Get_ : (./Nat → IO) → IO)
+> →   λ(Put_ : ./Nat → IO → IO)
+> →   λ(Pure_ : ./Prod0 → IO)
+> →   Get_ (λ(r : ./Nat ) →
+>       Put_ r (
+>         Get_ (λ(r : ./Nat ) →
+>           Put_ r (
+>             Get_ (λ(r : ./Nat ) →
+>               Put_ r (
+>                 Get_ (λ(r : ./Nat ) →
+>                   Put_ r (
+>                     Get_ (λ(r : ./Nat ) →
+>                       Put_ r (
+>                         Get_ (λ(r : ./Nat ) →
+>                           Put_ r (
+>                             Get_ (λ(r : ./Nat ) →
+>                               Put_ r (
+>                                 Get_ (λ(r : ./Nat ) →
+>                                   Put_ r (
+>                                     Get_ (λ(r : ./Nat ) →
+>                                       Put_ r (
+>                                         Get_ (λ(r : ./Nat ) →
+>                                           Put_ r (
+>                                             Pure_ ./Prod0/Make ))))))))))))))))))))
 -}
