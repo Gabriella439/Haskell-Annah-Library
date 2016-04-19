@@ -56,8 +56,14 @@ module Annah.Tutorial (
     -- * Prelude
     -- $prelude
 
-    -- * Standard library
-    -- $stdlib
+    -- * Natural numbers
+    -- $nats
+
+    -- * Lists
+    -- $lists
+
+    -- * Monoids
+    -- $monoids
     ) where
 
 {- $introduction
@@ -1017,9 +1023,7 @@ module Annah.Tutorial (
     However, if you read in @List/length@ from standard input, then @morte@
     looks for @../List@ expression relative to your present working directory
     and fails.
--}
 
-{- $stdlib
     Annah's Prelude has some similarities to Haskell's standard libraries and
     some differences.  The rough correspondences are:
 
@@ -1029,12 +1033,6 @@ module Annah.Tutorial (
       "Control.Monad.Operational".`Control.Monad.Operational.Program`)
     * @Defer@ corresponds to
       "Data.Functor.Coyoneda".`Data.Functor.Coyoneda.Coyoneda`
-    * @IO@ corresponds to a very simple `IO` type constructor that only supports
-      two operations:
-
-      > ./IO/get : ./IO ./Nat
-      > ./IO/put : ./Nat -> ./IO ./Prod0
-
     * @List@ corresponds to Haskell lists except that Annah @List@s are always
       finite because they are encoded recursively
     * @Maybe@ corresponds to Haskell's `Maybe` type constructor
@@ -1054,9 +1052,204 @@ module Annah.Tutorial (
       constructor.  Mnemonic: \"Sum type with one field\"
     * @Sum2@ corresponds to Haskell's `Either` type constructor.  Mnemonic:
       \"Sum type with two fields\"
+    * @IO@ corresponds to a very simple `IO` type constructor that only supports
+      two operations:
+
+      > ./IO/get : ./IO ./Nat
+      > ./IO/put : ./Nat -> ./IO ./Prod0
 
     In addition to those types, Annah also encodes several of Haskell's type
     classes as values.  Neither Annah nor Morte supports type classes /per se/.
     Instead, each class is encoded as a type constructor and each instance is
-    a term of the corresponding type.
+    a term of the corresponding type:
+
+    * @Functor@ corresponds to Haskell's `Functor` class
+    * @Monoid@ corresponds to Haskell's `Data.Monoid.Monoid` class
+    * @Monad@ corresponds to Haskell's `Monad` class
+    * @Category@ corresponds to Haskell's `Control.Category.Category` class
+
+    However, the specification of each type class radically differs from how
+    Haskell encodes things.  We'll revisit this in a later section.
+-}
+
+{- $nats
+    The Prelude provides addition and multiplication for natural numbers:
+
+> $ cat > three
+> ./Nat/Succ (./Nat/Succ (./Nat/Succ ./Nat/Zero ))
+> <Ctrl-D>
+
+> $ morte
+> ./Nat/(+) ./three ./three
+> <Ctrl-D>
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ Zero)))))
+
+> $ morte
+> ./Nat/(*) ./three ./three
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero))))))))
+
+    Also, Annah provides basic syntactic support for natural number literals:
+
+> $ annah | morte
+> ./Nat/(+) 3 3
+> <Ctrl-D>
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ Zero)))))
+
+> $ annah | morte
+> ./Nat/(*) 3 3
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero))))))))
+
+-}
+
+{- $lists
+    The Prelude provides operations on lists, too:
+
+> $ annah | morte
+> ./List/replicate ./Bool 3 ./Bool/True
+> <Ctrl-D>
+> ∀(List : *) → ∀(Cons : ∀(head : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → ∀(tail : List) → List) → ∀(Nil : List) → List
+> 
+> λ(List : *) → λ(Cons : ∀(head : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → ∀(tail : List) → List) → λ(Nil : List) → Cons (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True) (Cons (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True) (Cons (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True) Nil))
+
+    Annah also provides support for list literals:
+
+> $ annah | morte > bools
+> [nil ./Bool , ./Bool/True , ./Bool/False , ./Bool/True ]
+> <Ctrl-D>
+> ∀(List : *) → ∀(Cons : ∀(head : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → ∀(tail : List) → List) → ∀(Nil : List) → List
+
+> $ cat bools
+> λ(List : *) → λ(Cons : ∀(head : ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool) → ∀(tail : List) → List) → λ(Nil : List) → Cons (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True) (Cons (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False) (Cons (λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → True) Nil))
+
+    The general format for lists is:
+
+> [nil elementType, element0, element1, ..., elementN]
+
+    Here are some examples of operations on lists:
+
+> $ morte
+> ./List/null ./Bool ./bools
+> <Ctrl-D>
+> ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool
+> 
+> λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False
+
+> $ morte
+> ./List/length ./Bool (./List/(++) ./Bool ./bools ./bools )
+> <Ctrl-D>
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Nil : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Nil : Nat) → Succ (Succ (Succ (Succ (Succ (Succ Nil)))))
+
+> $ annah | morte
+> \(a : *) -> \(xs : ./List a) -> ./List/(++) a xs [nil a]
+> <Ctrl-D>
+> ∀(a : *) → ∀(xs : ∀(List : *) → ∀(Cons : ∀(head : a) → ∀(tail : List) → List) → ∀(Nil : List) → List) → ∀(List : *) → ∀(Cons : a → List → List) → ∀(Nil : List) → List
+> 
+> λ(a : *) → λ(xs : ∀(List : *) → ∀(Cons : ∀(head : a) → ∀(tail : List) → List) → ∀(Nil : List) → List) → xs
+
+    The last example shows how @morte@ can optimized away @xs ++ []@ to just
+    @xs@.
+-}
+
+{- $monoids
+    Annah also provides several folds on lists, like @sum@ or @and@:
+
+> $ annah | morte
+> <Ctrl-D>
+> ./Nat/sum [nil ./Nat , 1, 2, 3, 4]
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero)))))))))
+
+> $ annah | morte
+> <Ctrl-D>
+> ./Bool/and [nil ./Bool , ./Bool/True , ./Bool/False , ./Bool/True ]
+> ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool
+> 
+> λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False
+
+    What's interesting about these folds is their type:
+
+> $ cat Nat/sum.annah
+> let sum : ../Monoid ../Nat = \(xs : ../List ../Nat ) -> xs ../Nat ./(+) 0
+> in  sum
+
+> $ cat Bool/and.annah
+> let and : ../Monoid ../Bool =
+>     \(xs : ../List ../Bool ) -> xs ../Bool ./(&&) ./True
+> in  and
+
+    You might have been expecting their types to be something like this:
+
+> sum : ../List ../Nat  -> ../Nat
+> and : ../List ../Bool -> ../Bool
+
+    ... and you would have been right because that is actually what their types
+    are!  This is because of how `./Monoid.annah` is defined:
+
+> $ cat Monoid.annah
+> let Monoid (m : *) : * = ./List m -> m
+> in  Monoid
+
+    In other words, a `Monoid` \"instance\" for a type @m@ is just a function
+    that folds a @./List@ of @m@s into a single @m@.  The @./sum@ and @./and@
+    functions that fold lists also double as `./Monoid` instances.
+
+    You can recover the traditional Haskell `Monoid` operations like `mempty`
+    and `mappend` from the above @./Monoid@ definition:
+
+> $ cat Monoid/mempty.annah
+> let mempty (m : *) (monoid : ./Monoid m) : m =
+>     monoid [nil m]
+> in  mempty
+
+> $ cat Monoid/mappend.annah
+> let mappend (m : *) (monoid : ./Monoid m) (l : m) (r : m) : m =  
+>     monoid [nil m, l, r]
+> in  mappend
+
+    For example:
+
+> $ morte
+> ./Monoid/mempty ./Nat ./Nat/sum
+> <Ctrl-D>
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Zero
+
+> $ annah | morte
+> ./Monoid/mappend ./Nat ./Nat/sum 4 5
+> <Ctrl-D>
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero))))))))
+
+    However, in practice it's easier to just use the folds directly instead of
+    using @.\/Monoid\/mempty@ or @.\/Monoid\/mappend@:
+
+> $ annah | morte
+> ./Nat/sum [nil ./Nat ]
+> <Ctrl-D>
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Zero
+
+> $ annah | morte
+> ./Nat/sum [nil ./Nat , 4, 5]
+> <Ctrl-D>
+> ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat
+> 
+> λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero))))))))
+-}
+
+{- $monads
 -}
