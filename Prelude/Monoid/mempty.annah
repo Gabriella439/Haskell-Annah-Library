@@ -1,0 +1,3 @@
+let mempty (m : *) (monoid : ../Monoid m) : m =
+    monoid [nil m]
+in  mempty

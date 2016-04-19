@@ -1,0 +1,3 @@
+let mappend (m : *) (monoid : ../Monoid m) (l : m) (r : m) : m =  
+    monoid [nil m, l, r]
+in  mappend
