@@ -60,7 +60,6 @@ import Control.Applicative (pure, empty)
 import Data.String (IsString(..))
 import Data.Text.Lazy (Text)
 import qualified Morte.Core as M
-import Numeric.Natural (Natural)
 import Prelude hiding (pi)
 
 {-| Argument for function or constructor definitions
@@ -128,7 +127,7 @@ data Expr
     -- | > Family f e                      ~  f in e
     | Family [Type] Expr
     -- | > Natural n                       ~  n
-    | Natural Natural
+    | Natural Integer
     -- | > List t [x, y, z]                ~  [nil t,x,y,z]
     | List Expr [Expr]
     -- | > Path c [(o1, m1), (o2, m2)] o3  ~  [id c {o1} m1 {o2} m2 {o3}]
@@ -174,7 +173,7 @@ desugar (Do m bs b   ) = desugarDo m bs b
 > →   λ(Zero : Nat                )
 > →   Succ (Succ (Succ (Succ Zero)))
 -}
-desugarNatural :: Natural -> M.Expr M.Path
+desugarNatural :: Integer -> M.Expr M.Path
 desugarNatural n0 =
     M.Lam "Nat" (M.Const M.Star)
         (M.Lam "Succ" (M.Pi "pred" (M.Var (M.V "Nat" 0)) (M.Var (M.V "Nat" 0)))
