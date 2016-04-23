@@ -1,0 +1,10 @@
+let mapM
+    (m : * -> *)
+    (a : *)
+    (b : *)
+    (monad : ../Monad m)
+    (f : a -> m b)
+    (as : ../List a)
+    : m (../List b) =
+    ./sequence m b monad (../List/map a (m b) f as)
+in  mapM

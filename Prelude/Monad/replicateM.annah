@@ -1,0 +1,4 @@
+let replicateM (m : * -> *) (monad : ../Monad m) (n : ../Nat ) (a : *) (cmd : m a)
+  : m (../List a)
+  = ./sequence m a monad (../List/replicate (m a) n cmd)
+in  replicateM

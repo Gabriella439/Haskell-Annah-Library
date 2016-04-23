@@ -1,0 +1,12 @@
+let (<=<)
+    (m : * -> *)
+    (a : *)
+    (b : *)
+    (c : *)
+    (monad : ../Monad m)
+    (g : b -> m c)
+    (f : a -> m b)
+    (x : a)
+    : m c =
+    monad c (do m { y : b <- f x; z : c <- g y; })
+in  (<=<)

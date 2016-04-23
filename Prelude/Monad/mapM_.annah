@@ -1,0 +1,10 @@
+let mapM_
+    (m : * -> *)
+    (a : *)
+    (b : *)
+    (monad : ../Monad m)
+    (f : a -> m ../Prod0 )
+    (as : ../List a)
+    : m ../Prod0 =
+    ./sequence_ m monad (../List/map a (m ../Prod0 ) f as)
+in  mapM_
