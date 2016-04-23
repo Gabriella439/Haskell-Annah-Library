@@ -3,6 +3,11 @@
     feature that Annah supports is desugaring mutually recursive datatypes
     to non-recursive lambda expressions.
 
+    Annah is not intended to be used as a production language.  Rather, Annah is
+    a step along the way towards a production language that I factored out as
+    a reusable library that others can learn from and possibly fork for their
+    own use cases.
+
     Under the hood, all Annah expressions are translated to a minimalist
     implementation of the calculus of constructions called Morte, which only
     supports non-recursive lambda expressions and their types.  You can find
@@ -21,6 +26,11 @@
     terms of low-level lambda calculus expressions and not in terms of the
     original Annah source code.
   
+    Most notably, Annah does not provide support for text, due to the gross
+    inefficiency of encoding even basic ASCII text in lambda calculus.  Text
+    handling would be better served by a backend with primitive support for
+    text literals and operations on text.
+
     This tutorial assumes that you have first read the Morte tutorial, which
     you can find here:
 
@@ -77,7 +87,8 @@ module Annah.Tutorial (
 
 {- $introduction
     This library comes with a binary executable that you can use to compile
-    Annah expressions.  This executable can be used in two separate ways.
+    Annah expressions to Morte expressions.  This executable can be used in two
+    separate ways.
 
     First, you can read an Annah expression from standard input and the program
     will output the equivalent low-level Morte expression to standard output:
@@ -1668,4 +1679,17 @@ module Annah.Tutorial (
     Annah's Prelude only provides support for one @./Category@ instance for
     functions named @./(->)/Category@, so in practice the @./Category@ support
     is not that handy out-of-the box and is mainly provided for completeness.
+-}
+
+{- $conclusion
+    Those are all the features that Annah supports!  Annah is a very tiny
+    language and library that illustrates and implements basic idioms for
+    translating functional programming concepts into pure lambda calculus.
+
+    Hopefully you can use Annah to learn how to encode a subset of Haskell in a
+    completely total programming language.  If you translate any Haskell
+    functions to Annah you can contribute them upstream to the Annah prelude by
+    submitting a pull request against the Annah repository:
+
+    <https://github.com/Gabriel439/Haskell-Annah-Library/tree/master/Prelude>
 -}
