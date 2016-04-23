@@ -300,22 +300,38 @@ desugarDo m bs0 (Bind (Arg x0 _A0) e0) =
     M.Lam "Cmd" (M.Const M.Star)
         (M.Lam "Bind"
             (M.Pi "b" (M.Const M.Star)
-                (M.Pi "_" (M.App (desugar m) "b")
+                (M.Pi "_" (M.App (desugar0 m) "b")
                     (M.Pi "_" (M.Pi "_" "b" "Cmd") "Cmd") ) )
-            (M.Lam "Pure" (M.Pi x0 (desugar _A0) "Cmd")
+            (M.Lam "Pure" (M.Pi x0 (desugar1 _A0) "Cmd")
                 (go bs0 (0 :: Int) (0 :: Int)) ) )
   where
+    desugar0
+        = M.shift 1 "b"
+        . M.shift 1 "Cmd"
+        . desugar
+
+    desugar1
+        = M.shift 1 "Bind"
+        . M.shift 1 "Cmd"
+        . desugar
+
+    desugar2
+        = M.shift 1 "Pure"
+        . M.shift 1 "Bind"
+        . M.shift 1 "Cmd"
+        . desugar
+
     go  []                    numPure numBind =
         M.App
-            (M.App (M.App (M.Var (M.V "Bind" numBind)) (desugar _A0))
-                (desugar e0) )
+            (M.App (M.App (M.Var (M.V "Bind" numBind)) (desugar2 _A0))
+                (desugar2 e0) )
             (M.Var (M.V "Pure" numPure))
     go (Bind (Arg x _A) e:bs) numPure numBind = numBind' `seq` numPure' `seq`
         M.App
             (M.App
-                (M.App (M.Var (M.V "Bind" numBind)) (desugar _A))
-                (desugar e) )
-            (M.Lam x (desugar _A) (go bs numBind' numPure'))
+                (M.App (M.Var (M.V "Bind" numBind)) (desugar2 _A))
+                (desugar2 e) )
+            (M.Lam x (desugar2 _A) (go bs numBind' numPure'))
       where
         numBind' = if x == "Bind" then numBind + 1 else numBind
         numPure' = if x == "Pure" then numPure + 1 else numPure
