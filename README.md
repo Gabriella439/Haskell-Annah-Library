@@ -1,7 +1,7 @@
 # Annah v1.0.0
 
-Annah is a medium-level total language that compiles down to the calculus of
-constructions
+Annah is a medium-level total functional programming language that compiles down
+to the calculus of constructions
 (specifically [Morte](https://github.com/Gabriel439/Haskell-Morte-Library)).
 
 Annah exists primarily as a reference implementation for encoding higher-level
@@ -10,10 +10,16 @@ and folklore but have never been consolidated into a single focused
 implementation that people could learn from, experiment with, or fork for their
 own uses.
 
-Annah is not just a compiler but also a Prelude which translates a small subset
-of Haskell to pure and total lambda calculus.  The latest Prelude is hosted
-online [here](http://sigil.place/prelude/annah/1.0/) and can be referenced
-directly within Annah or Morte expressions.
+This project provides three separate features:
+
+* the `annah` compiler, which compiles Annah expressions into Morte
+  expressions
+* the `annah` Haskell library, used to implement the `annah` compiler
+* the Annah Prelude, a small subset of Haskell translated to Annah code
+
+The latest Annah Prelude is hosted online
+[here](http://sigil.place/prelude/annah/1.0/)
+and can be referenced directly within Annah or Morte expressions.
 
 ## Quick start
 
@@ -79,8 +85,8 @@ even
 λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False
 ```
 
-You can clone the Prelude locally and refer to expression by their local path,
-too:
+You can also clone the Prelude locally and refer to expression by their relative
+path, too:
 
 ```bash
 $ wget -np -nH -r --cut-dirs=3 http://sigil.place/prelude/annah/1.0/
@@ -108,7 +114,8 @@ in  even 3
 λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False
 ```
 
-Here's a more advanced example of a list comprehension written in Annah:
+Here is another example of a list comprehension written in Annah, to illustrate
+Annah's support for lists and @do@ notation:
 
 ```bash
 $ annah | morte
@@ -161,7 +168,7 @@ URL.
 
 Annah is heavily exercised by the Annah Prelude so most bugs should have been
 rooted out by this point.  The most likely bugs that still remain at this point
-are bugs in the desugaring logic not correctly avoiding name capture.
+are in the desugaring logic not correctly avoiding name capture.
 
 The most likely thing to change in the API is support for new desugaring rules
 if people request them and are willing to implement them.
