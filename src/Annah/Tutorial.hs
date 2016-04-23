@@ -1199,7 +1199,7 @@ module Annah.Tutorial (
 > and : ../List ../Bool -> ../Bool
 
     ... and you would have been right because that is actually what their types
-    are!  This is because of how `./Monoid.annah` is defined:
+    are!  This is because of how @./Monoid.annah@ is defined:
 
 > $ cat Monoid.annah
 > let Monoid (m : *) : * = ./List m -> m
@@ -1207,7 +1207,7 @@ module Annah.Tutorial (
 
     In other words, a `Monoid` \"instance\" for a type @m@ is just a function
     that folds a @./List@ of @m@s into a single @m@.  The @./sum@ and @./and@
-    functions that fold lists also double as `./Monoid` instances.
+    functions that fold lists also double as @./Monoid@ instances.
 
     You can recover the traditional Haskell `Monoid` operations like `mempty`
     and `mappend` from the above @./Monoid@ definition:
@@ -1268,9 +1268,11 @@ module Annah.Tutorial (
 > λ(Cmd : *) → λ(Bind : ∀(b : *) → ./IO  b → (b → Cmd) → Cmd) → λ(Pure : ./Prod0  → Cmd) → Bind ./Nat  ./IO/get  (λ(n : ./Nat ) → Bind ./Prod0  (./IO/put  n) Pure)
 
     Annah provides a @./Cmd@ type that is equivalent to Haskell's operational
-    type for storing chained commands.  Annah differs from Haskell in that
-    @do@ notation desugars to an operational type instead of desugaring directly
-    to the @(>>=)@ operator.  We'll see why in the next section on \"Monads\".
+    type for storing chained commands.  Anywhere you see @./Cmd m@, just think
+    a \"list of nested @m@\"s.
+
+    Annah differs from Haskell in that @do@ notation desugars to the operational
+    type (i.e. @./Cmd@ instead of desugaring to the @(>>=)@ operator.
 
     Annah also provides utilities similar to Haskell for chaining commands, such
     as @.\/Monad\/replicateM_.annah@ which lets you repeat a command a fixed
@@ -1331,7 +1333,7 @@ module Annah.Tutorial (
 
     This is Morte's way of telling us that @./echo@ is not an @./IO@ action,
     but rather a @.\/Cmd .\/IO@ action.  However, we can flatten any action of
-    type @./Cmd ./IO@ back into an @./IO@ action by using the @./IO/Monad@
+    type @.\/Cmd .\/IO@ back into an @./IO@ action by using the @.\/IO\/Monad@
     function:
 
 > $ annah > echo2
@@ -1341,7 +1343,7 @@ module Annah.Tutorial (
 > })
 > <Ctrl-D>
 
-    What's the difference between @./echo@ and @./echo2?  If we try to print
+    What's the difference between @./echo@ and @./echo2@?  If we try to print
     out the normalized expressions we get a huge mess:
 
 > $ morte
@@ -1393,11 +1395,11 @@ module Annah.Tutorial (
 >         Put_ r
 >             (Pure_ ./Prod0/Make ))
 
-    In @./echo@, the @.\/IO\/get@ and .\/IO\/put@ actions have not been fused
+    In @./echo@, the @.\/IO\/get@ and @.\/IO\/put@ actions have not been fused
     together yet.  They are just stored within a @./Cmd@ type, which behaves a
     lot like a \"list for actions\", waiting to be fused.
 
-    @./echo2@, on ther other hand, has fused both @./IO@ actions together and is
+    @./echo2@, on the other hand, has fused both @./IO@ actions together and is
     an @./IO@ action in its own right.
 
     If we look at the type of @.\/IO\/Monad@, we get:
