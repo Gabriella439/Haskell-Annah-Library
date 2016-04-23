@@ -1,4 +1,4 @@
-let replicateM_ (m : * -> *) (monad : ../Monad m) (n : ../Nat ) (cmd : m ../Prod0 )
-  : m ../Prod0
-  = ./sequence_ m monad (../List/replicate (m ../Prod0 ) n cmd)
+let replicateM_ (m : * -> *) (n : ../Nat ) (cmd : m ../Prod0 )
+  : ../Cmd m ../Prod0
+  = ./sequence_ m (../List/replicate (m ../Prod0 ) n cmd)
 in  replicateM_

@@ -1,10 +1,7 @@
 let sequence_
     (m : * -> *)
-    (monad : ../Monad m)
     (cmds : ../List (m ../Prod0 ))
-    : m ../Prod0 =
-    monad
-    ../Prod0
+    : ../Cmd m ../Prod0 =
     (   cmds
         (../Cmd m ../Prod0 )
         (\(cmd1 : m ../Prod0 ) -> \(cmd2 : ../Cmd m ../Prod0 ) ->

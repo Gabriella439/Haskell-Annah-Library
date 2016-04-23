@@ -1,11 +1,8 @@
 let sequence
     (m : * -> *)
     (a : *)
-    (monad : ../Monad m)
     (cmds : ../List (m a))
-    : m (../List a) =
-    monad
-    (../List a)
+    : ../Cmd m (../List a) =
     (   cmds
         (../Cmd m (../List a) )
         (\(cmd1 : m a) -> \(cmd2 : ../Cmd m (../List a)) ->

@@ -1,7 +1,7 @@
 let Monoid (f : * -> *) (m : *) (monoid : ../Monoid m) : ../Monoid (../Cmd f m) =
     \(cmds : ../List (../Cmd f m))
 ->  ./Monad f m (do (../Cmd f) {
-        ms : ../List m <- ../Monad/sequence (../Cmd f) m (./Monad f) cmds;
+        ms : ../List m <- ./Monad f (../List m) (../Monad/sequence (../Cmd f) m cmds);
         _  : m         <- ./Pure f m (monoid ms);
     })
 in  Monoid

@@ -1,1 +1,1 @@
-λ(m : * → *) → λ(a : *) → λ(b : *) → λ(monad : ../Monad  m) → λ(f : a → m ../Prod0 ) → λ(as : ../List  a) → ./sequence_  m monad (../List/map  a (m ../Prod0 ) f as)
+λ(m : * → *) → λ(a : *) → λ(b : *) → λ(monad : ../Monad  m) → λ(f : a → m ../Prod0 ) → λ(as : ../List  a) → ./sequence_  m (../List/map  a (m ../Prod0 ) f as)
