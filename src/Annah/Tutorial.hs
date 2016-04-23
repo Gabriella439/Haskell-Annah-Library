@@ -68,8 +68,11 @@ module Annah.Tutorial (
     -- * Commands
     -- $commands
 
-    -- * Monads
-    -- $monads
+    -- * IO
+    -- $io
+
+    -- * Paths
+    -- $paths
     ) where
 
 {- $introduction
@@ -1257,40 +1260,288 @@ module Annah.Tutorial (
 -}
 
 {- $commands
-    Annah also provides syntactic support for chaining commands:
+    Annah also provides syntactic support for chaining commands using @do@
+    notation, in a style very similar to Haskell.  The following examples will
+    all give very large outputs so I will tidy the output results, although
+    there is not a good way to tidy the output in general:
 
-> $ annah
-> do ./IO {
->     n : ./Nat   <- ./IO/get  ;
->     _ : ./Prod0 <- ./IO/put n;
+    For example, here is how you write a list comprehension in Annah.
+
+> $ annah | morte  # Output cleaned up by hand
+> ./List/Monad ./Nat (do ./List {
+>     x : ./Nat <- [nil ./Nat , 1, 2, 3];
+>     y : ./Nat <- [nil ./Nat , 4, 5, 6];
+>     _ : ./Nat <- ./List/pure ./Nat (./Nat/(+) x y);
+> })
+> <Ctrl-D>
+>     ∀(List : *)
+> →   ∀(Cons : ∀(head : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → ∀(tail : List) → List)
+> →   ∀(Nil : List)
+> →   List
+> 
+>     λ(List : *)
+> →   λ(Cons : ∀(head : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → ∀(tail : List) → List)
+> →   λ(Nil : List)
+> →   Cons
+>     (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ Zero)))))
+>     (   Cons
+>         (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ Zero))))))
+>         (   Cons
+>             (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero)))))))
+>             (   Cons
+>                 (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ Zero))))))
+>                 (   Cons
+>                     (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero)))))))
+>                     (   Cons
+>                         (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero))))))))
+>                         (   Cons
+>                             (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero)))))))
+>                             (   Cons
+>                                 (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero))))))))
+>                                 (   Cons
+>                                     (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero)))))))))
+>                                     Nil
+>                                 )
+>                             )
+>                         )
+>                     )
+>                 )
+>             )
+>         )
+>     )
+
+    ... which is equivalent to:
+
+> ./List ./Nat
+>
+> [nil ./Nat , 5, 6, 7, 6, 7, 8, 7, 8, 9]
+
+    Annah @do@ notation has a few important differences from Haskell's @do@
+    notation:
+
+    * Every command's return type must be annotated; even the final command
+    * Braces are required and semicolons are required on all lines
+    * You must annotate the monad's type constructor right after the @do@
+    * You (usually) wrap the @do@ block in the @./Monad@ instance for your
+      type constructor followed by the @do@ block's return value
+
+    Here is an example diagram to illustrate the last rule:
+
+> +-- Monad instance for ./List
+> |
+> |            +-- The return value of block ...
+> |            |
+> v            v
+> ./List/Monad ./Nat (do ./List {
+>     x : ./Nat <- [nil ./Nat , 1, 2, 3];
+>     y : ./Nat <- [nil ./Nat , 4, 5, 6];
+>     _ : ./Nat <- ./List/pure ./Nat (./Nat/(+) x y);
+> })      ^
+>         |
+>         +-- ... which must match this return value
+
+    You actually don't have to wrap the @do@ block in a @./Monad@ instance, but
+    you will get a different result.  Let's see what happens if we omit the
+    @./Monad@ instance:
+
+> $ annah | morte  # Output cleaned up by hand
+> do ./List {
+>     x : ./Nat <- [nil ./Nat , 1, 2, 3];
+>     y : ./Nat <- [nil ./Nat , 4, 5, 6];
+>     _ : ./Nat <- ./List/pure ./Nat (./Nat/(+) x y);
 > }
 > <Ctrl-D>
-> λ(Cmd : *) → λ(Bind : ∀(b : *) → ./IO  b → (b → Cmd) → Cmd) → λ(Pure : ./Prod0  → Cmd) → Bind ./Nat  ./IO/get  (λ(n : ./Nat ) → Bind ./Prod0  (./IO/put  n) Pure)
+>     ∀(Cmd : *)
+> →   ∀(Bind : ∀(b : *) → (∀(List : *) → ∀(Cons : ∀(head : b) → ∀(tail : List) → List) → ∀(Nil : List) → List) → (b → Cmd) → Cmd)
+> →   ∀(Pure : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Cmd)
+> →   Cmd
+>
+>     λ(Cmd : *)
+> →   λ(Bind : ∀(b : *) → (∀(List : *) → ∀(Cons : ∀(head : b) → ∀(tail : List) → List) → ∀(Nil : List) → List) → (b → Cmd) → Cmd)
+> →   λ(Pure : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Cmd)
+> →   Bind
+>     (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat)
+>     (   λ(List : *)
+>     →   λ(Cons : ∀(head : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → ∀(tail : List) → List)
+>     →   λ(Nil : List)
+>     →   Cons
+>         (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → Succ)
+>         (   Cons
+>             (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ Zero))
+>             (   Cons
+>                 (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ Zero)))
+>                 Nil
+>             )
+>         )
+>     )
+>     (   λ(x : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat)
+>     →   Bind
+>         (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat)
+>         (   λ(List : *)
+>         →   λ(Cons : ∀(head : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → ∀(tail : List) → List)
+>         →   λ(Nil : List)
+>         →   Cons
+>             (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero))))
+>             (   Cons
+>                 (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ Zero)))))
+>                 (   Cons
+>                     (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ (Succ (Succ Zero))))))
+>                     Nil
+>                 )
+>             )
+>         )
+>         (   λ(y : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat)
+>         →   Bind
+>             (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat)
+>             (   λ(List : *)
+>             →   λ(Cons : ∀(head : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → ∀(tail : List) → List)
+>             →   Cons
+>                 (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → x Nat Succ (y Nat Succ Zero))
+>             )
+>             Pure
+>         )
+>     )
 
-    Annah provides a @./Cmd@ type that is equivalent to Haskell's operational
-    type for storing chained commands.  Anywhere you see @./Cmd m@, just think
-    a \"list of nested @m@\"s.
+    ... which is equivalent to:
 
-    Annah differs from Haskell in that @do@ notation desugars to the operational
-    type (i.e. @./Cmd@ instead of desugaring to the @(>>=)@ operator.
+> ./Cmd ./List./Nat
+>
+>     λ(Cmd : *)
+> →   λ(Bind : ∀(b : *) → ./List b → (b → Cmd) → Cmd)
+> →   λ(Pure : ./Nat → Cmd)
+> →   Bind
+>     ./Nat
+>     [nil ./Nat , 1, 2, 3]
+>     (   λ(x : ./Nat )
+>     →   Bind
+>         ./Nat
+>         [nil ./Nat 4, 5, 6]
+>         (   λ(y : ./Nat )
+>         →   Bind
+>             ./Nat
+>             [nil ./Nat (./Nat/(+) x y)]
+>             Pure
+>         )
+>     )
+
+    The @do@ notation is desugaring to a data type named @./Cmd@ that inserts
+    placeholders for each @<-@ (pronounced: \"bind\").  In the Haskell world
+    this datatype is commonly known as the \"operational\" monad.
+
+    So why did we wrap the @do@ block in @.\/List\/Monad@?  Well, let's check
+    out the type of the @.\/List\/Monad@ function:
+
+> $ cat ./List/Monad.annah 
+> let Monad: ../Monad ../List
+>     =   \(a : *)
+>     ->  \(m : ../Cmd ../List a)
+>     ->  m (../List a) (\(b : *) -> ./(>>=) b a) (./pure a)
+> in  Monad
+
+    Hmmm, that's weird.  Wasn't it supposed to be a function?  Actually, it is!
+    To see why, let's check out how @./Monad@ is defined:
+
+> let Monad (m : * -> *) : * = forall (a : *) -> ./Cmd m a -> m a
+> in  Monad
+
+    A @./Monad m@ is a function that transforms a @./Cmd m a@ into an @m a@ by
+    replacing each @Bind@ with the correct \"bind\" operation for that `Monad`
+    and replaces each @Pure@ with the correct \"pure\" operation for that
+    `Monad`.  Therefore a @./Monad ./List@ is a function that transforms a
+    @.\/Cmd .\/List a@ into a @./List a@.
+
+    That's why we wrap the @do@ block in @.\/List\/Monad@ because the @do@
+    block starts out with this type:
+
+> do ./List { ... } : ./Cmd ./List ./Nat
+
+    ... and then when we apply the @.\/List\/Monad function we get back a
+    bona-fide @./List@:
+
+> ./List/Monad ./Nat (do ./List { ... }) ./List ./Nat
+
+    There are a couple of parallels between Annah's @./Monad@+@./Cmd@ and
+    Annah's @./Monoid@+@./List@:
+
+    * Both of them have syntactic support for building a placeholder of some
+      sort.  List notation builds a @./List@ and @do@ notation builds a @./Cmd@
+    * Both of them have a way to fold the placeholder into a single value.
+      @./Monoid@s fold @./List@s and @./Monad@s fold @./Cmd@s.
+
+-}
+
+{- $io
+
+    Annah also supports a very simplistic @./IO@ type as a proof of concept for
+    how you would model a foreign function interface.  For example, here is an
+    @./IO@ action that reads a @./Nat@ and writes out the same @./Nat@:
+
+> $ annah
+> ./IO/Monad ./Prod0 (do ./IO {
+>     n : ./Nat   <- ./IO/get  ;
+>     _ : ./Prod0 <- ./IO/put n;
+> })
+> <Ctrl-D>
+> ./IO/Monad  ./Prod0  (λ(Cmd : *) → λ(Bind : ∀(b : *) → ./IO  b → (b → Cmd) → Cmd) → λ(Pure : ./Prod0  → Cmd) → Bind ./Nat  ./IO/get  (λ(n : ./Nat ) → Bind ./Prod0  (./IO/put  n) Pure))
 
     Annah also provides utilities similar to Haskell for chaining commands, such
     as @.\/Monad\/replicateM_.annah@ which lets you repeat a command a fixed
     number of times:
 
 > $ cat Monad/replicateM_.annah
-> let replicateM_ (m : * -> *) (monad : ../Monad m) (n : ../Nat ) (cmd : m ../Prod0 )
->   : m ../Prod0
->   = ./sequence_ m monad (../List/replicate (m ../Prod0 ) n cmd)
-> in  replicateM
+> let replicateM_ (m : * -> *) (n : ../Nat ) (cmd : m ../Prod0 )
+>   : ../Cmd m ../Prod0
+>   = ./sequence_ m (../List/replicate (m ../Prod0 ) n cmd)
+> in  replicateM_
+
+    Notice that @.\/Monad\/replicateM_@ does not take a @./Monad@ instance as
+    an argument.  Instead, @.\/Monad\/replicateM_@ returns a @./Cmd@ which
+    you can fold with the appropriate @./Monad@ instance:
 
     For example:
 
-> $ annah | morte
-> ./Monad/replicateM_ ./IO ./IO/Monad 10 (./IO/put 4)
-> ∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → IO
+> $ annah | morte  # Output cleaned up by hand
+> ./IO/Monad ./Prod0 (./Monad/replicateM_ ./IO 10 (./IO/put 4))
+>     ∀(IO : *)
+> →   ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO)
+> →   ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO)
+> →   ∀(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO)
+> →   IO
 > 
-> λ(IO : *) → λ(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → λ(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → λ(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Put_ (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero)))) (Pure_ (λ(Prod0 : *) → λ(Make : Prod0) → Make)))))))))))
+>     λ(IO : *)
+> →   λ(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO)
+> →   λ(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO)
+> →   λ(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO)
+> →   Put_
+>     (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero))))
+>     (   Put_
+>         (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero))))
+>         (   Put_
+>             (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero))))
+>             (   Put_
+>                 (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero))))
+>                 (   Put_
+>                     (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero))))
+>                     (   Put_
+>                         (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero))))
+>                         (   Put_
+>                             (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero))))
+>                             (   Put_
+>                                 (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero))))
+>                                 (   Put_
+>                                     (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero))))
+>                                     (   Put_
+>                                         (λ(Nat : *) → λ(Succ : ∀(pred : Nat) → Nat) → λ(Zero : Nat) → Succ (Succ (Succ (Succ Zero))))
+>                                         (Pure_ (λ(Prod0 : *) → λ(Make : Prod0) → Make))
+>                                     )
+>                                 )
+>                             )
+>                         )
+>                     )
+>                 )
+>             )
+>         )
+>     )
 
     If you clean that up a bit you get a syntax tree for printing @4@ 10 times:
 
@@ -1299,132 +1550,17 @@ module Annah.Tutorial (
 > →   λ(Put_ : ./Nat → IO → IO)
 > →   λ(Pure_ : ./Prod0 → IO)
 > →   Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Put_ 4 (Pure_ ./Prod0/Make ))))))))))
--}
 
-{- $monads
-    Suppose that you try to repeat this action 10 times:
+    Let's try a more complicated program, that reads and writes integers 10
+    times:
 
-> $ annah > echo
-> do ./IO {
->     n : ./Nat   <- ./IO/get  ;
->     _ : ./Prod0 <- ./IO/put n;
-> }
-> <Ctrl-D>
-
-    This would not be the correct way to repeat the action 10 times:
-
-> $ morte
-> ./Monad/replicateM_ ./IO ./IO/Monad 10 ./echo
-> <Ctrl-D>
-> annah: 
-> Expression: { very large expression }
->
-> Error: Function applied to argument of the wrong type
-> 
-> Expected type: ∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → IO
-> Argument type: ∀(Cmd : *) → ∀(Bind : ∀(b : *) → (∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : b → IO) → IO) → (b → Cmd) → Cmd) → ∀(Pure : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → Cmd) → Cmd
-
-    If we were to clean up that type error, we would get:
-
-> Error: Function applied to argument of the wrong type
-> 
-> Expected type: ./IO ./Prod0
-> Argument type: ./Cmd ./IO ./Prod0
-
-    This is Morte's way of telling us that @./echo@ is not an @./IO@ action,
-    but rather a @.\/Cmd .\/IO@ action.  However, we can flatten any action of
-    type @.\/Cmd .\/IO@ back into an @./IO@ action by using the @.\/IO\/Monad@
-    function:
-
-> $ annah > echo2
-> ./IO/Monad ./Prod0 (do ./IO {
+> $ annah | morte
+> let io : ./IO ./Prod0 = ./IO/Monad ./Prod0 (do ./IO {
 >     n : ./Nat   <- ./IO/get  ;
 >     _ : ./Prod0 <- ./IO/put n;
 > })
+> in  ./IO/Monad ./Prod0 (./Monad/replicateM_ ./IO 10 io)
 > <Ctrl-D>
-
-    What's the difference between @./echo@ and @./echo2@?  If we try to print
-    out the normalized expressions we get a huge mess:
-
-> $ morte
-> ./echo
-> <Ctrl-D>
-> ∀(Cmd : *) → ∀(Bind : ∀(b : *) → (∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : b → IO) → IO) → (b → Cmd) → Cmd) → ∀(Pure : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → Cmd) → Cmd
-> 
-> λ(Cmd : *) → λ(Bind : ∀(b : *) → (∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : b → IO) → IO) → (b → Cmd) → Cmd) → λ(Pure : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → Cmd) → Bind (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) (λ(IO : *) → λ(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → λ(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → Get_) (λ(n : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Bind (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) (λ(IO : *) → λ(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → λ(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → λ(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → Put_ n (Pure_ (λ(Prod0 : *) → λ(Make : Prod0) → Make))) Pure)
-
-> $ morte
-> ./echo2
-> <Ctrl-D>
-> ∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → IO
-> 
-> λ(IO : *) → λ(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → λ(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → λ(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Pure_ (λ(Prod0 : *) → λ(Make : Prod0) → Make)))
-
-    Unfortunately, there is no way that @annah@ or @morte@ can auto-simplify
-    these kinds of outputs in general, but for the purpose of this tutorial I
-    can simplify them for you:
-
-> -- echo
-> 
-> let get : ./IO ./Nat =
->         λ(IO : *)
->     →   λ(Get_ : (./Nat → IO) → IO)
->     →   λ(Put_ : ./Nat → IO → IO)
->     →   Get_
->
-> let put : ./Nat → ./IO ./Prod0 =
->         λ(IO : *)
->     →   λ(Get_ : (./Nat → IO) → IO)
->     →   λ(Put_ : ./Nat → IO → IO)
->     →   λ(Pure_ : ./Prod0 → IO)
->     →   Put_ n (Pure_ ./Prod0/Make ))
->
-> in  λ(Cmd : *)
-> →   λ(Bind : ∀(b : *) → ./IO b → (b → Cmd) → Cmd)
-> →   λ(Pure : ./Prod0 → Cmd)
-> →   Bind ./Nat get (λ(n : ./Nat ) →
->         Bind ./Prod0 put Pure)
-
-> -- echo2
->
->     λ(IO : *)
-> →   λ(Get_ : (./Nat → IO) → IO)
-> →   λ(Put_ : ./Nat → IO → IO)
-> →   λ(Pure_ : ./Prod0 → IO)
-> →   Get_ (λ(r : ./Nat ) →
->         Put_ r
->             (Pure_ ./Prod0/Make ))
-
-    In @./echo@, the @.\/IO\/get@ and @.\/IO\/put@ actions have not been fused
-    together yet.  They are just stored within a @./Cmd@ type, which behaves a
-    lot like a \"list for actions\", waiting to be fused.
-
-    @./echo2@, on the other hand, has fused both @./IO@ actions together and is
-    an @./IO@ action in its own right.
-
-    If we look at the type of @.\/IO\/Monad@, we get:
-
-> $ cat IO/Monad.annah
-> let Monad : ../Monad ../IO =
->         \(a : *)
->     ->  \(cmd : ../Cmd ../IO a)
->     ->  cmd (../IO a) (\(b : *) -> ../IO/(>>=) b a) (../IO/pure a)
-> in  Monad
-
-    The type says that it is a @./Monad@ instance for the @./IO@ type
-    constructor.  Let's see what the definition of @./Monad@ looks like:
-
-> $ cat Monad.annah
-> let Monad (m : * -> *) : * = forall (a : *) -> ./Cmd m a -> m a
-> in  Monad
-
-    In other words, a @./Monad m@ is something that knows how to fold a \"list
-    of @m@ actions\" (i.e. a @./Cmd m@) into a single @m@ action.
-
-    Now let's see if we can repeat the fixed @./echo2@ command 10 times:
-
-> $ annah | morte
-> ./Monad/replicateM_ ./IO ./IO/Monad 10 ./echo2
 > ∀(IO : *) → ∀(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → ∀(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → ∀(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → IO
 > 
 > λ(IO : *) → λ(Get_ : ((∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO) → IO) → λ(Put_ : (∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → IO → IO) → λ(Pure_ : (∀(Prod0 : *) → ∀(Make : Prod0) → Prod0) → IO) → Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Get_ (λ(r : ∀(Nat : *) → ∀(Succ : ∀(pred : Nat) → Nat) → ∀(Zero : Nat) → Nat) → Put_ r (Pure_ (λ(Prod0 : *) → λ(Make : Prod0) → Make)))))))))))))))))))))
@@ -1455,5 +1591,81 @@ module Annah.Tutorial (
 >                                       Put_ r (
 >                                         Get_ (λ(r : ./Nat ) →
 >                                           Put_ r (
->                                             Pure_ ./Prod0/Make ))))))))))))))))))))
+>                                             Pure_ ./Prod0/Make))))))))))))))))))))
+
+    In other words, we've built an abstract syntax tree representing ten
+    @Get_@ and @Put_@ nodes where each @Get_@ node threads its result to the
+    next @Put_@ node.
+
+    Annah cannot run this abstract syntax tree since Annah does not have a
+    backend to interpret this tree.  The most Annah can do is model effects
+    without running them.
+-}
+
+{- $paths
+    Annah provides support for the `Category` type class, too, using an approach
+    very similar to the support for `Monoid` and `Monad`:
+
+    * Provide a placeholder type named @./Path@ (which is a \"free category\")
+    * Provide syntactic support for building @./Path@s
+    * Define a @./Category@ to be something that folds @./Path@s
+
+> $ cat Category.annah
+> let Category (cat : * -> * -> *) : * =
+>     forall (a : *) -> forall (b : *) -> ./Path cat a b -> cat a b
+> in  Category
+
+    Here is an example of composing several functions using the @./Category@
+    instance for functions:
+
+> $ annah | morte
+> let even (n : ./Nat ) : ./Bool = n ./Bool ./Bool/not ./Bool/True
+>
+> in  let f : ./List ./Nat -> ./Bool =
+>     ./(->)/Category (./List ./Nat ) ./Bool
+>         [id ./(->) { ./List ./Nat } ./Nat/sum { ./Nat } even { ./Bool } ./Bool/not { ./Bool }]
+>
+>     in  f [nil ./Nat , 1, 2, 3, 4
+> <Ctrl-D>
+> ∀(Bool : *) → ∀(True : Bool) → ∀(False : Bool) → Bool
+> 
+> λ(Bool : *) → λ(True : Bool) → λ(False : Bool) → False
+
+    The above code creates a composition chain of three functions, reading from
+    left to right:
+
+    * @.\/Nat/sum@, which has type @.\/List .\/Nat -> .\/Nat@
+    * @even@, which has type @.\/Nat -> .\/Bool@
+    * @.\/Bool\/not@, which has type @.\/Bool -> .\/Bool@
+
+    Annah's path notation requires you to annotate the types along the way as
+    you compose each component.  In the above example, you can find each
+    function's input type immediately to the left of that function and the
+    output type immediately to the right of each function.  Types are surrounded
+    by braces to separate them from the things you compose.
+
+    Annah's path notation differs from lists in a couple of ways:
+
+    * You replace @nil@ with @id@
+    * The @id@ is followed by the type constructor that you are chaining
+    * You replace commas with intermediate types
+
+    You may find the notation easier to read if you put each composable
+    component on a separate line preceded by the corresponding input type:
+
+> let even (n : ./Nat ) : ./Bool = n ./Bool ./Bool/not ./Bool/True
+>
+> in  let f : ./List ./Nat -> ./Bool =
+>     ./(->)/Category (./List ./Nat ) ./Bool [id ./(->)
+>         { ./List ./Nat } ./Nat/sum
+>         { ./Nat        } even
+>         { ./Bool       } ./Bool/not
+>         { ./Bool       }
+>     ]
+>
+>     in  f [nil ./Nat , 1, 2, 3, 4]
+
+    Annah's Prelude only provides support for one @./Category@ instance for
+    functions named @./(->)/Category@, so in practice the @./Category@ support
+    is not that handy out-of-the box and is mainly provided for completeness.
 -}
