@@ -83,6 +83,9 @@ module Annah.Tutorial (
 
     -- * Paths
     -- $paths
+
+    -- * Conclusion
+    -- $conclusion
     ) where
 
 {- $introduction
