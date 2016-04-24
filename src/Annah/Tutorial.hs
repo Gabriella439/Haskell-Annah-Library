@@ -979,7 +979,8 @@ module Annah.Tutorial (
     ... or you can \"import\" the entire Prelude into your current directory
     using @wget@:
 
-> $ wget -np -nH -r --cut-dirs=3 http://sigil.place/prelude/annah/1.0/
+> $ wget -np -r --cut-dirs=3 http://sigil.place/prelude/annah/1.0/
+> $ cd sigil.place
 > $ ls
 > (->)            Defer.annah    List.annah    Path         Sum0.annah
 > (->).annah      Eq             Maybe         Path.annah   Sum1
