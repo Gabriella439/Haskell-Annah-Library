@@ -1275,6 +1275,7 @@ module Annah.Tutorial (
 -}
 
 {- $commands
+
     Annah also provides syntactic support for chaining commands using @do@
     notation, in a style very similar to Haskell.  The following examples will
     all give very large outputs so I will tidy the output results, although
@@ -1462,7 +1463,7 @@ module Annah.Tutorial (
     A @./Monad m@ is a function that transforms a @./Cmd m a@ into an @m a@ by
     replacing each @Bind@ with the correct \"bind\" operation for that `Monad`
     and replaces each @Pure@ with the correct \"pure\" operation for that
-    `Monad`.  Therefore a @./Monad ./List@ is a function that transforms a
+    `Monad`.  Therefore a @.\/Monad .\/List@ is a function that transforms a
     @.\/Cmd .\/List a@ into a @./List a@.
 
     That's why we wrap the @do@ block in @.\/List\/Monad@ because the @do@
@@ -1470,13 +1471,13 @@ module Annah.Tutorial (
 
 > do ./List { ... } : ./Cmd ./List ./Nat
 
-    ... and then when we apply the @.\/List\/Monad function we get back a
+    ... and then when we apply the @.\/List\/Monad@ function we get back a
     bona-fide @./List@:
 
 > ./List/Monad ./Nat (do ./List { ... }) ./List ./Nat
 
-    There are a couple of parallels between Annah's @./Monad@+@./Cmd@ and
-    Annah's @./Monoid@+@./List@:
+    There are a couple of parallels between Annah's @./Monad@ + @./Cmd@ and
+    Annah's @./Monoid@ + @./List@:
 
     * Both of them have syntactic support for building a placeholder of some
       sort.  List notation builds a @./List@ and @do@ notation builds a @./Cmd@
