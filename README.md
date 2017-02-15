@@ -28,11 +28,10 @@ and can be referenced directly within Annah or Morte expressions.
 
     ```bash
     $ cat > stack.yaml
-    resolver: lts-5.13
+    resolver: lts-8.0
     packages: []
     extra-deps:
     - annah-1.0.0
-    - morte-1.6.0
     <Ctrl-D>
     ```
 

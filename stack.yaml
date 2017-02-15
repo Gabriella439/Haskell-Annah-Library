@@ -1,5 +1,4 @@
-resolver: lts-5.11
+resolver: lts-8.0
 packages:
 - '.'
-extra-deps:
-- morte-1.6.0
+extra-deps: []
