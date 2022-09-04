@@ -2,7 +2,7 @@
 
 Annah is a medium-level total functional programming language that compiles down
 to the calculus of constructions
-(specifically [Morte](https://github.com/Gabriel439/Haskell-Morte-Library)).
+(specifically [Morte](https://github.com/Gabriella439/Haskell-Morte-Library)).
 
 Annah exists primarily as a reference implementation for encoding higher-level
 idioms in pure lambda calculus.  Many of these tricks are scattered among papers
@@ -164,7 +164,7 @@ simplifies the implementation is very welcome!
 
 I also welcome contributions to Annah's prelude which you can find here:
 
-https://github.com/Gabriel439/Haskell-Annah-Library/tree/master/Prelude
+https://github.com/Gabriella439/Haskell-Annah-Library/tree/master/Prelude
 
 ... and I will periodically upload versioned Preludes online here:
 
@@ -175,7 +175,7 @@ URL.
 
 ## Development Status
 
-[![Build Status](https://travis-ci.org/Gabriel439/Haskell-Annah-Library.png)](https://travis-ci.org/Gabriel439/Haskell-Annah-Library)
+[![Build Status](https://travis-ci.org/Gabriella439/Haskell-Annah-Library.png)](https://travis-ci.org/Gabriella439/Haskell-Annah-Library)
 
 Annah is heavily exercised by the Annah Prelude so most bugs should have been
 rooted out by this point.  The most likely bugs that still remain at this point
@@ -186,7 +186,7 @@ if people request them and are willing to implement them.
 
 ## License (BSD 3-clause)
 
-Copyright (c) 2016 Gabriel Gonzalez
+Copyright (c) 2016 Gabriella Gonzalez
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -199,7 +199,7 @@ are permitted provided that the following conditions are met:
   list of conditions and the following disclaimer in the documentation and/or
   other materials provided with the distribution.
 
-* Neither the name of Gabriel Gonzalez nor the names of other contributors may
+* Neither the name of Gabriella Gonzalez nor the names of other contributors may
   be used to endorse or promote products derived from this software without
   specific prior written permission.
 
