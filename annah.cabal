@@ -5,10 +5,10 @@ Build-Type: Simple
 Tested-With: GHC == 7.6.3, GHC == 7.8.4, GHC == 7.10.2
 License: BSD3
 License-File: LICENSE
-Copyright: 2015 Gabriel Gonzalez
-Author: Gabriel Gonzalez
-Maintainer: Gabriel439@gmail.com
-Bug-Reports: https://github.com/Gabriel439/Haskell-Annah-Library/issues
+Copyright: 2015 Gabriella Gonzalez
+Author: Gabriella Gonzalez
+Maintainer: GenuineGabriella@gmail.com
+Bug-Reports: https://github.com/Gabriella439/Haskell-Annah-Library/issues
 Synopsis: Medium-level language that desugars to Morte
 Description: Annah is a very simple statically typed and purely functional
     lambda calculus with built-in support for:
@@ -36,7 +36,7 @@ Description: Annah is a very simple statically typed and purely functional
 Category: Compiler
 Source-Repository head
     Type: git
-    Location: https://github.com/Gabriel439/Haskell-Annah-Library
+    Location: https://github.com/Gabriella439/Haskell-Annah-Library
 
 Library
     Hs-Source-Dirs: src
